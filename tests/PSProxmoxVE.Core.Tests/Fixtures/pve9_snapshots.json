@@ -1,0 +1,1 @@
+{"data":[{"name":"current","description":"You are here!","snaptime":0,"parent":"snap1"},{"name":"snap1","description":"Before upgrade","snaptime":1710000000,"vmstate":1,"parent":"base"},{"name":"base","description":"Initial setup","snaptime":1709000000,"vmstate":0}]}

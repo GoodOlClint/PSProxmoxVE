@@ -1,0 +1,1 @@
+{"data":[{"vmid":200,"name":"ct-web","status":"running","node":"pve1","cpus":2,"maxmem":2147483648,"maxswap":536870912,"maxdisk":8589934592,"ostype":"ubuntu","unprivileged":1,"uptime":43200,"tags":"web"},{"vmid":201,"name":"ct-db","status":"stopped","node":"pve1","cpus":1,"maxmem":1073741824,"maxswap":268435456,"maxdisk":4294967296,"ostype":"debian","unprivileged":1,"uptime":0}]}

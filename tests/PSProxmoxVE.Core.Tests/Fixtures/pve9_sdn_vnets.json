@@ -1,0 +1,1 @@
+{"data":[{"vnet":"myvnet","zone":"localzone","tag":100,"alias":"My VNET"},{"vnet":"prodnet","zone":"vxlanzone","tag":200,"alias":"Production Network","vlanaware":1}]}

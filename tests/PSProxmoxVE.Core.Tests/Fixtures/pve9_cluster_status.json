@@ -1,0 +1,1 @@
+{"data":[{"type":"cluster","name":"testcluster","nodes":3,"quorate":1,"version":3},{"type":"node","name":"pve1","online":1,"local":1,"nodeid":1,"ip":"192.168.1.10","level":""},{"type":"node","name":"pve2","online":1,"local":0,"nodeid":2,"ip":"192.168.1.11","level":""},{"type":"node","name":"pve3","online":0,"local":0,"nodeid":3,"ip":"192.168.1.12","level":""}]}

@@ -1,0 +1,1 @@
+{"data":[{"node":"pve-old","status":"online","maxcpu":4,"maxmem":16106127360,"mem":4294967296,"uptime":172800,"pveversion":"pve-manager/8.3-2/12345678","kversion":"6.5.13-6-pve","loadavg":["0.10","0.15","0.12"]}]}

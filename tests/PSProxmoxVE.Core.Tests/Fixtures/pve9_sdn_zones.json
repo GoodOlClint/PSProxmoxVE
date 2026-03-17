@@ -1,0 +1,1 @@
+{"data":[{"zone":"localzone","type":"simple","dns":"","reversedns":"","dnszone":"","mtu":1500,"pending":0},{"zone":"vxlanzone","type":"vxlan","dns":"","reversedns":"","dnszone":"","mtu":1450,"nodes":"pve1,pve2","pending":0}]}

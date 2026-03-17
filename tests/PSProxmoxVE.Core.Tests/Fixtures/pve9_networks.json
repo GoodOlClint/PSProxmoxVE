@@ -1,0 +1,1 @@
+{"data":[{"iface":"vmbr0","type":"bridge","address":"192.168.1.10","netmask":"255.255.255.0","gateway":"192.168.1.1","bridge_ports":"enp0s31f6","autostart":1,"active":1,"cidr":"192.168.1.10/24"},{"iface":"vmbr1","type":"bridge","address":"10.0.0.1","netmask":"255.255.255.0","bridge_ports":"enp2s0","autostart":1,"active":1,"cidr":"10.0.0.1/24","bridge_vlan_aware":1}]}
