@@ -1,0 +1,81 @@
+name: Mock Integration Tests
+
+# These tests run the module against a mock PVE API server.
+# No real Proxmox host needed - runs on GitHub-hosted runners.
+# Validates HTTP request correctness, auth flows, deserialization,
+# and end-to-end cmdlet behavior against simulated PVE responses.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  mock-integration:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            framework: net10.0
+            shell: pwsh
+          - os: windows-latest
+            framework: net10.0
+            shell: pwsh
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build mock server
+        run: dotnet build tests/PSProxmoxVE.MockServer/PSProxmoxVE.MockServer.csproj --configuration Release
+
+      - name: Build module
+        run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework net10.0 --output ./publish/net10.0
+
+      - name: Install Pester 5
+        shell: pwsh
+        run: Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser
+
+      - name: Copy module to module path (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $modulePath = "$env:USERPROFILE\Documents\PowerShell\Modules\PSProxmoxVE"
+          New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
+          Copy-Item -Path .\publish\net10.0\* -Destination $modulePath -Recurse -Force
+
+      - name: Copy module to module path (Linux)
+        if: matrix.os != 'windows-latest'
+        shell: pwsh
+        run: |
+          $modulePath = "$HOME/.local/share/powershell/Modules/PSProxmoxVE"
+          New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
+          Copy-Item -Path ./publish/net10.0/* -Destination $modulePath -Recurse -Force
+
+      - name: Run mock integration tests
+        shell: pwsh
+        run: |
+          Import-Module Pester -MinimumVersion 5.0
+          $config = New-PesterConfiguration
+          $config.Run.Path = "tests/PSProxmoxVE.Tests/MockIntegration"
+          $config.Filter.Tag = "MockIntegration"
+          $config.Output.Verbosity = "Detailed"
+          $config.TestResult.Enabled = $true
+          $config.TestResult.OutputFormat = "NUnitXml"
+          $config.TestResult.OutputPath = "TestResults/mock-integration-results.xml"
+          Invoke-Pester -Configuration $config
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mock-integration-results-${{ matrix.os }}
+          path: TestResults/
