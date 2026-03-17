@@ -1,0 +1,304 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Newtonsoft.Json.Linq;
+using PSProxmoxVE.Core.Authentication;
+using PSProxmoxVE.Core.Client;
+using PSProxmoxVE.Core.Models.Nodes;
+using PSProxmoxVE.Core.Models.Vms;
+
+namespace PSProxmoxVE.Core.Services
+{
+    /// <summary>
+    /// Service for Proxmox VE QEMU/KVM virtual machine API operations.
+    /// </summary>
+    public class VmService
+    {
+        private readonly NodeService _nodeService = new NodeService();
+
+        // -------------------------------------------------------------------------
+        // Read operations
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Returns VMs. If <paramref name="node"/> is null, queries every cluster node.
+        /// </summary>
+        public PveVm[] GetVms(PveSession session, string? node = null)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+
+            if (node != null)
+                return GetVmsOnNode(session, node);
+
+            // Query all nodes and aggregate
+            var nodes = _nodeService.GetNodes(session);
+            var all = new List<PveVm>();
+            foreach (var n in nodes)
+            {
+                try
+                {
+                    var vms = GetVmsOnNode(session, n.Name);
+                    // Stamp the node name in case it wasn't returned by the API
+                    foreach (var vm in vms)
+                        vm.Node ??= n.Name;
+                    all.AddRange(vms);
+                }
+                catch
+                {
+                    // Skip nodes that are offline or inaccessible
+                }
+            }
+            return all.ToArray();
+        }
+
+        private PveVm[] GetVmsOnNode(PveSession session, string node)
+        {
+            using var client = new PveHttpClient(session);
+            var response = client.GetAsync($"nodes/{node}/qemu").GetAwaiter().GetResult();
+            var data = JObject.Parse(response)["data"];
+            return data?.ToObject<PveVm[]>() ?? Array.Empty<PveVm>();
+        }
+
+        /// <summary>
+        /// Returns a single VM by its ID on the specified node.
+        /// </summary>
+        public PveVm GetVm(PveSession session, string node, int vmid)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+
+            var vms = GetVmsOnNode(session, node);
+            var vm = vms.FirstOrDefault(v => v.VmId == vmid);
+            if (vm == null)
+                throw new InvalidOperationException($"VM {vmid} not found on node '{node}'.");
+            vm.Node ??= node;
+            return vm;
+        }
+
+        /// <summary>
+        /// Returns the full configuration of a VM.
+        /// </summary>
+        public PveVmConfig GetVmConfig(PveSession session, string node, int vmid)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+
+            using var client = new PveHttpClient(session);
+            var response = client.GetAsync($"nodes/{node}/qemu/{vmid}/config")
+                .GetAwaiter().GetResult();
+            var data = JObject.Parse(response)["data"];
+            return data?.ToObject<PveVmConfig>() ?? new PveVmConfig();
+        }
+
+        // -------------------------------------------------------------------------
+        // Configuration mutation
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Updates one or more VM configuration settings. Changes are applied immediately (POST).
+        /// </summary>
+        public void SetVmConfig(PveSession session, string node, int vmid, Dictionary<string, object> config)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            using var client = new PveHttpClient(session);
+            var formData = config.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value?.ToString() ?? string.Empty);
+            client.PutAsync($"nodes/{node}/qemu/{vmid}/config", formData)
+                .GetAwaiter().GetResult();
+        }
+
+        // -------------------------------------------------------------------------
+        // Lifecycle
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Creates a new VM. Returns the task UPID.
+        /// </summary>
+        public PveTask CreateVm(PveSession session, string node, Dictionary<string, object> config)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            using var client = new PveHttpClient(session);
+            var formData = config.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value?.ToString() ?? string.Empty);
+            var response = client.PostAsync($"nodes/{node}/qemu", formData)
+                .GetAwaiter().GetResult();
+            return ParseTask(response, node);
+        }
+
+        /// <summary>Starts a VM. Returns the task UPID.</summary>
+        public PveTask StartVm(PveSession session, string node, int vmid)
+            => PostStatus(session, node, vmid, "start");
+
+        /// <summary>Stops a VM (hard power-off). Returns the task UPID.</summary>
+        public PveTask StopVm(PveSession session, string node, int vmid)
+            => PostStatus(session, node, vmid, "stop");
+
+        /// <summary>Gracefully shuts down a VM. Returns the task UPID.</summary>
+        public PveTask ShutdownVm(PveSession session, string node, int vmid, int? timeoutSeconds = null)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+
+            var formData = new Dictionary<string, string>();
+            if (timeoutSeconds.HasValue)
+                formData["timeout"] = timeoutSeconds.Value.ToString();
+
+            using var client = new PveHttpClient(session);
+            var response = client.PostAsync($"nodes/{node}/qemu/{vmid}/status/shutdown", formData)
+                .GetAwaiter().GetResult();
+            return ParseTask(response, node);
+        }
+
+        /// <summary>Resets a VM (hard reset). Returns the task UPID.</summary>
+        public PveTask ResetVm(PveSession session, string node, int vmid)
+            => PostStatus(session, node, vmid, "reset");
+
+        /// <summary>Suspends a VM (writes RAM state to disk). Returns the task UPID.</summary>
+        public PveTask SuspendVm(PveSession session, string node, int vmid)
+            => PostStatus(session, node, vmid, "suspend");
+
+        /// <summary>Resumes a suspended VM. Returns the task UPID.</summary>
+        public PveTask ResumeVm(PveSession session, string node, int vmid)
+            => PostStatus(session, node, vmid, "resume");
+
+        // -------------------------------------------------------------------------
+        // Removal / migration / clone
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Removes a VM. Returns the task UPID.
+        /// </summary>
+        public PveTask RemoveVm(PveSession session, string node, int vmid, bool purge = false)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+
+            var purgeParam = purge ? "?purge=1" : "?purge=0";
+            using var client = new PveHttpClient(session);
+            var response = client.DeleteAsync($"nodes/{node}/qemu/{vmid}{purgeParam}")
+                .GetAwaiter().GetResult();
+            return ParseTask(response, node);
+        }
+
+        /// <summary>
+        /// Clones a VM. Returns the task UPID.
+        /// </summary>
+        public PveTask CloneVm(
+            PveSession session,
+            string node,
+            int vmid,
+            int newid,
+            string? name = null,
+            string? targetNode = null,
+            bool full = true)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+
+            var formData = new Dictionary<string, string>
+            {
+                ["newid"] = newid.ToString(),
+                ["full"] = full ? "1" : "0"
+            };
+            if (!string.IsNullOrEmpty(name)) formData["name"] = name!;
+            if (!string.IsNullOrEmpty(targetNode)) formData["target"] = targetNode!;
+
+            using var client = new PveHttpClient(session);
+            var response = client.PostAsync($"nodes/{node}/qemu/{vmid}/clone", formData)
+                .GetAwaiter().GetResult();
+            return ParseTask(response, node);
+        }
+
+        /// <summary>
+        /// Migrates a VM to another node. Returns the task UPID.
+        /// </summary>
+        public PveTask MigrateVm(
+            PveSession session,
+            string node,
+            int vmid,
+            string targetNode,
+            bool online = true)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (string.IsNullOrWhiteSpace(targetNode)) throw new ArgumentNullException(nameof(targetNode));
+
+            var formData = new Dictionary<string, string>
+            {
+                ["target"] = targetNode,
+                ["online"] = online ? "1" : "0"
+            };
+
+            using var client = new PveHttpClient(session);
+            var response = client.PostAsync($"nodes/{node}/qemu/{vmid}/migrate", formData)
+                .GetAwaiter().GetResult();
+            return ParseTask(response, node);
+        }
+
+        /// <summary>
+        /// Resizes a disk attached to a VM. Returns the task UPID.
+        /// </summary>
+        /// <param name="disk">Disk identifier, e.g. "scsi0" or "virtio0".</param>
+        /// <param name="size">
+        /// New absolute size (e.g. "32G") or relative increase with "+" prefix (e.g. "+10G").
+        /// </param>
+        public PveTask ResizeDisk(
+            PveSession session,
+            string node,
+            int vmid,
+            string disk,
+            string size)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (string.IsNullOrWhiteSpace(disk)) throw new ArgumentNullException(nameof(disk));
+            if (string.IsNullOrWhiteSpace(size)) throw new ArgumentNullException(nameof(size));
+
+            var formData = new Dictionary<string, string>
+            {
+                ["disk"] = disk,
+                ["size"] = size
+            };
+
+            using var client = new PveHttpClient(session);
+            var response = client.PutAsync($"nodes/{node}/qemu/{vmid}/resize", formData)
+                .GetAwaiter().GetResult();
+            return ParseTask(response, node);
+        }
+
+        // -------------------------------------------------------------------------
+        // Private helpers
+        // -------------------------------------------------------------------------
+
+        private PveTask PostStatus(PveSession session, string node, int vmid, string action)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+
+            using var client = new PveHttpClient(session);
+            var response = client.PostAsync($"nodes/{node}/qemu/{vmid}/status/{action}")
+                .GetAwaiter().GetResult();
+            return ParseTask(response, node);
+        }
+
+        private static PveTask ParseTask(string response, string node)
+        {
+            var data = JObject.Parse(response)["data"];
+            // Many endpoints return the UPID string directly as the data value
+            if (data?.Type == JTokenType.String)
+                return new PveTask { Upid = data.ToString(), Node = node };
+
+            var task = data?.ToObject<PveTask>() ?? new PveTask();
+            task.Node = node;
+            return task;
+        }
+    }
+}
