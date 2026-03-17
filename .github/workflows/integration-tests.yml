@@ -1,50 +1,106 @@
 name: Integration Tests
 
+# Real integration tests against a live Proxmox VE instance.
+# Runs on a self-hosted runner with network access to the PVE API.
+#
+# Triggers:
+#   - push to main (if self-hosted runner is available)
+#   - manual dispatch with optional host override
+#
+# Runner setup:
+#   See tests/infrastructure/runner/README.md for self-hosted runner
+#   installation instructions.
+#
+# Required repository secrets:
+#   PVETEST_HOST       - Hostname or IP of the PVE node
+#   PVETEST_PORT       - API port (default 8006)
+#   PVETEST_APITOKEN   - API token in USER@REALM!TOKENID=UUID format
+#   PVETEST_NODE       - Node name to run tests against
+#   PVETEST_STORAGE    - Storage name for upload tests
+#   PVETEST_ISO_PATH   - Path to a small test ISO on the runner
+#
+# WARNING: Integration tests create and destroy real VMs, upload files,
+# and modify network configuration. Never run against production.
+
 on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       pve_host:
         description: 'Proxmox VE host (overrides secret)'
         required: false
         type: string
-
-# Integration tests require a live Proxmox VE node.
-# Configure these repository secrets when a test node is available:
-#   PVETEST_HOST       - Hostname or IP of the PVE node
-#   PVETEST_PORT       - API port (default 8006)
-#   PVETEST_APITOKEN   - API token in USER@REALM!TOKENID=UUID format
-#   PVETEST_NODE       - Node name to run tests against
-#   PVETEST_STORAGE    - Storage name for upload tests
-#   PVETEST_ISO_PATH   - Local path to a test ISO file
-#
-# WARNING: Integration tests create and destroy real VMs, upload files,
-# and modify network configuration. Never run against production.
+      skip_terraform:
+        description: 'Skip Terraform provisioning (use existing PVE)'
+        required: false
+        type: boolean
+        default: true
 
 jobs:
+  # Gate job: only proceed if a self-hosted runner with the right labels
+  # picks up the job AND secrets are configured
   integration:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, proxmox, integration]
+    timeout-minutes: 30
+
     steps:
       - uses: actions/checkout@v4
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
+
       - name: Check required secrets
         id: check-secrets
+        shell: bash
         run: |
-          if [ -z "${{ secrets.PVETEST_HOST }}" ] || [ -z "${{ secrets.PVETEST_APITOKEN }}" ]; then
+          if [ -z "${{ secrets.PVETEST_HOST }}" ] && [ -z "${{ inputs.pve_host }}" ]; then
             echo "skip=true" >> $GITHUB_OUTPUT
-            echo "::warning::Integration tests skipped - required secrets not configured"
+            echo "::warning::Integration tests skipped - PVETEST_HOST not configured"
+          elif [ -z "${{ secrets.PVETEST_APITOKEN }}" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "::warning::Integration tests skipped - PVETEST_APITOKEN not configured"
           else
             echo "skip=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Verify PVE API reachable
+        if: steps.check-secrets.outputs.skip != 'true'
+        shell: bash
+        env:
+          PVETEST_HOST: ${{ inputs.pve_host || secrets.PVETEST_HOST }}
+          PVETEST_PORT: ${{ secrets.PVETEST_PORT || '8006' }}
+        run: |
+          echo "Testing connectivity to PVE API at ${PVETEST_HOST}:${PVETEST_PORT}..."
+          if curl -sk --connect-timeout 10 "https://${PVETEST_HOST}:${PVETEST_PORT}/api2/json/version" | grep -q '"version"'; then
+            echo "PVE API is responsive"
+          else
+            echo "::error::Cannot reach PVE API at ${PVETEST_HOST}:${PVETEST_PORT}"
+            exit 1
+          fi
+
+      - name: Setup .NET
+        if: steps.check-secrets.outputs.skip != 'true'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
       - name: Build module
         if: steps.check-secrets.outputs.skip != 'true'
-        run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework net8.0
-      - name: Install Pester
+        run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework net10.0 --output ./publish/net10.0
+
+      - name: Install Pester 5
         if: steps.check-secrets.outputs.skip != 'true'
         shell: pwsh
         run: Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser
+
+      - name: Copy module to module path
+        if: steps.check-secrets.outputs.skip != 'true'
+        shell: pwsh
+        run: |
+          $modulePath = "$HOME/.local/share/powershell/Modules/PSProxmoxVE"
+          New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
+          Copy-Item -Path ./publish/net10.0/* -Destination $modulePath -Recurse -Force
+
       - name: Run integration tests
         if: steps.check-secrets.outputs.skip != 'true'
         shell: pwsh
@@ -56,7 +112,16 @@ jobs:
           PVETEST_STORAGE: ${{ secrets.PVETEST_STORAGE }}
           PVETEST_ISO_PATH: ${{ secrets.PVETEST_ISO_PATH }}
         run: |
-          Invoke-Pester tests/PSProxmoxVE.Tests/Integration -Tag Integration -CI -OutputFormat NUnitXml -OutputFile TestResults/integration-results.xml
+          Import-Module Pester -MinimumVersion 5.0
+          $config = New-PesterConfiguration
+          $config.Run.Path = "tests/PSProxmoxVE.Tests/Integration"
+          $config.Filter.Tag = "Integration"
+          $config.Output.Verbosity = "Detailed"
+          $config.TestResult.Enabled = $true
+          $config.TestResult.OutputFormat = "NUnitXml"
+          $config.TestResult.OutputPath = "TestResults/integration-results.xml"
+          Invoke-Pester -Configuration $config
+
       - name: Upload test results
         if: always() && steps.check-secrets.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
