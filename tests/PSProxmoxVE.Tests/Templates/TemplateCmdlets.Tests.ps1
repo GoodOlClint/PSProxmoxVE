@@ -15,8 +15,8 @@
 BeforeAll {
     $moduleRoot = Resolve-Path (Join-Path $PSScriptRoot '../../../src/PSProxmoxVE')
     $dllCandidates = @(
-        Join-Path $moduleRoot 'bin/Debug/net8.0/PSProxmoxVE.dll'
-        Join-Path $moduleRoot 'bin/Release/net8.0/PSProxmoxVE.dll'
+        Join-Path $moduleRoot 'bin/Debug/net9.0/PSProxmoxVE.dll'
+        Join-Path $moduleRoot 'bin/Release/net9.0/PSProxmoxVE.dll'
         Join-Path $moduleRoot 'bin/Debug/net48/PSProxmoxVE.dll'
         Join-Path $moduleRoot 'bin/Release/net48/PSProxmoxVE.dll'
     )
@@ -51,12 +51,14 @@ Describe 'Template cmdlets — manifest declarations' {
         $script:Manifest = if (Test-Path $manifestPath) { Import-PowerShellDataFile $manifestPath } else { $null }
     }
 
-    foreach ($cmdName in @('Get-PveTemplate', 'New-PveTemplate',
-                            'Remove-PveTemplate', 'New-PveVmFromTemplate')) {
-        It "$cmdName should be declared in CmdletsToExport" {
-            if ($null -eq $script:Manifest) { Set-ItResult -Skipped -Because 'Manifest not found'; return }
-            $script:Manifest.CmdletsToExport | Should -Contain $cmdName
-        }
+    It "<cmdName> should be declared in CmdletsToExport" -TestCases @(
+        @{ cmdName = 'Get-PveTemplate' }
+        @{ cmdName = 'New-PveTemplate' }
+        @{ cmdName = 'Remove-PveTemplate' }
+        @{ cmdName = 'New-PveVmFromTemplate' }
+    ) {
+        if ($null -eq $script:Manifest) { Set-ItResult -Skipped -Because 'Manifest not found'; return }
+        $script:Manifest.CmdletsToExport | Should -Contain $cmdName
     }
 }
 
@@ -274,6 +276,7 @@ Describe 'New-PveVmFromTemplate' {
                 elseif ($script:Cmd.Parameters.ContainsKey('SourceNode')) { $splat['SourceNode'] = 'pve-node1' }
                 if ($script:Cmd.Parameters.ContainsKey('TemplateId'))    { $splat['TemplateId'] = 9000 }
                 elseif ($script:Cmd.Parameters.ContainsKey('VmId'))      { $splat['VmId'] = 9000 }
+                if ($script:Cmd.Parameters.ContainsKey('NewVmId'))       { $splat['NewVmId'] = 9001 }
                 & 'New-PveVmFromTemplate' @splat
             } | Should -Throw '*No active Proxmox VE session*'
         }

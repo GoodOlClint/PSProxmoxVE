@@ -12,8 +12,8 @@
 BeforeAll {
     $moduleRoot = Resolve-Path (Join-Path $PSScriptRoot '../../../src/PSProxmoxVE')
     $dllCandidates = @(
-        Join-Path $moduleRoot 'bin/Debug/net8.0/PSProxmoxVE.dll'
-        Join-Path $moduleRoot 'bin/Release/net8.0/PSProxmoxVE.dll'
+        Join-Path $moduleRoot 'bin/Debug/net9.0/PSProxmoxVE.dll'
+        Join-Path $moduleRoot 'bin/Release/net9.0/PSProxmoxVE.dll'
         Join-Path $moduleRoot 'bin/Debug/net48/PSProxmoxVE.dll'
         Join-Path $moduleRoot 'bin/Release/net48/PSProxmoxVE.dll'
     )
@@ -48,12 +48,15 @@ Describe 'Network cmdlets — manifest declarations' {
         $script:Manifest = if (Test-Path $manifestPath) { Import-PowerShellDataFile $manifestPath } else { $null }
     }
 
-    foreach ($cmdName in @('Get-PveNetwork', 'New-PveNetwork', 'Set-PveNetwork',
-                            'Remove-PveNetwork', 'Invoke-PveNetworkApply')) {
-        It "$cmdName should be declared in CmdletsToExport" {
-            if ($null -eq $script:Manifest) { Set-ItResult -Skipped -Because 'Manifest not found'; return }
-            $script:Manifest.CmdletsToExport | Should -Contain $cmdName
-        }
+    It "<cmdName> should be declared in CmdletsToExport" -TestCases @(
+        @{ cmdName = 'Get-PveNetwork' }
+        @{ cmdName = 'New-PveNetwork' }
+        @{ cmdName = 'Set-PveNetwork' }
+        @{ cmdName = 'Remove-PveNetwork' }
+        @{ cmdName = 'Invoke-PveNetworkApply' }
+    ) {
+        if ($null -eq $script:Manifest) { Set-ItResult -Skipped -Because 'Manifest not found'; return }
+        $script:Manifest.CmdletsToExport | Should -Contain $cmdName
     }
 }
 

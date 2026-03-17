@@ -16,8 +16,8 @@
 BeforeAll {
     $moduleRoot = Resolve-Path (Join-Path $PSScriptRoot '../../../src/PSProxmoxVE')
     $dllCandidates = @(
-        Join-Path $moduleRoot 'bin/Debug/net8.0/PSProxmoxVE.dll'
-        Join-Path $moduleRoot 'bin/Release/net8.0/PSProxmoxVE.dll'
+        Join-Path $moduleRoot 'bin/Debug/net9.0/PSProxmoxVE.dll'
+        Join-Path $moduleRoot 'bin/Release/net9.0/PSProxmoxVE.dll'
         Join-Path $moduleRoot 'bin/Debug/net48/PSProxmoxVE.dll'
         Join-Path $moduleRoot 'bin/Release/net48/PSProxmoxVE.dll'
     )
@@ -56,12 +56,16 @@ Describe 'SDN cmdlets — manifest declarations' {
         $script:Manifest = if (Test-Path $manifestPath) { Import-PowerShellDataFile $manifestPath } else { $null }
     }
 
-    foreach ($cmdName in @('Get-PveSdnZone', 'New-PveSdnZone', 'Remove-PveSdnZone',
-                            'Get-PveSdnVnet', 'New-PveSdnVnet', 'Remove-PveSdnVnet')) {
-        It "$cmdName should be declared in CmdletsToExport" {
-            if ($null -eq $script:Manifest) { Set-ItResult -Skipped -Because 'Manifest not found'; return }
-            $script:Manifest.CmdletsToExport | Should -Contain $cmdName
-        }
+    It "<cmdName> should be declared in CmdletsToExport" -TestCases @(
+        @{ cmdName = 'Get-PveSdnZone' }
+        @{ cmdName = 'New-PveSdnZone' }
+        @{ cmdName = 'Remove-PveSdnZone' }
+        @{ cmdName = 'Get-PveSdnVnet' }
+        @{ cmdName = 'New-PveSdnVnet' }
+        @{ cmdName = 'Remove-PveSdnVnet' }
+    ) {
+        if ($null -eq $script:Manifest) { Set-ItResult -Skipped -Because 'Manifest not found'; return }
+        $script:Manifest.CmdletsToExport | Should -Contain $cmdName
     }
 }
 

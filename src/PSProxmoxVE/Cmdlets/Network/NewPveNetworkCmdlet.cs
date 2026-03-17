@@ -20,7 +20,7 @@ namespace PSProxmoxVE.Cmdlets.Network
 
         /// <summary>The interface name (e.g., "vmbr1", "bond0").</summary>
         [Parameter(Mandatory = true, Position = 1)]
-        public string Interface { get; set; } = string.Empty;
+        public string Iface { get; set; } = string.Empty;
 
         /// <summary>The interface type.</summary>
         [Parameter(Mandatory = true, Position = 2)]
@@ -66,7 +66,7 @@ namespace PSProxmoxVE.Cmdlets.Network
 
         protected override void ProcessRecord()
         {
-            if (!ShouldProcess($"{Interface} on {Node}", "Create PVE Network Interface"))
+            if (!ShouldProcess($"{Iface} on {Node}", "Create PVE Network Iface"))
                 return;
 
             var session = GetSession();
@@ -74,7 +74,7 @@ namespace PSProxmoxVE.Cmdlets.Network
 
             var data = new Dictionary<string, string>
             {
-                ["iface"] = Interface,
+                ["iface"] = Iface,
                 ["type"]  = Type
             };
 

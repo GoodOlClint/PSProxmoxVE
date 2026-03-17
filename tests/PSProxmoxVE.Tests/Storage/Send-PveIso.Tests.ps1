@@ -9,8 +9,8 @@
 BeforeAll {
     $moduleRoot = Resolve-Path (Join-Path $PSScriptRoot '../../../src/PSProxmoxVE')
     $dllCandidates = @(
-        Join-Path $moduleRoot 'bin/Debug/net8.0/PSProxmoxVE.dll'
-        Join-Path $moduleRoot 'bin/Release/net8.0/PSProxmoxVE.dll'
+        Join-Path $moduleRoot 'bin/Debug/net9.0/PSProxmoxVE.dll'
+        Join-Path $moduleRoot 'bin/Release/net9.0/PSProxmoxVE.dll'
         Join-Path $moduleRoot 'bin/Debug/net48/PSProxmoxVE.dll'
         Join-Path $moduleRoot 'bin/Release/net48/PSProxmoxVE.dll'
     )
@@ -169,8 +169,11 @@ Describe 'Send-PveIso' {
     Context 'Without active session' {
         It 'Should throw when no session is active (without -WhatIf)' {
             if (-not $script:CmdExists) { Set-ItResult -Skipped -Because 'Not yet compiled'; return }
-            { Send-PveIso -Node 'pve-node1' -Storage 'local' -Path '/tmp/test.iso' -ErrorAction Stop } |
-                Should -Throw '*No active Proxmox VE session*'
+            $tmpIso = [System.IO.Path]::GetTempFileName()
+            try {
+                { Send-PveIso -Node 'pve-node1' -Storage 'local' -Path $tmpIso -Confirm:$false -ErrorAction Stop } |
+                    Should -Throw '*No active Proxmox VE session*'
+            } finally { Remove-Item $tmpIso -ErrorAction SilentlyContinue }
         }
     }
 }

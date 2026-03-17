@@ -9,7 +9,7 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// Deletes the specified Software-Defined Networking VNet from the cluster SDN configuration.
     /// </para>
     /// </summary>
-    [Cmdlet(VerbsCommon.Remove, "PveSdnVnet", SupportsShouldProcess = true)]
+    [Cmdlet(VerbsCommon.Remove, "PveSdnVnet", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
     public class RemovePveSdnVnetCmdlet : PveCmdletBase
     {
         /// <summary>The VNet identifier to remove.</summary>

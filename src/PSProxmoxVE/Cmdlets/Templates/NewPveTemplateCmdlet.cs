@@ -12,7 +12,7 @@ namespace PSProxmoxVE.Cmdlets.Templates
     /// The VM must be stopped before converting. Returns a PveTask.
     /// </para>
     /// </summary>
-    [Cmdlet(VerbsCommon.New, "PveTemplate", SupportsShouldProcess = true)]
+    [Cmdlet(VerbsCommon.New, "PveTemplate", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
     [OutputType(typeof(PveTask))]
     public class NewPveTemplateCmdlet : PveCmdletBase
     {
@@ -30,10 +30,10 @@ namespace PSProxmoxVE.Cmdlets.Templates
 
         protected override void ProcessRecord()
         {
+            var session  = GetSession();
+
             if (!ShouldProcess($"VM {VmId} on {Node}", "Convert to PVE Template (irreversible)"))
                 return;
-
-            var session  = GetSession();
             var service  = new TemplateService();
             var task     = service.CreateTemplate(session, Node, VmId);
 

@@ -11,8 +11,8 @@
 BeforeAll {
     $moduleRoot = Resolve-Path (Join-Path $PSScriptRoot '../../../src/PSProxmoxVE')
     $dllCandidates = @(
-        Join-Path $moduleRoot 'bin/Debug/net8.0/PSProxmoxVE.dll'
-        Join-Path $moduleRoot 'bin/Release/net8.0/PSProxmoxVE.dll'
+        Join-Path $moduleRoot 'bin/Debug/net9.0/PSProxmoxVE.dll'
+        Join-Path $moduleRoot 'bin/Release/net9.0/PSProxmoxVE.dll'
         Join-Path $moduleRoot 'bin/Debug/net48/PSProxmoxVE.dll'
         Join-Path $moduleRoot 'bin/Release/net48/PSProxmoxVE.dll'
     )
@@ -143,7 +143,7 @@ Describe 'Get-PveStorageContent' {
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'Get-PveStorageContent'
-            { Get-PveStorageContent -ErrorAction Stop } |
+            { Get-PveStorageContent -Node 'pve-node1' -Storage 'local' -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }

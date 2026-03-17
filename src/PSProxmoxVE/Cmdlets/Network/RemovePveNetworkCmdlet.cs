@@ -10,7 +10,7 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// use Invoke-PveNetworkApply to apply pending changes to the running system.
     /// </para>
     /// </summary>
-    [Cmdlet(VerbsCommon.Remove, "PveNetwork", SupportsShouldProcess = true)]
+    [Cmdlet(VerbsCommon.Remove, "PveNetwork", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
     public class RemovePveNetworkCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
@@ -19,17 +19,17 @@ namespace PSProxmoxVE.Cmdlets.Network
 
         /// <summary>The interface name to remove.</summary>
         [Parameter(Mandatory = true, Position = 1)]
-        public string Interface { get; set; } = string.Empty;
+        public string Iface { get; set; } = string.Empty;
 
         protected override void ProcessRecord()
         {
-            if (!ShouldProcess($"{Interface} on {Node}", "Remove PVE Network Interface"))
+            if (!ShouldProcess($"{Iface} on {Node}", "Remove PVE Network Iface"))
                 return;
 
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
-            client.DeleteAsync($"/nodes/{Node}/network/{Interface}").GetAwaiter().GetResult();
+            client.DeleteAsync($"/nodes/{Node}/network/{Iface}").GetAwaiter().GetResult();
         }
     }
 }

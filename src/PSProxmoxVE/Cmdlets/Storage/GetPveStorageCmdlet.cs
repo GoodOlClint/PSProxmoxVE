@@ -24,6 +24,10 @@ namespace PSProxmoxVE.Cmdlets.Storage
         [Alias("NodeName")]
         public string? Node { get; set; }
 
+        /// <summary>Filter results to a specific storage name (e.g., "local", "local-lvm").</summary>
+        [Parameter(Mandatory = false)]
+        public string? Storage { get; set; }
+
         /// <summary>Filter results to a specific storage type (e.g., "dir", "nfs", "zfspool").</summary>
         [Parameter(Mandatory = false)]
         public string? Type { get; set; }
@@ -43,6 +47,10 @@ namespace PSProxmoxVE.Cmdlets.Storage
             {
                 if (!string.IsNullOrEmpty(Node))
                     storage.Node = Node;
+
+                if (!string.IsNullOrEmpty(Storage) &&
+                    !string.Equals(storage.Storage, Storage, StringComparison.OrdinalIgnoreCase))
+                    continue;
 
                 if (!string.IsNullOrEmpty(Type) &&
                     !string.Equals(storage.Type, Type, StringComparison.OrdinalIgnoreCase))

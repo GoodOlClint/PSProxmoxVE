@@ -40,10 +40,10 @@ namespace PSProxmoxVE.Cmdlets.Snapshots
 
         protected override void ProcessRecord()
         {
+            var session = GetSession();
+
             if (!ShouldProcess($"VM {VmId} on {Node}", $"Restore snapshot '{Name}' (current state will be lost)"))
                 return;
-
-            var session = GetSession();
             using var client = new PveHttpClient(session);
 
             var json = client.PostAsync($"/nodes/{Node}/qemu/{VmId}/snapshot/{Name}/rollback").GetAwaiter().GetResult();

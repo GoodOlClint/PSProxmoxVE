@@ -13,7 +13,7 @@ namespace PSProxmoxVE.Cmdlets.Snapshots
     /// Returns a PveTask. Use -Wait to block until removal completes.
     /// </para>
     /// </summary>
-    [Cmdlet(VerbsCommon.Remove, "PveSnapshot", SupportsShouldProcess = true)]
+    [Cmdlet(VerbsCommon.Remove, "PveSnapshot", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
     [OutputType(typeof(PveTask))]
     public class RemovePveSnapshotCmdlet : PveCmdletBase
     {
@@ -37,10 +37,10 @@ namespace PSProxmoxVE.Cmdlets.Snapshots
 
         protected override void ProcessRecord()
         {
+            var session = GetSession();
+
             if (!ShouldProcess($"VM {VmId} snapshot '{Name}' on {Node}", "Remove PVE Snapshot"))
                 return;
-
-            var session = GetSession();
             using var client = new PveHttpClient(session);
 
             var json = client.DeleteAsync($"/nodes/{Node}/qemu/{VmId}/snapshot/{Name}").GetAwaiter().GetResult();

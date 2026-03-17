@@ -40,7 +40,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
 
         /// <summary>Checksum algorithm used for verification.</summary>
         [Parameter(Mandatory = false)]
-        [ValidateSet("md5", "sha1", "sha256", IgnoreCase = true)]
+        [ValidateSet("md5", "sha1", "sha256", "sha512", IgnoreCase = true)]
         public string? ChecksumAlgorithm { get; set; }
 
         /// <summary>

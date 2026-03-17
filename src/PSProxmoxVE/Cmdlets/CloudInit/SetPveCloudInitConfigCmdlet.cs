@@ -32,9 +32,10 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
         [Parameter(Mandatory = false)]
         public string? Hostname { get; set; }
 
-        /// <summary>Cloud-init default username.</summary>
+        /// <summary>Cloud-init default username. Alias: User.</summary>
         [Parameter(Mandatory = false)]
-        public string? User { get; set; }
+        [Alias("User")]
+        public string? CiUser { get; set; }
 
         /// <summary>Cloud-init default user password. Accepts a SecureString.</summary>
         [Parameter(Mandatory = false)]
@@ -49,15 +50,15 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
         /// Maps to ipconfig0 on the VM.
         /// </summary>
         [Parameter(Mandatory = false)]
-        public string? IpConfig { get; set; }
+        public string? IpConfig0 { get; set; }
 
         /// <summary>DNS nameserver(s) to inject (space or comma separated).</summary>
         [Parameter(Mandatory = false)]
-        public string? Dns { get; set; }
+        public string? Nameserver { get; set; }
 
         /// <summary>DNS search domain to inject.</summary>
         [Parameter(Mandatory = false)]
-        public string? SearchDomain { get; set; }
+        public string? Searchdomain { get; set; }
 
         /// <summary>When specified, waits for the config update task to complete before returning.</summary>
         [Parameter(Mandatory = false)]
@@ -65,16 +66,18 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
 
         protected override void ProcessRecord()
         {
+            var session = GetSession();
+
             if (!ShouldProcess($"VM {VmId} on {Node}", "Set PVE Cloud-Init Config"))
                 return;
 
             var config = new Dictionary<string, object>();
 
-            if (!string.IsNullOrEmpty(User))         config["ciuser"]       = User;
+            if (!string.IsNullOrEmpty(CiUser))        config["ciuser"]       = CiUser;
             if (!string.IsNullOrEmpty(Hostname))     config["name"]         = Hostname;
-            if (!string.IsNullOrEmpty(IpConfig))     config["ipconfig0"]    = IpConfig;
-            if (!string.IsNullOrEmpty(Dns))          config["nameserver"]   = Dns;
-            if (!string.IsNullOrEmpty(SearchDomain)) config["searchdomain"] = SearchDomain;
+            if (!string.IsNullOrEmpty(IpConfig0))    config["ipconfig0"]    = IpConfig0;
+            if (!string.IsNullOrEmpty(Nameserver))   config["nameserver"]   = Nameserver;
+            if (!string.IsNullOrEmpty(Searchdomain)) config["searchdomain"] = Searchdomain;
 
             if (Password != null)
             {
@@ -96,7 +99,6 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
                 return;
             }
 
-            var session = GetSession();
             var service = new CloudInitService();
             service.SetCloudInitConfig(session, Node, VmId, config);
 

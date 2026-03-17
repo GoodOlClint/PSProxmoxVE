@@ -24,6 +24,10 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Alias("NodeName")]
         public string Node { get; set; } = string.Empty;
 
+        /// <summary>Filter results to this specific interface name (e.g., "vmbr0").</summary>
+        [Parameter(Mandatory = false)]
+        public string? Iface { get; set; }
+
         /// <summary>Filter by interface type (e.g., "bridge", "bond", "eth", "vlan").</summary>
         [Parameter(Mandatory = false)]
         [ValidateSet("bridge", "bond", "eth", "alias", "vlan", "OVSBridge", "OVSBond",
@@ -47,6 +51,9 @@ namespace PSProxmoxVE.Cmdlets.Network
             {
                 var network = item.ToObject<PveNetwork>()!;
                 network.Node = Node;
+                if (!string.IsNullOrEmpty(Iface) &&
+                    !string.Equals(network.Iface, Iface, System.StringComparison.OrdinalIgnoreCase))
+                    continue;
                 WriteObject(network);
             }
         }

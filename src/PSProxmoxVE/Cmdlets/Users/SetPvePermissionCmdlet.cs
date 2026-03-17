@@ -24,7 +24,7 @@ namespace PSProxmoxVE.Cmdlets.Users
 
         /// <summary>The role to assign (e.g., "Administrator", "PVEVMUser").</summary>
         [Parameter(Mandatory = true, Position = 2)]
-        public string RoleId { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
 
         /// <summary>The ACL entry type: "user" or "group".</summary>
         [Parameter(Mandatory = false)]
@@ -42,7 +42,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         protected override void ProcessRecord()
         {
             var action = Delete.IsPresent ? "Remove" : "Set";
-            if (!ShouldProcess($"{Type} '{UgId}' at '{Path}'", $"{action} PVE Permission ({RoleId})"))
+            if (!ShouldProcess($"{Type} '{UgId}' at '{Path}'", $"{action} PVE Permission ({Role})"))
                 return;
 
             var session = GetSession();
@@ -51,7 +51,7 @@ namespace PSProxmoxVE.Cmdlets.Users
             var data = new Dictionary<string, string>
             {
                 ["path"]  = Path,
-                ["roles"] = RoleId
+                ["roles"] = Role
             };
 
             if (string.Equals(Type, "group", System.StringComparison.OrdinalIgnoreCase))

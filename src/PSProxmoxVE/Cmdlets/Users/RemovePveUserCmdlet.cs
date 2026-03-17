@@ -9,7 +9,7 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// Deletes the specified user from the Proxmox VE access management system.
     /// </para>
     /// </summary>
-    [Cmdlet(VerbsCommon.Remove, "PveUser", SupportsShouldProcess = true)]
+    [Cmdlet(VerbsCommon.Remove, "PveUser", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
     public class RemovePveUserCmdlet : PveCmdletBase
     {
         /// <summary>The user identifier to remove (e.g., "jdoe@pve").</summary>

@@ -23,6 +23,11 @@ namespace PSProxmoxVE.Cmdlets.Users
         [Parameter(Mandatory = false, Position = 0)]
         public string? UserId { get; set; }
 
+        /// <summary>When specified, returns only enabled users.</summary>
+        [Parameter(Mandatory = false)]
+        [Alias("EnabledOnly")]
+        public SwitchParameter Enabled { get; set; }
+
         protected override void ProcessRecord()
         {
             var session = GetSession();
@@ -35,24 +40,26 @@ namespace PSProxmoxVE.Cmdlets.Users
             foreach (var item in data)
             {
                 var user = item.ToObject<PveUser>()!;
-
-                if (!string.IsNullOrEmpty(UserId))
-                {
-                    var pattern = UserId.Replace("*", "");
-                    if (UserId.Contains("*"))
-                    {
-                        if (user.UserId.IndexOf(pattern, System.StringComparison.OrdinalIgnoreCase) < 0)
-                            continue;
-                    }
-                    else
-                    {
-                        if (!string.Equals(user.UserId, UserId, System.StringComparison.OrdinalIgnoreCase))
-                            continue;
-                    }
-                }
-
-                WriteObject(user);
+                if (MatchesFilters(user))
+                    WriteObject(user);
             }
+        }
+
+        private bool MatchesFilters(PveUser user)
+        {
+            if (Enabled.IsPresent && user.Enabled.GetValueOrDefault() != 1)
+                return false;
+
+            if (string.IsNullOrEmpty(UserId))
+                return true;
+
+            if (UserId.Contains("*"))
+            {
+                var pattern = UserId.Replace("*", "");
+                return user.UserId.IndexOf(pattern, System.StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+
+            return string.Equals(user.UserId, UserId, System.StringComparison.OrdinalIgnoreCase);
         }
     }
 }

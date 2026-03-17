@@ -17,9 +17,10 @@ namespace PSProxmoxVE.Cmdlets.Templates
     [OutputType(typeof(PveTask))]
     public class NewPveVmFromTemplateCmdlet : PveCmdletBase
     {
-        /// <summary>The node where the source template resides.</summary>
-        [Parameter(Mandatory = true, Position = 0)]
-        public string Node { get; set; } = string.Empty;
+        /// <summary>The node where the source template resides. Alias: Node.</summary>
+        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true)]
+        [Alias("Node")]
+        public string TemplateNode { get; set; } = string.Empty;
 
         /// <summary>The source template VM ID. Accepts pipeline input from Get-PveTemplate (PveVm.VmId).</summary>
         [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true)]
@@ -61,7 +62,7 @@ namespace PSProxmoxVE.Cmdlets.Templates
             var service = new VmService();
             var task    = service.CloneVm(
                 session,
-                Node,
+                TemplateNode,
                 VmId,
                 NewVmId,
                 name:       NewName,
@@ -71,7 +72,7 @@ namespace PSProxmoxVE.Cmdlets.Templates
             if (Wait.IsPresent && !string.IsNullOrEmpty(task.Upid))
             {
                 var taskService = new TaskService();
-                task = taskService.WaitForTask(session, Node, task.Upid);
+                task = taskService.WaitForTask(session, TemplateNode, task.Upid);
             }
 
             WriteObject(task);

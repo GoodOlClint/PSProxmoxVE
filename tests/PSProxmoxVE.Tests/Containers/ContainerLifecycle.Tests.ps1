@@ -12,8 +12,8 @@
 BeforeAll {
     $moduleRoot = Resolve-Path (Join-Path $PSScriptRoot '../../../src/PSProxmoxVE')
     $dllCandidates = @(
-        Join-Path $moduleRoot 'bin/Debug/net8.0/PSProxmoxVE.dll'
-        Join-Path $moduleRoot 'bin/Release/net8.0/PSProxmoxVE.dll'
+        Join-Path $moduleRoot 'bin/Debug/net9.0/PSProxmoxVE.dll'
+        Join-Path $moduleRoot 'bin/Release/net9.0/PSProxmoxVE.dll'
         Join-Path $moduleRoot 'bin/Debug/net48/PSProxmoxVE.dll'
         Join-Path $moduleRoot 'bin/Release/net48/PSProxmoxVE.dll'
     )
@@ -159,8 +159,7 @@ Describe 'Remove-PveContainer' {
     Context 'Without active session' {
         It 'Should throw when no session is active (without -WhatIf)' {
             Skip-IfMissing 'Remove-PveContainer'
-            { Remove-PveContainer -Node 'pve-node1' -VmId 200 -ErrorAction Stop } |
-                Should -Throw '*No active Proxmox VE session*'
+            { Remove-PveContainer -Node 'pve-node1' -VmId 200 -Confirm:$false -ErrorAction Stop } | Should -Throw '*No active Proxmox VE session*'
         }
 
         It 'Should not throw with -WhatIf' {

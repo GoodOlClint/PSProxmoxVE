@@ -10,7 +10,7 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// All VNets within this zone must be removed first.
     /// </para>
     /// </summary>
-    [Cmdlet(VerbsCommon.Remove, "PveSdnZone", SupportsShouldProcess = true)]
+    [Cmdlet(VerbsCommon.Remove, "PveSdnZone", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
     public class RemovePveSdnZoneCmdlet : PveCmdletBase
     {
         /// <summary>The zone identifier to remove.</summary>

@@ -20,7 +20,7 @@ namespace PSProxmoxVE.Cmdlets.Network
 
         /// <summary>The interface name to modify.</summary>
         [Parameter(Mandatory = true, Position = 1)]
-        public string Interface { get; set; } = string.Empty;
+        public string Iface { get; set; } = string.Empty;
 
         /// <summary>IPv4 address for the interface.</summary>
         [Parameter(Mandatory = false)]
@@ -68,7 +68,7 @@ namespace PSProxmoxVE.Cmdlets.Network
 
         protected override void ProcessRecord()
         {
-            if (!ShouldProcess($"{Interface} on {Node}", "Set PVE Network Interface"))
+            if (!ShouldProcess($"{Iface} on {Node}", "Set PVE Network Iface"))
                 return;
 
             var session = GetSession();
@@ -88,7 +88,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             if (Autostart.IsPresent)                data["autostart"]    = "1";
             if (!string.IsNullOrEmpty(Comments))    data["comments"]     = Comments;
 
-            client.PutAsync($"/nodes/{Node}/network/{Interface}", data).GetAwaiter().GetResult();
+            client.PutAsync($"/nodes/{Node}/network/{Iface}", data).GetAwaiter().GetResult();
         }
     }
 }

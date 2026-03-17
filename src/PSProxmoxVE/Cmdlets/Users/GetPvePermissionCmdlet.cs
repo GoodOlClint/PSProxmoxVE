@@ -22,7 +22,7 @@ namespace PSProxmoxVE.Cmdlets.Users
 
         /// <summary>Filter results to a specific user or group ID.</summary>
         [Parameter(Mandatory = false)]
-        public string? UgId { get; set; }
+        public string? UserId { get; set; }
 
         protected override void ProcessRecord()
         {
@@ -37,8 +37,8 @@ namespace PSProxmoxVE.Cmdlets.Users
                     !string.Equals(perm.Path, Path, StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                if (!string.IsNullOrEmpty(UgId) &&
-                    !string.Equals(perm.UserId, UgId, StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrEmpty(UserId) &&
+                    !string.Equals(perm.UserId, UserId, StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 WriteObject(perm);

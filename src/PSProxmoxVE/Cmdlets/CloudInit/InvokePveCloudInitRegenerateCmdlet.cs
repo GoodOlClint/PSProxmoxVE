@@ -1,6 +1,7 @@
 using System.Management.Automation;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
+using PSProxmoxVE.Core.Authentication;
 
 namespace PSProxmoxVE.Cmdlets.CloudInit
 {
@@ -24,6 +25,10 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
         [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true)]
         public int VmId { get; set; }
 
+        /// <summary>When specified, waits for the regeneration task to complete before returning.</summary>
+        [Parameter]
+        public SwitchParameter Wait { get; set; }
+
         protected override void ProcessRecord()
         {
             if (!ShouldProcess($"VM {VmId} on {Node}", "Regenerate PVE Cloud-Init Drive"))
@@ -31,7 +36,7 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
 
             var session = GetSession();
             var service = new CloudInitService();
-            service.RegenerateCloudInitImage(session, Node, VmId);
+            var upid = service.RegenerateCloudInitImage(session, Node, VmId);
 
             var task = new PveTask
             {
@@ -39,6 +44,11 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
                 Status     = "stopped",
                 ExitStatus = "OK"
             };
+
+            if (Wait.IsPresent && !string.IsNullOrEmpty(upid))
+            {
+                task = new TaskService().WaitForTask(session, Node, upid, null, null, null);
+            }
 
             WriteObject(task);
         }
