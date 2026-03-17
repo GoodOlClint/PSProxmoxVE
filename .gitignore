@@ -1,0 +1,12 @@
+bin/
+obj/
+TestResults/
+coverage/
+*.nupkg
+*.user
+*.suo
+.vs/
+nupkg/
+*.ps1xml.bak
+*.DotSettings.user
+BenchmarkDotNet.Artifacts/

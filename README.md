@@ -1,0 +1,339 @@
+# PSProxmoxVE
+
+A production-grade C# binary PowerShell module for managing Proxmox VE environments. Built for internal worklab use.
+
+## Supported Proxmox VE Versions
+
+| PVE Version | Status |
+|---|---|
+| 9.x (current, 9.1.6+) | **Primary target — fully supported** |
+| 8.x | Supported |
+| 7.x | EOL 2024 — **not supported** |
+
+## Prerequisites
+
+- **PowerShell** 5.1 (Windows PowerShell) or 7.2+
+- **OS**: Windows, Linux, macOS
+- **Network**: HTTPS access to Proxmox VE API (default port 8006)
+
+## .NET Framework Compatibility
+
+| PowerShell Version | .NET Target | Notes |
+|---|---|---|
+| 5.1 (Windows PowerShell) | net48 (.NET Framework 4.8) | Full feature parity |
+| 7.2, 7.4, 7.5 | net8.0 | Full feature parity |
+
+All public API surface compiles and functions correctly on both targets.
+
+## Installation
+
+This module is distributed via private GitHub releases (not PSGallery).
+
+```powershell
+# Download the latest release from GitHub
+# Extract to a directory in your PSModulePath
+
+# Verify installation
+Get-Module -ListAvailable PSProxmoxVE
+Import-Module PSProxmoxVE
+```
+
+## Quick Start
+
+### Connect to a Proxmox VE Server
+
+```powershell
+# Using username/password (ticket-based authentication)
+$cred = Get-Credential -UserName 'root@pam'
+Connect-PveServer -Server 'pve.example.com' -Credential $cred -SkipCertificateCheck
+
+# Using API token
+Connect-PveServer -Server 'pve.example.com' -ApiToken 'root@pam!mytoken=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+
+# Verify connection
+Test-PveConnection -Detailed
+```
+
+### List and Manage VMs
+
+```powershell
+# List all VMs
+Get-PveVm
+
+# List VMs on a specific node
+Get-PveVm -Node 'pve1'
+
+# Filter by status
+Get-PveVm -Status 'running'
+
+# Start/stop VMs
+Get-PveVm -Name 'my-vm' | Start-PveVm -Wait
+Get-PveVm -Name 'my-vm' | Stop-PveVm -Wait
+
+# Clone a VM
+Get-PveVm -VmId 100 | Copy-PveVm -NewVmId 200 -NewName 'my-clone' -Full -Wait
+
+# Get VM configuration
+Get-PveVm -VmId 100 | Get-PveVmConfig
+```
+
+### Upload an ISO
+
+```powershell
+# Upload a local ISO file to Proxmox storage
+Send-PveIso -Node 'pve1' -Storage 'local' -Path './ubuntu-24.04-live-server-amd64.iso' -Wait
+```
+
+> **Note:** `Send-PveIso` implements a workaround for a long-standing Proxmox API multipart parsing bug
+> ([bugzilla 7389](https://bugzilla.proxmox.com/show_bug.cgi?id=7389)). Standard multipart HTTP libraries
+> (including .NET's `MultipartFormDataContent`) add sub-headers that Proxmox's `pveproxy` mishandles,
+> resulting in corrupt uploads. This cmdlet constructs the multipart body manually to ensure correct uploads
+> where other tools may produce corrupt files.
+
+### Work with Snapshots
+
+```powershell
+# List snapshots
+Get-PveVm -VmId 100 | Get-PveSnapshot
+
+# Create a snapshot
+Get-PveVm -VmId 100 | New-PveSnapshot -Name 'before-upgrade' -Description 'Snapshot before OS upgrade' -Wait
+
+# Rollback
+Get-PveVm -VmId 100 | Get-PveSnapshot | Where-Object Name -eq 'before-upgrade' | Restore-PveSnapshot -Wait
+```
+
+### Cloud-Init Configuration
+
+```powershell
+# Get current cloud-init config
+Get-PveVm -VmId 100 | Get-PveCloudInitConfig
+
+# Set cloud-init config
+Get-PveVm -VmId 100 | Set-PveCloudInitConfig -Hostname 'web01' -User 'admin' -SshKeys @('ssh-ed25519 AAAA...') -IpConfig 'ip=dhcp' -Wait
+
+# Regenerate cloud-init image after changes
+Get-PveVm -VmId 100 | Invoke-PveCloudInitRegenerate -Wait
+```
+
+## Authentication Guide
+
+### Username/Password (Ticket-Based)
+
+Ticket authentication uses Proxmox's built-in session system. The module POSTs to `/api2/json/access/ticket` and stores the returned ticket cookie and CSRF token.
+
+- **Format:** `user@realm` (e.g., `root@pam`, `admin@pve`, `user@mydomain`)
+- **Expiry:** Tickets expire after 2 hours. The module detects expiry and prompts you to reconnect.
+- **Realms:** Supports all Proxmox realms — `pam`, `pve`, custom LDAP/AD realms.
+- **When to use:** Interactive sessions, ad-hoc management tasks.
+
+```powershell
+$cred = Get-Credential -UserName 'admin@pve'
+Connect-PveServer -Server 'pve.example.com' -Credential $cred
+```
+
+### API Token
+
+API tokens provide persistent, non-expiring authentication. They are the recommended approach for automation.
+
+- **Format:** `USER@REALM!TOKENID=UUID` (e.g., `root@pam!automation=12345678-abcd-efgh-ijkl-123456789012`)
+- **No expiry:** Tokens remain valid until explicitly revoked.
+- **When to use:** Automation, scripts, CI/CD pipelines.
+
+**Creating an API token in the PVE UI:**
+1. Navigate to **Datacenter → Permissions → API Tokens**
+2. Click **Add**
+3. Select the user, enter a token ID, optionally uncheck "Privilege Separation"
+4. Copy the token value — it is shown only once
+
+```powershell
+Connect-PveServer -Server 'pve.example.com' -ApiToken 'root@pam!automation=12345678-abcd-efgh-ijkl-123456789012'
+```
+
+## Multi-Cluster Usage
+
+Every cmdlet accepts an optional `-Session` parameter. This enables managing multiple Proxmox VE clusters simultaneously:
+
+```powershell
+# Connect to two clusters
+$prod = Connect-PveServer -Server 'pve-prod.example.com' -ApiToken $prodToken -PassThru
+$dev = Connect-PveServer -Server 'pve-dev.example.com' -ApiToken $devToken -PassThru
+
+# Query each cluster explicitly
+$prodVms = Get-PveVm -Session $prod
+$devVms = Get-PveVm -Session $dev
+
+# The last Connect-PveServer call sets the default session
+# So Get-PveVm without -Session uses $dev
+Get-PveVm  # Uses $dev session
+```
+
+## SDN Management
+
+Software-Defined Networking (SDN) features require **Proxmox VE 8.0 or later**.
+
+```powershell
+# List SDN zones and VNets
+Get-PveSdnZone
+Get-PveSdnVnet
+
+# Create a new zone
+New-PveSdnZone -Zone 'myzone' -Type 'simple'
+
+# Create a VNet
+New-PveSdnVnet -Vnet 'myvnet' -Zone 'myzone' -Tag 100
+```
+
+If connected to a PVE server below version 8.0, SDN cmdlets will throw a clear error:
+
+```
+SDN management requires Proxmox VE 8.0 or later. Connected server is version 7.4.
+```
+
+## Cmdlet Reference
+
+### Connection
+| Cmdlet | Description |
+|---|---|
+| `Connect-PveServer` | Establish a session to a Proxmox VE server |
+| `Disconnect-PveServer` | Close the active session |
+| `Test-PveConnection` | Test if the current session is valid |
+
+### Nodes
+| Cmdlet | Description |
+|---|---|
+| `Get-PveNode` | List cluster nodes |
+| `Get-PveNodeStatus` | Get detailed node status |
+
+### Virtual Machines
+| Cmdlet | Description |
+|---|---|
+| `Get-PveVm` | List VMs with optional filters |
+| `New-PveVm` | Create a new VM |
+| `Remove-PveVm` | Delete a VM |
+| `Start-PveVm` | Start a VM |
+| `Stop-PveVm` | Stop a VM (hard) |
+| `Restart-PveVm` | Graceful restart (shutdown + start) |
+| `Suspend-PveVm` | Suspend a VM |
+| `Resume-PveVm` | Resume a suspended VM |
+| `Reset-PveVm` | Hard reset a VM |
+| `Copy-PveVm` | Clone a VM (full or linked) |
+| `Move-PveVm` | Migrate a VM to another node |
+| `Get-PveVmConfig` | Get VM configuration |
+| `Set-PveVmConfig` | Modify VM configuration |
+| `Resize-PveVmDisk` | Resize a VM disk |
+
+### Containers
+| Cmdlet | Description |
+|---|---|
+| `Get-PveContainer` | List LXC containers |
+| `New-PveContainer` | Create a new container |
+| `Remove-PveContainer` | Delete a container |
+| `Start-PveContainer` | Start a container |
+| `Stop-PveContainer` | Stop a container |
+| `Restart-PveContainer` | Restart a container |
+| `Copy-PveContainer` | Clone a container |
+| `Get-PveContainerConfig` | Get container configuration |
+| `Set-PveContainerConfig` | Modify container configuration |
+
+### Storage
+| Cmdlet | Description |
+|---|---|
+| `Get-PveStorage` | List storage pools |
+| `Get-PveStorageContent` | List storage content (ISOs, images, etc.) |
+| `Send-PveIso` | Upload a local ISO file |
+| `Invoke-PveStorageDownload` | Download a URL to storage (server-side) |
+| `New-PveStorage` | Create a storage pool |
+| `Remove-PveStorage` | Remove a storage pool |
+
+### Snapshots
+| Cmdlet | Description |
+|---|---|
+| `Get-PveSnapshot` | List VM snapshots |
+| `New-PveSnapshot` | Create a snapshot |
+| `Remove-PveSnapshot` | Delete a snapshot |
+| `Restore-PveSnapshot` | Rollback to a snapshot |
+
+### Network
+| Cmdlet | Description |
+|---|---|
+| `Get-PveNetwork` | List network interfaces |
+| `New-PveNetwork` | Create a network interface |
+| `Set-PveNetwork` | Modify a network interface |
+| `Remove-PveNetwork` | Delete a network interface |
+| `Invoke-PveNetworkApply` | Apply pending network changes |
+
+### SDN (PVE 8.0+)
+| Cmdlet | Description |
+|---|---|
+| `Get-PveSdnZone` | List SDN zones |
+| `New-PveSdnZone` | Create an SDN zone |
+| `Remove-PveSdnZone` | Delete an SDN zone |
+| `Get-PveSdnVnet` | List SDN VNets |
+| `New-PveSdnVnet` | Create an SDN VNet |
+| `Remove-PveSdnVnet` | Delete an SDN VNet |
+
+### Users & Permissions
+| Cmdlet | Description |
+|---|---|
+| `Get-PveUser` | List users |
+| `New-PveUser` | Create a user |
+| `Remove-PveUser` | Delete a user |
+| `Set-PveUser` | Modify a user |
+| `Get-PveRole` | List roles |
+| `New-PveRole` | Create a role |
+| `Remove-PveRole` | Delete a role |
+| `Get-PvePermission` | List permissions |
+| `Set-PvePermission` | Set a permission |
+
+### Templates
+| Cmdlet | Description |
+|---|---|
+| `Get-PveTemplate` | List VM templates |
+| `New-PveTemplate` | Convert a VM to a template |
+| `Remove-PveTemplate` | Delete a template |
+| `New-PveVmFromTemplate` | Create a VM from a template |
+
+### Cloud-Init
+| Cmdlet | Description |
+|---|---|
+| `Get-PveCloudInitConfig` | Get cloud-init configuration |
+| `Set-PveCloudInitConfig` | Set cloud-init configuration |
+| `Invoke-PveCloudInitRegenerate` | Regenerate cloud-init image |
+
+### Tasks
+| Cmdlet | Description |
+|---|---|
+| `Get-PveTask` | Get task status |
+| `Wait-PveTask` | Wait for a task to complete |
+
+## Known Limitations (v1)
+
+- **No automatic retries**: Failed API calls are not retried. Implement your own retry logic if needed.
+- **Integration tests require live node**: Integration tests require a dedicated Proxmox VE test node. See `tests/PSProxmoxVE.Tests/Integration/README.md`.
+- **No Ceph management**: Ceph pool/OSD/monitor management is not included in v1.
+- **No PBS integration**: Proxmox Backup Server operations are not included in v1.
+- **Task waiting**: `Wait-PveTask` polls with a minimum 1-second interval. For high-frequency monitoring, use the PVE web UI.
+
+## Contributing
+
+1. Clone the repository
+2. Open `PSProxmoxVE.sln` in your IDE
+3. Build: `dotnet build`
+4. Run unit tests: `./tools/Invoke-Tests.ps1`
+5. Run integration tests (requires live PVE node): `./tools/Invoke-Tests.ps1 -Tier Integration`
+
+### Commit Convention
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/):
+
+- `feat:` — new feature
+- `fix:` — bug fix
+- `test:` — test additions or changes
+- `ci:` — CI/CD changes
+- `docs:` — documentation changes
+- `refactor:` — code refactoring
+
+## License
+
+[MIT](LICENSE)
