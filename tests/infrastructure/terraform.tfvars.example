@@ -1,0 +1,18 @@
+# Connection to your existing Proxmox host
+proxmox_endpoint  = "https://pve.example.com:8006"
+proxmox_api_token = "root@pam!terraform=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+target_node       = "pve"
+
+# Path to PVE ISO (download from proxmox.com/en/downloads)
+iso_file = "/path/to/proxmox-ve_9.1-1.iso"
+
+# Network config for nested PVE (must be routable from CI runner)
+test_vm_ip      = "192.168.1.200"
+test_vm_gateway = "192.168.1.1"
+
+# Optional overrides
+# cores          = 4
+# memory         = 8192
+# disk_size      = 64
+# disk_storage   = "local-lvm"
+# network_bridge = "vmbr0"
