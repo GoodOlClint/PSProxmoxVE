@@ -1,0 +1,132 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  pester-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            ps_version: '5.1'
+            framework: net48
+            shell: powershell
+          - os: windows-latest
+            ps_version: '7.2'
+            framework: net8.0
+            shell: pwsh
+          - os: windows-latest
+            ps_version: '7.5'
+            framework: net8.0
+            shell: pwsh
+          - os: ubuntu-latest
+            ps_version: '7.2'
+            framework: net8.0
+            shell: pwsh
+          - os: ubuntu-latest
+            ps_version: '7.5'
+            framework: net8.0
+            shell: pwsh
+          - os: macos-latest
+            ps_version: '7.5'
+            framework: net8.0
+            shell: pwsh
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install PowerShell 7.2 (Windows)
+        if: matrix.ps_version == '7.2' && matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          winget install --id Microsoft.PowerShell --version 7.2 --accept-source-agreements --accept-package-agreements --silent
+        continue-on-error: true
+
+      - name: Install PowerShell 7.2 (Linux)
+        if: matrix.ps_version == '7.2' && matrix.os == 'ubuntu-latest'
+        run: |
+          wget -q https://github.com/PowerShell/PowerShell/releases/download/v7.2.24/powershell_7.2.24-1.deb_amd64.deb
+          sudo dpkg -i powershell_7.2.24-1.deb_amd64.deb
+          sudo apt-get install -f -y
+
+      - name: Build module
+        run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework ${{ matrix.framework }} --output ./publish/${{ matrix.framework }}
+
+      - name: Install Pester 5 (PS 5.1)
+        if: matrix.ps_version == '5.1'
+        shell: powershell
+        run: |
+          Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser -SkipPublisherCheck
+
+      - name: Install Pester 5 (PS 7.x)
+        if: matrix.ps_version != '5.1'
+        shell: pwsh
+        run: |
+          Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser
+
+      - name: Copy module to module path (PS 5.1)
+        if: matrix.ps_version == '5.1'
+        shell: powershell
+        run: |
+          $modulePath = "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\PSProxmoxVE"
+          New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
+          Copy-Item -Path .\publish\${{ matrix.framework }}\* -Destination $modulePath -Recurse -Force
+
+      - name: Copy module to module path (PS 7.x, Windows)
+        if: matrix.ps_version != '5.1' && matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $modulePath = "$env:USERPROFILE\Documents\PowerShell\Modules\PSProxmoxVE"
+          New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
+          Copy-Item -Path .\publish\${{ matrix.framework }}\* -Destination $modulePath -Recurse -Force
+
+      - name: Copy module to module path (PS 7.x, non-Windows)
+        if: matrix.ps_version != '5.1' && matrix.os != 'windows-latest'
+        shell: pwsh
+        run: |
+          $modulePath = "$HOME/.local/share/powershell/Modules/PSProxmoxVE"
+          New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
+          Copy-Item -Path ./publish/${{ matrix.framework }}/* -Destination $modulePath -Recurse -Force
+
+      - name: Create TestResults directory (PS 5.1)
+        if: matrix.ps_version == '5.1'
+        shell: powershell
+        run: New-Item -ItemType Directory -Path TestResults -Force | Out-Null
+
+      - name: Create TestResults directory (PS 7.x)
+        if: matrix.ps_version != '5.1'
+        shell: pwsh
+        run: New-Item -ItemType Directory -Path TestResults -Force | Out-Null
+
+      - name: Run Pester tests (PS 5.1)
+        if: matrix.ps_version == '5.1'
+        shell: powershell
+        run: |
+          Import-Module Pester -MinimumVersion 5.0
+          Invoke-Pester tests/PSProxmoxVE.Tests -ExcludeTag Integration -CI -OutputFormat NUnitXml -OutputFile TestResults/pester-results.xml
+
+      - name: Run Pester tests (PS 7.x)
+        if: matrix.ps_version != '5.1'
+        shell: pwsh
+        run: |
+          Import-Module Pester -MinimumVersion 5.0
+          Invoke-Pester tests/PSProxmoxVE.Tests -ExcludeTag Integration -CI -OutputFormat NUnitXml -OutputFile TestResults/pester-results.xml
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pester-results-${{ matrix.os }}-ps${{ matrix.ps_version }}
+          path: TestResults/

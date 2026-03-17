@@ -1,0 +1,51 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-net48:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build net48
+        run: dotnet build --configuration Release --framework net48 --no-restore
+      - name: Test net48
+        run: dotnet test tests/PSProxmoxVE.Core.Tests/PSProxmoxVE.Core.Tests.csproj --configuration Release --framework net48 --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-net48
+          path: ./coverage
+
+  build-net8:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build net8.0
+        run: dotnet build --configuration Release --framework net8.0 --no-restore
+      - name: Test net8.0
+        run: dotnet test tests/PSProxmoxVE.Core.Tests/PSProxmoxVE.Core.Tests.csproj --configuration Release --framework net8.0 --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-net8-${{ matrix.os }}
+          path: ./coverage

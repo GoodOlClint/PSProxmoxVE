@@ -1,0 +1,65 @@
+name: Integration Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      pve_host:
+        description: 'Proxmox VE host (overrides secret)'
+        required: false
+        type: string
+
+# Integration tests require a live Proxmox VE node.
+# Configure these repository secrets when a test node is available:
+#   PVETEST_HOST       - Hostname or IP of the PVE node
+#   PVETEST_PORT       - API port (default 8006)
+#   PVETEST_APITOKEN   - API token in USER@REALM!TOKENID=UUID format
+#   PVETEST_NODE       - Node name to run tests against
+#   PVETEST_STORAGE    - Storage name for upload tests
+#   PVETEST_ISO_PATH   - Local path to a test ISO file
+#
+# WARNING: Integration tests create and destroy real VMs, upload files,
+# and modify network configuration. Never run against production.
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Check required secrets
+        id: check-secrets
+        run: |
+          if [ -z "${{ secrets.PVETEST_HOST }}" ] || [ -z "${{ secrets.PVETEST_APITOKEN }}" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "::warning::Integration tests skipped - required secrets not configured"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+      - name: Build module
+        if: steps.check-secrets.outputs.skip != 'true'
+        run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework net8.0
+      - name: Install Pester
+        if: steps.check-secrets.outputs.skip != 'true'
+        shell: pwsh
+        run: Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser
+      - name: Run integration tests
+        if: steps.check-secrets.outputs.skip != 'true'
+        shell: pwsh
+        env:
+          PVETEST_HOST: ${{ inputs.pve_host || secrets.PVETEST_HOST }}
+          PVETEST_PORT: ${{ secrets.PVETEST_PORT || '8006' }}
+          PVETEST_APITOKEN: ${{ secrets.PVETEST_APITOKEN }}
+          PVETEST_NODE: ${{ secrets.PVETEST_NODE }}
+          PVETEST_STORAGE: ${{ secrets.PVETEST_STORAGE }}
+          PVETEST_ISO_PATH: ${{ secrets.PVETEST_ISO_PATH }}
+        run: |
+          Invoke-Pester tests/PSProxmoxVE.Tests/Integration -Tag Integration -CI -OutputFormat NUnitXml -OutputFile TestResults/integration-results.xml
+      - name: Upload test results
+        if: always() && steps.check-secrets.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: TestResults/
