@@ -130,9 +130,12 @@ jobs:
             "${{ steps.terraform.outputs.vm_id }}" \
             "${PVE_PASSWORD}" \
             900)
-          echo "$OUTPUT"
           VM_IP=$(echo "$OUTPUT" | grep "^IP=" | cut -d= -f2)
           VM_TOKEN=$(echo "$OUTPUT" | grep "^TOKEN=" | cut -d= -f2-)
+          # Mask sensitive values before they appear in logs
+          echo "::add-mask::${VM_IP}"
+          echo "::add-mask::${VM_TOKEN}"
+          echo "Nested PVE ready at ${VM_IP}"
           echo "host=${VM_IP}" >> "$GITHUB_OUTPUT"
           echo "token=${VM_TOKEN}" >> "$GITHUB_OUTPUT"
 
