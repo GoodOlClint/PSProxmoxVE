@@ -221,4 +221,13 @@ jobs:
           TF_VAR_target_node: ${{ secrets.PVE_TARGET_NODE }}
           TF_VAR_iso_local_path: /tmp/${{ steps.iso.outputs.filename }}
           TF_VAR_test_vm_password: ${{ env.PVE_PASSWORD }}
-        run: terraform destroy -auto-approve -input=false
+        run: |
+          terraform init -input=false
+          # Clear stale lock from cancelled runs
+          if [ -f .terraform.tfstate.lock.info ]; then
+            LOCK_ID=$(python3 -c "import json; print(json.load(open('.terraform.tfstate.lock.info'))['ID'])")
+            terraform force-unlock -force "$LOCK_ID" || true
+          fi
+          terraform destroy -auto-approve -input=false || true
+          # Clean up state so next run starts fresh
+          rm -f terraform.tfstate terraform.tfstate.backup .terraform.tfstate.lock.info
