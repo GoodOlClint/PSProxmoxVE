@@ -27,21 +27,7 @@ BeforeAll {
     # -----------------------------------------------------------------------
     # Resolve and import module
     # -----------------------------------------------------------------------
-    $moduleRoot = Resolve-Path (Join-Path $PSScriptRoot '../../../src/PSProxmoxVE')
-    $dllCandidates = @(
-        Join-Path $moduleRoot 'bin/Debug/net9.0/PSProxmoxVE.dll'
-        Join-Path $moduleRoot 'bin/Release/net9.0/PSProxmoxVE.dll'
-        Join-Path $moduleRoot 'bin/Debug/net48/PSProxmoxVE.dll'
-        Join-Path $moduleRoot 'bin/Release/net48/PSProxmoxVE.dll'
-    )
-
-    $moduleDll = $dllCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-
-    if ($null -eq $moduleDll) {
-        throw "PSProxmoxVE.dll not found. Build the project before running Pester tests."
-    }
-
-    Import-Module $moduleDll -Force -ErrorAction Stop
+    . $PSScriptRoot/../_TestHelper.ps1
 
     # -----------------------------------------------------------------------
     # Check required environment variables

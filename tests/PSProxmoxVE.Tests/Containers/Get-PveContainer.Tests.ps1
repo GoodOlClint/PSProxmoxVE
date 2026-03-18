@@ -10,21 +10,7 @@
 #>
 
 BeforeAll {
-    $moduleRoot = Resolve-Path (Join-Path $PSScriptRoot '../../../src/PSProxmoxVE')
-    $dllCandidates = @(
-        Join-Path $moduleRoot 'bin/Debug/net9.0/PSProxmoxVE.dll'
-        Join-Path $moduleRoot 'bin/Release/net9.0/PSProxmoxVE.dll'
-        Join-Path $moduleRoot 'bin/Debug/net48/PSProxmoxVE.dll'
-        Join-Path $moduleRoot 'bin/Release/net48/PSProxmoxVE.dll'
-    )
-
-    $script:ModuleDll = $dllCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-
-    if ($null -eq $script:ModuleDll) {
-        throw "PSProxmoxVE.dll not found. Build the project before running Pester tests."
-    }
-
-    Import-Module $script:ModuleDll -Force -ErrorAction Stop
+    . $PSScriptRoot/../_TestHelper.ps1
 
     $script:CmdExists = $null -ne (Get-Command 'Get-PveContainer' -ErrorAction SilentlyContinue)
 }
@@ -34,7 +20,7 @@ Describe 'Get-PveContainer' {
     Context 'Command existence' {
         It 'Get-PveContainer should be listed in the module manifest CmdletsToExport' {
             # The .psd1 declares the cmdlet; implementation may be pending.
-            $manifestPath = Join-Path $moduleRoot 'PSProxmoxVE.psd1'
+            $manifestPath = Join-Path (Get-Module PSProxmoxVE).ModuleBase 'PSProxmoxVE.psd1'
             if (Test-Path $manifestPath) {
                 $manifest = Import-PowerShellDataFile $manifestPath
                 $manifest.CmdletsToExport | Should -Contain 'Get-PveContainer'

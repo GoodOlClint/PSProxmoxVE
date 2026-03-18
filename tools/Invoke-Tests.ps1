@@ -270,7 +270,7 @@ function Invoke-PesterUnitTests {
 
         $config = New-PesterConfiguration
         $config.Run.Path          = $pesterTestDir
-        $config.Filter.ExcludeTag = @('Integration', 'MockIntegration')
+        $config.Filter.ExcludeTag = @('Integration')
         $config.Output.Verbosity  = 'Detailed'
         $config.Run.PassThru      = $true
 

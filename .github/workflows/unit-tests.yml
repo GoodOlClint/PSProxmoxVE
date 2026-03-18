@@ -96,7 +96,7 @@ jobs:
           $config = New-PesterConfiguration
           $config.Run.Path = "tests/PSProxmoxVE.Tests"
           $config.Run.Exit = $true
-          $config.Filter.ExcludeTag = @("Integration", "MockIntegration")
+          $config.Filter.ExcludeTag = @("Integration")
           $config.Output.Verbosity = "Detailed"
           $config.TestResult.Enabled = $true
           $config.TestResult.OutputFormat = "NUnitXml"
@@ -111,7 +111,7 @@ jobs:
           $config = New-PesterConfiguration
           $config.Run.Path = "tests/PSProxmoxVE.Tests"
           $config.Run.Exit = $true
-          $config.Filter.ExcludeTag = @("Integration", "MockIntegration")
+          $config.Filter.ExcludeTag = @("Integration")
           $config.Output.Verbosity = "Detailed"
           $config.TestResult.Enabled = $true
           $config.TestResult.OutputFormat = "NUnitXml"

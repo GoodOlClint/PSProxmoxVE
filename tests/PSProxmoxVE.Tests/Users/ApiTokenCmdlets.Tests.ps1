@@ -9,21 +9,7 @@
 #>
 
 BeforeAll {
-    $moduleRoot = Resolve-Path (Join-Path $PSScriptRoot '../../../src/PSProxmoxVE')
-    $dllCandidates = @(
-        Join-Path $moduleRoot 'bin/Debug/net9.0/PSProxmoxVE.dll'
-        Join-Path $moduleRoot 'bin/Release/net9.0/PSProxmoxVE.dll'
-        Join-Path $moduleRoot 'bin/Debug/net48/PSProxmoxVE.dll'
-        Join-Path $moduleRoot 'bin/Release/net48/PSProxmoxVE.dll'
-    )
-
-    $script:ModuleDll = $dllCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-
-    if ($null -eq $script:ModuleDll) {
-        throw "PSProxmoxVE.dll not found. Build the project before running Pester tests."
-    }
-
-    Import-Module $script:ModuleDll -Force -ErrorAction Stop
+    . $PSScriptRoot/../_TestHelper.ps1
 
     $allNames = @('Get-PveApiToken', 'New-PveApiToken', 'Remove-PveApiToken')
 
@@ -44,7 +30,7 @@ BeforeAll {
 # ---------------------------------------------------------------------------
 Describe 'API Token cmdlets — manifest declarations' {
     BeforeAll {
-        $manifestPath = Join-Path $moduleRoot 'PSProxmoxVE.psd1'
+        $manifestPath = Join-Path (Get-Module PSProxmoxVE).ModuleBase 'PSProxmoxVE.psd1'
         $script:Manifest = if (Test-Path $manifestPath) { Import-PowerShellDataFile $manifestPath } else { $null }
     }
 
