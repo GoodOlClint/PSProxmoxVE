@@ -69,9 +69,12 @@ jobs:
         env:
           PVETEST_HOST: ${{ inputs.pve_host || secrets.PVETEST_HOST }}
           PVETEST_PORT: ${{ secrets.PVETEST_PORT || '8006' }}
+          PVETEST_APITOKEN: ${{ secrets.PVETEST_APITOKEN }}
         run: |
           echo "Testing connectivity to PVE API at ${PVETEST_HOST}:${PVETEST_PORT}..."
-          if curl -sk --connect-timeout 10 "https://${PVETEST_HOST}:${PVETEST_PORT}/api2/json/version" | grep -q '"version"'; then
+          if curl -sk --connect-timeout 10 \
+              -H "Authorization: PVEAPIToken=${PVETEST_APITOKEN}" \
+              "https://${PVETEST_HOST}:${PVETEST_PORT}/api2/json/nodes" | grep -q '"node"'; then
             echo "PVE API is responsive"
           else
             echo "::error::Cannot reach PVE API at ${PVETEST_HOST}:${PVETEST_PORT}"
