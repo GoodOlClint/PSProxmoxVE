@@ -53,24 +53,19 @@ variable "disk_size" {
 variable "disk_storage" {
   description = "Proxmox storage pool for VM disks (must support raw format)"
   type        = string
-  default     = "local-lvm"
+  default     = "nas-iscsi-lvm"
 }
 
-variable "iso_storage" {
-  description = "Proxmox storage pool for uploading the PVE ISO"
+variable "iso_file_id" {
+  description = "Proxmox file ID of the PVE installation ISO (e.g. nas-nfs:iso/proxmox-ve_9.1-1.iso)"
   type        = string
-  default     = "local"
-}
-
-variable "iso_file" {
-  description = "Local path to the Proxmox VE installation ISO file"
-  type        = string
+  default     = "nas-nfs:iso/proxmox-ve_9.1-1.iso"
 }
 
 variable "network_bridge" {
   description = "Network bridge on the host to attach the nested PVE VM to"
   type        = string
-  default     = "vmbr0"
+  default     = "Core"
 }
 
 variable "test_vm_ip" {
@@ -102,8 +97,3 @@ variable "test_vm_password" {
   default     = "Testpass123!"
 }
 
-variable "answer_file_storage" {
-  description = "Proxmox storage pool for the answer file snippet (must support snippets content type)"
-  type        = string
-  default     = "local"
-}

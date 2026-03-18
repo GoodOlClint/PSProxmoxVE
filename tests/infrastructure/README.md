@@ -53,6 +53,25 @@ This Terraform configuration provisions a throwaway nested Proxmox VE virtual ma
    terraform output -raw pve_test_api_token
    ```
 
+## Preparing the Installer ISO (one-time per PVE version)
+
+The standard PVE installer ISO has no automated install mode. Before first use — and again whenever you upgrade to a new PVE release — run the following on the Proxmox host to produce a modified ISO that tells the installer to fetch its answer file from an attached FAT partition labeled `PROXMOX-AIS`:
+
+```bash
+ssh root@<proxmox-host>
+
+# Paths are examples — adjust to match your NAS mount points
+ORIGINAL_ISO=/mnt/pve/nas-nfs/template/iso/proxmox-ve_9.1-1.iso
+MODIFIED_ISO=/mnt/pve/nas-nfs/template/iso/proxmox-ve_9.1-1-auto.iso
+
+proxmox-auto-install-assistant prepare-iso "$ORIGINAL_ISO" \
+  --fetch-from partition \
+  --partition-label proxmox-ais \
+  --output "$MODIFIED_ISO"
+```
+
+Update `iso_file_id` in `terraform.tfvars` to point to the new `*-auto.iso` file. The original ISO is left untouched.
+
 ## How It Works
 
 ### Answer File
