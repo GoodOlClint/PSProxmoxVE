@@ -20,17 +20,20 @@ BeforeAll {
 
     # Find the built module DLL
     $dllSearchPaths = @(
-        (Join-Path $PSScriptRoot '../../PSProxmoxVE.MockServer/bin/Release/net10.0/PSProxmoxVE.MockServer.dll'),
-        (Join-Path $PSScriptRoot '../../PSProxmoxVE.MockServer/bin/Debug/net10.0/PSProxmoxVE.MockServer.dll')
+        (Join-Path $PSScriptRoot '../../PSProxmoxVE.MockServer/bin/Release/net9.0/PSProxmoxVE.MockServer.dll'),
+        (Join-Path $PSScriptRoot '../../PSProxmoxVE.MockServer/bin/Debug/net9.0/PSProxmoxVE.MockServer.dll')
     )
     $mockServerDll = $dllSearchPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
 
     if (-not $mockServerDll) {
         # Build it
-        $buildOutput = dotnet build $mockServerProject --configuration Release 2>&1
+        $buildOutput = dotnet build $mockServerProject --configuration Release 2>&1 | Out-String
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to build mock server (exit code $LASTEXITCODE): $buildOutput"
+        }
         $mockServerDll = $dllSearchPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
         if (-not $mockServerDll) {
-            throw "Failed to build mock server: $buildOutput"
+            throw "Mock server build succeeded but DLL not found at expected paths: $($dllSearchPaths -join ', ')"
         }
     }
 

@@ -93,14 +93,30 @@ jobs:
         shell: powershell
         run: |
           Import-Module Pester -MinimumVersion 5.0
-          Invoke-Pester tests/PSProxmoxVE.Tests -ExcludeTag Integration -CI -OutputFormat NUnitXml -OutputFile TestResults/pester-results.xml
+          $config = New-PesterConfiguration
+          $config.Run.Path = "tests/PSProxmoxVE.Tests"
+          $config.Run.Exit = $true
+          $config.Filter.ExcludeTag = @("Integration", "MockIntegration")
+          $config.Output.Verbosity = "Detailed"
+          $config.TestResult.Enabled = $true
+          $config.TestResult.OutputFormat = "NUnitXml"
+          $config.TestResult.OutputPath = "TestResults/pester-results.xml"
+          Invoke-Pester -Configuration $config
 
       - name: Run Pester tests (PS 7.x)
         if: matrix.ps_version != '5.1'
         shell: pwsh
         run: |
           Import-Module Pester -MinimumVersion 5.0
-          Invoke-Pester tests/PSProxmoxVE.Tests -ExcludeTag Integration -CI -OutputFormat NUnitXml -OutputFile TestResults/pester-results.xml
+          $config = New-PesterConfiguration
+          $config.Run.Path = "tests/PSProxmoxVE.Tests"
+          $config.Run.Exit = $true
+          $config.Filter.ExcludeTag = @("Integration", "MockIntegration")
+          $config.Output.Verbosity = "Detailed"
+          $config.TestResult.Enabled = $true
+          $config.TestResult.OutputFormat = "NUnitXml"
+          $config.TestResult.OutputPath = "TestResults/pester-results.xml"
+          Invoke-Pester -Configuration $config
 
       - name: Upload test results
         if: always()

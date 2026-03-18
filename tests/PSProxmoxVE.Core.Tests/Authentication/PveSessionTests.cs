@@ -42,7 +42,7 @@ namespace PSProxmoxVE.Core.Tests.Authentication
         {
             var session = new PveSession(TestHostname, TestPort, false, "root@pam!mytoken=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 
-            Assert.Equal($"https://{TestHostname}:{TestPort}/api2/json", session.BaseUrl);
+            Assert.Equal($"https://{TestHostname}:{TestPort}/api2/json/", session.BaseUrl);
         }
 
         [Fact]
