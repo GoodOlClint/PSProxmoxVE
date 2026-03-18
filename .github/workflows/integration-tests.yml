@@ -82,9 +82,9 @@ jobs:
         shell: bash
         run: |
           sed "s/\${root_password}/${PVE_PASSWORD}/" \
-            ${INFRA_DIR}/answer.toml.tftpl > /tmp/answer.toml
+            ${INFRA_DIR}/answer.toml.tftpl > ${RUNNER_TEMP}/answer.toml
           echo "Generated answer file:"
-          cat /tmp/answer.toml
+          cat ${RUNNER_TEMP}/answer.toml
 
       - name: Prepare auto-install ISO
         if: inputs.skip_provision != true
@@ -92,9 +92,9 @@ jobs:
         run: |
           bash ${SCRIPTS_DIR}/prepare-auto-iso.sh \
             "${{ steps.iso.outputs.base }}" \
-            /tmp/answer.toml \
+            ${RUNNER_TEMP}/answer.toml \
             ${SCRIPTS_DIR}/first-boot.sh \
-            "/tmp/${{ steps.iso.outputs.filename }}"
+            "${RUNNER_TEMP}/${{ steps.iso.outputs.filename }}"
 
       - name: Terraform init
         if: inputs.skip_provision != true
@@ -111,7 +111,7 @@ jobs:
           TF_VAR_proxmox_endpoint: ${{ secrets.PVE_ENDPOINT }}
           TF_VAR_proxmox_api_token: ${{ secrets.PVE_API_TOKEN }}
           TF_VAR_target_node: ${{ secrets.PVE_TARGET_NODE }}
-          TF_VAR_iso_local_path: /tmp/${{ steps.iso.outputs.filename }}
+          TF_VAR_iso_local_path: ${RUNNER_TEMP}/${{ steps.iso.outputs.filename }}
           TF_VAR_test_vm_password: ${{ env.PVE_PASSWORD }}
         run: |
           terraform apply -auto-approve -input=false
@@ -190,7 +190,7 @@ jobs:
 
       - name: Create test ISO
         shell: bash
-        run: dd if=/dev/urandom of=/tmp/pvetest.iso bs=1M count=1 2>/dev/null
+        run: dd if=/dev/urandom of=${RUNNER_TEMP}/pvetest.iso bs=1M count=1 2>/dev/null
 
       - name: Run integration tests
         shell: pwsh
@@ -200,7 +200,7 @@ jobs:
           PVETEST_APITOKEN: ${{ steps.target.outputs.token }}
           PVETEST_NODE: ${{ steps.target.outputs.node }}
           PVETEST_STORAGE: ${{ steps.target.outputs.storage }}
-          PVETEST_ISO_PATH: /tmp/pvetest.iso
+          PVETEST_ISO_PATH: ${RUNNER_TEMP}/pvetest.iso
         run: |
           Import-Module Pester -MinimumVersion 5.0
           $config = New-PesterConfiguration
@@ -229,7 +229,7 @@ jobs:
           TF_VAR_proxmox_endpoint: ${{ secrets.PVE_ENDPOINT }}
           TF_VAR_proxmox_api_token: ${{ secrets.PVE_API_TOKEN }}
           TF_VAR_target_node: ${{ secrets.PVE_TARGET_NODE }}
-          TF_VAR_iso_local_path: /tmp/${{ steps.iso.outputs.filename }}
+          TF_VAR_iso_local_path: ${RUNNER_TEMP}/${{ steps.iso.outputs.filename }}
           TF_VAR_test_vm_password: ${{ env.PVE_PASSWORD }}
         run: |
           terraform init -input=false
