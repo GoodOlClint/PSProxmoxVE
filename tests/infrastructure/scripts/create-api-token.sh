@@ -2,21 +2,23 @@
 # Wait for a fresh nested PVE instance to boot, discover its IP via the QEMU guest agent,
 # then wait for the PVE API and create an API token.
 #
-# Usage: create-api-token.sh <parent-pve-host> <parent-api-token> <vm-id> <root-password> [max-wait-seconds]
+# Usage: create-api-token.sh <parent-pve-endpoint> <parent-api-token> <vm-id> <root-password> [max-wait-seconds]
+#   parent-pve-endpoint: Full URL e.g. https://172.16.100.150:8006
 #   Outputs two lines:
 #     IP=<discovered-ip>
 #     TOKEN=root@pam!integration=<secret>
 set -euo pipefail
 
-PARENT_HOST="$1"
+PARENT_ENDPOINT="${1%/}"
 PARENT_TOKEN="$2"
 VM_ID="$3"
 ROOT_PASSWORD="$4"
 MAX_WAIT="${5:-600}"
 INTERVAL=10
-PARENT_API="https://${PARENT_HOST}/api2/json"
-PARENT_NODE=$(curl -sk -H "Authorization: PVEAPIToken=${PARENT_TOKEN}" \
-    "${PARENT_API}/nodes" | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['node'])")
+PARENT_API="${PARENT_ENDPOINT}/api2/json"
+NODES_JSON=$(curl -sk -H "Authorization: PVEAPIToken=${PARENT_TOKEN}" \
+    "${PARENT_API}/nodes")
+PARENT_NODE=$(echo "$NODES_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['node'])")
 
 # --- Phase 1: Discover IP via QEMU guest agent ---
 echo "Waiting for guest agent on VM ${VM_ID} (node: ${PARENT_NODE})..."
@@ -60,7 +62,7 @@ fi
 NESTED_API="https://${VM_IP}:8006/api2/json"
 echo "Waiting for nested PVE API at ${NESTED_API}..."
 while [ $elapsed -lt $MAX_WAIT ]; do
-    if curl -sk --connect-timeout 5 "${NESTED_API}/version" 2>/dev/null | grep -q '"version"'; then
+    if curl -sk --connect-timeout 5 "${NESTED_API}/access/domains" 2>/dev/null | grep -q '"realm"'; then
         echo "Nested PVE API is responsive after ${elapsed}s"
         break
     fi

@@ -50,12 +50,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ── Provision nested PVE ───────────────────────────────────────────
+      # ── Pre-flight cleanup ─────────────────────────────────────────────
 
-      - name: Select PVE ISO
+      - name: Pre-flight cleanup
         if: inputs.skip_provision != true
-        id: iso
         shell: bash
+        id: iso
+        env:
+          PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
         run: |
           VERSION="${{ inputs.pve_version || '9' }}"
           if [ "$VERSION" = "9" ]; then
@@ -65,6 +67,15 @@ jobs:
             echo "base=/opt/pve-isos/proxmox-ve_8.4-1.iso" >> "$GITHUB_OUTPUT"
             echo "filename=proxmox-ve_8.4-1-auto.iso" >> "$GITHUB_OUTPUT"
           fi
+
+          bash ${SCRIPTS_DIR}/preflight-cleanup.sh \
+            "${{ secrets.PVE_ENDPOINT }}" \
+            "${PVE_API_TOKEN}" \
+            99900 \
+            "auto.iso" \
+            "${INFRA_DIR}"
+
+      # ── Provision nested PVE ───────────────────────────────────────────
 
       - name: Generate answer file
         if: inputs.skip_provision != true
@@ -113,9 +124,8 @@ jobs:
         env:
           PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
         run: |
-          PARENT_HOST=$(echo '${{ secrets.PVE_ENDPOINT }}' | sed -E 's|https?://||;s|:.*||')
           OUTPUT=$(bash ${SCRIPTS_DIR}/create-api-token.sh \
-            "${PARENT_HOST}" \
+            "${{ secrets.PVE_ENDPOINT }}" \
             "${PVE_API_TOKEN}" \
             "${{ steps.terraform.outputs.vm_id }}" \
             "${PVE_PASSWORD}" \
@@ -223,11 +233,18 @@ jobs:
           TF_VAR_test_vm_password: ${{ env.PVE_PASSWORD }}
         run: |
           terraform init -input=false
-          # Clear stale lock from cancelled runs
-          if [ -f .terraform.tfstate.lock.info ]; then
-            LOCK_ID=$(python3 -c "import json; print(json.load(open('.terraform.tfstate.lock.info'))['ID'])")
-            terraform force-unlock -force "$LOCK_ID" || true
-          fi
           terraform destroy -auto-approve -input=false || true
-          # Clean up state so next run starts fresh
           rm -f terraform.tfstate terraform.tfstate.backup .terraform.tfstate.lock.info
+
+      - name: Final cleanup
+        if: always() && inputs.skip_provision != true
+        shell: bash
+        env:
+          PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
+        run: |
+          bash ${SCRIPTS_DIR}/preflight-cleanup.sh \
+            "${{ secrets.PVE_ENDPOINT }}" \
+            "${PVE_API_TOKEN}" \
+            99900 \
+            "${{ steps.iso.outputs.filename }}" \
+            "${INFRA_DIR}" || true
