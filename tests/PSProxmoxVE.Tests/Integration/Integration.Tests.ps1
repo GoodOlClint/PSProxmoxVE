@@ -77,7 +77,7 @@ BeforeAll {
 
     # Track resources created during the run so AfterAll can clean up.
     $script:CreatedVmIds   = [System.Collections.Generic.List[int]]::new()
-    $script:CreatedVmSnaps = [System.Collections.Generic.List[hashtable]]::new()
+    $script:TestVmId       = $null
 }
 
 AfterAll {
@@ -85,6 +85,8 @@ AfterAll {
     if ($null -eq $script:SkipReason -and $script:CreatedVmIds.Count -gt 0) {
         foreach ($vmId in $script:CreatedVmIds) {
             try {
+                Stop-PveVm -Node $script:Node -VmId $vmId -ErrorAction SilentlyContinue | Out-Null
+                Start-Sleep -Seconds 3
                 Remove-PveVm -Node $script:Node -VmId $vmId -Force -Purge -Confirm:$false -ErrorAction SilentlyContinue
             }
             catch { <# non-fatal #> }
@@ -153,7 +155,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
             { Get-PveVm -Node $script:Node -ErrorAction Stop } | Should -Not -Throw
         }
 
-        It 'Should create and remove a test VM' {
+        It 'Should create a test VM' {
             if ($script:SkipReason) { Set-ItResult -Skipped -Because $script:SkipReason; return }
 
             $task = New-PveVm `
@@ -170,34 +172,22 @@ Describe 'Integration Tests' -Tag 'Integration' {
                   Select-Object -First 1
             $vm | Should -Not -BeNullOrEmpty
 
+            $script:TestVmId = $vm.VmId
             $script:CreatedVmIds.Add($vm.VmId)
-
-            $removeTask = Remove-PveVm `
-                -Node    $script:Node `
-                -VmId    $vm.VmId `
-                -Confirm:$false `
-                -Wait
-
-            $removeTask | Should -Not -BeNullOrEmpty
-            $script:CreatedVmIds.Remove($vm.VmId) | Out-Null
         }
 
         It 'Should start and stop a VM' {
             if ($script:SkipReason) { Set-ItResult -Skipped -Because $script:SkipReason; return }
 
-            # Requires at least one VM on the test node; skip if none found.
-            $vm = Get-PveVm -Node $script:Node | Where-Object { $_.Status -eq 'stopped' } |
-                  Select-Object -First 1
-
-            if ($null -eq $vm) {
-                Set-ItResult -Skipped -Because 'No stopped VM available on the test node'
+            if ($null -eq $script:TestVmId) {
+                Set-ItResult -Skipped -Because 'No test VM was created'
                 return
             }
 
-            $startTask = Start-PveVm -Node $script:Node -VmId $vm.VmId -Wait
+            $startTask = Start-PveVm -Node $script:Node -VmId $script:TestVmId -Wait
             $startTask | Should -Not -BeNullOrEmpty
 
-            $stopTask = Stop-PveVm -Node $script:Node -VmId $vm.VmId -Wait
+            $stopTask = Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait
             $stopTask | Should -Not -BeNullOrEmpty
         }
 
@@ -260,31 +250,34 @@ Describe 'Integration Tests' -Tag 'Integration' {
         It 'Should create and remove a snapshot' {
             if ($script:SkipReason) { Set-ItResult -Skipped -Because $script:SkipReason; return }
 
-            $vm = Get-PveVm -Node $script:Node | Where-Object { $_.Status -eq 'stopped' } |
-                  Select-Object -First 1
-
-            if ($null -eq $vm) {
-                Set-ItResult -Skipped -Because 'No stopped VM available for snapshot test'
+            if ($null -eq $script:TestVmId) {
+                Set-ItResult -Skipped -Because 'No test VM was created'
                 return
+            }
+
+            # Ensure the VM is stopped for snapshot
+            $vm = Get-PveVm -Node $script:Node | Where-Object { $_.VmId -eq $script:TestVmId }
+            if ($vm.Status -eq 'running') {
+                Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait | Out-Null
             }
 
             $snapName = 'pester-snap'
 
             $createTask = New-PveSnapshot `
                 -Node        $script:Node `
-                -VmId        $vm.VmId `
+                -VmId        $script:TestVmId `
                 -Name        $snapName `
                 -Description 'Created by Pester integration test' `
                 -Wait
 
             $createTask | Should -Not -BeNullOrEmpty
 
-            $snapshots = Get-PveSnapshot -Node $script:Node -VmId $vm.VmId
+            $snapshots = Get-PveSnapshot -Node $script:Node -VmId $script:TestVmId
             $snapshots | Where-Object { $_.Name -eq $snapName } | Should -Not -BeNullOrEmpty
 
             $removeTask = Remove-PveSnapshot `
                 -Node    $script:Node `
-                -VmId    $vm.VmId `
+                -VmId    $script:TestVmId `
                 -Name    $snapName `
                 -Confirm:$false `
                 -Wait
@@ -330,16 +323,13 @@ Describe 'Integration Tests' -Tag 'Integration' {
         It 'Should get cloud-init config' {
             if ($script:SkipReason) { Set-ItResult -Skipped -Because $script:SkipReason; return }
 
-            $ciVm = Get-PveVm -Node $script:Node | Where-Object { $_.Status -eq 'stopped' } |
-                    Select-Object -First 1
-
-            if ($null -eq $ciVm) {
-                Set-ItResult -Skipped -Because 'No stopped VM available for cloud-init test'
+            if ($null -eq $script:TestVmId) {
+                Set-ItResult -Skipped -Because 'No test VM available for cloud-init test'
                 return
             }
 
             # Get-PveCloudInitConfig should not throw even if the VM has no cloud-init drive.
-            { Get-PveCloudInitConfig -Node $script:Node -VmId $ciVm.VmId -ErrorAction Stop } |
+            { Get-PveCloudInitConfig -Node $script:Node -VmId $script:TestVmId -ErrorAction Stop } |
                 Should -Not -Throw
         }
     }

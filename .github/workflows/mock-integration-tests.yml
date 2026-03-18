@@ -18,27 +18,27 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            framework: net10.0
+            framework: net9.0
             shell: pwsh
           - os: windows-latest
-            framework: net10.0
+            framework: net9.0
             shell: pwsh
 
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '9.0.x'
 
       - name: Build mock server
         run: dotnet build tests/PSProxmoxVE.MockServer/PSProxmoxVE.MockServer.csproj --configuration Release
 
       - name: Build module
-        run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework net10.0 --output ./publish/net10.0
+        run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework net9.0 --output ./publish/net9.0
 
       - name: Install Pester 5
         shell: pwsh
@@ -50,7 +50,7 @@ jobs:
         run: |
           $modulePath = "$env:USERPROFILE\Documents\PowerShell\Modules\PSProxmoxVE"
           New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
-          Copy-Item -Path .\publish\net10.0\* -Destination $modulePath -Recurse -Force
+          Copy-Item -Path .\publish\net9.0\* -Destination $modulePath -Recurse -Force
 
       - name: Copy module to module path (Linux)
         if: matrix.os != 'windows-latest'
@@ -58,7 +58,7 @@ jobs:
         run: |
           $modulePath = "$HOME/.local/share/powershell/Modules/PSProxmoxVE"
           New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
-          Copy-Item -Path ./publish/net10.0/* -Destination $modulePath -Recurse -Force
+          Copy-Item -Path ./publish/net9.0/* -Destination $modulePath -Recurse -Force
 
       - name: Run mock integration tests
         shell: pwsh

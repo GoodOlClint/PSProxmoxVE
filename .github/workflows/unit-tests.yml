@@ -17,49 +17,27 @@ jobs:
             framework: net48
             shell: powershell
           - os: windows-latest
-            ps_version: '7.2'
-            framework: net8.0
-            shell: pwsh
-          - os: windows-latest
             ps_version: '7.5'
-            framework: net8.0
-            shell: pwsh
-          - os: ubuntu-latest
-            ps_version: '7.2'
-            framework: net8.0
+            framework: net9.0
             shell: pwsh
           - os: ubuntu-latest
             ps_version: '7.5'
-            framework: net8.0
+            framework: net9.0
             shell: pwsh
           - os: macos-latest
             ps_version: '7.5'
-            framework: net8.0
+            framework: net9.0
             shell: pwsh
 
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '8.0.x'
-
-      - name: Install PowerShell 7.2 (Windows)
-        if: matrix.ps_version == '7.2' && matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          winget install --id Microsoft.PowerShell --version 7.2 --accept-source-agreements --accept-package-agreements --silent
-        continue-on-error: true
-
-      - name: Install PowerShell 7.2 (Linux)
-        if: matrix.ps_version == '7.2' && matrix.os == 'ubuntu-latest'
-        run: |
-          wget -q https://github.com/PowerShell/PowerShell/releases/download/v7.2.24/powershell_7.2.24-1.deb_amd64.deb
-          sudo dpkg -i powershell_7.2.24-1.deb_amd64.deb
-          sudo apt-get install -f -y
+          dotnet-version: '9.0.x'
 
       - name: Build module
         run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework ${{ matrix.framework }} --output ./publish/${{ matrix.framework }}
