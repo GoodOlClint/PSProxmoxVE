@@ -99,6 +99,82 @@ namespace PSProxmoxVE.Core.Services
         }
 
         // -------------------------------------------------------------------------
+        // API Tokens
+        // -------------------------------------------------------------------------
+
+        /// <summary>Returns all API tokens for the specified user.</summary>
+        public PveApiToken[] GetApiTokens(PveSession session, string userId)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentNullException(nameof(userId));
+
+            using var client = new PveHttpClient(session);
+            var encodedId = Uri.EscapeDataString(userId);
+            var response = client.GetAsync($"access/users/{encodedId}/token").GetAwaiter().GetResult();
+            var data = JObject.Parse(response)["data"];
+            var tokens = data?.ToObject<PveApiToken[]>() ?? Array.Empty<PveApiToken>();
+            foreach (var t in tokens)
+                t.UserId = userId;
+            return tokens;
+        }
+
+        /// <summary>
+        /// Creates a new API token for the specified user and returns the token object,
+        /// including the secret <c>Value</c> (shown only once).
+        /// </summary>
+        /// <param name="userId">User ID in "username@realm" format.</param>
+        /// <param name="tokenId">Token identifier (alphanumeric and hyphens).</param>
+        /// <param name="comment">Optional description.</param>
+        /// <param name="expire">Expiry as a Unix timestamp; 0 = never.</param>
+        /// <param name="privilegeSeparation">
+        /// When true, the token's effective permissions are intersected with the user's ACLs.
+        /// </param>
+        public PveApiToken CreateApiToken(
+            PveSession session,
+            string userId,
+            string tokenId,
+            string? comment = null,
+            long? expire = null,
+            bool? privilegeSeparation = null)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(userId))  throw new ArgumentNullException(nameof(userId));
+            if (string.IsNullOrWhiteSpace(tokenId)) throw new ArgumentNullException(nameof(tokenId));
+
+            var formData = new Dictionary<string, string>();
+            if (!string.IsNullOrEmpty(comment))    formData["comment"]  = comment!;
+            if (expire.HasValue)                   formData["expire"]   = expire.Value.ToString();
+            if (privilegeSeparation.HasValue)      formData["privsep"]  = privilegeSeparation.Value ? "1" : "0";
+
+            using var client = new PveHttpClient(session);
+            var encodedUser  = Uri.EscapeDataString(userId);
+            var encodedToken = Uri.EscapeDataString(tokenId);
+            var response = client.PostAsync(
+                $"access/users/{encodedUser}/token/{encodedToken}", formData)
+                .GetAwaiter().GetResult();
+
+            var data = JObject.Parse(response)["data"];
+            var token = data?.ToObject<PveApiToken>() ?? new PveApiToken();
+            token.UserId  = userId;
+            token.TokenId = tokenId;
+            return token;
+        }
+
+        /// <summary>Removes an API token.</summary>
+        public void RemoveApiToken(PveSession session, string userId, string tokenId)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(userId))  throw new ArgumentNullException(nameof(userId));
+            if (string.IsNullOrWhiteSpace(tokenId)) throw new ArgumentNullException(nameof(tokenId));
+
+            using var client = new PveHttpClient(session);
+            var encodedUser  = Uri.EscapeDataString(userId);
+            var encodedToken = Uri.EscapeDataString(tokenId);
+            client.DeleteAsync($"access/users/{encodedUser}/token/{encodedToken}")
+                .GetAwaiter().GetResult();
+        }
+
+        // -------------------------------------------------------------------------
         // Roles
         // -------------------------------------------------------------------------
 

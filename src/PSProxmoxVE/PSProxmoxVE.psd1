@@ -132,6 +132,11 @@
         'Get-PvePermission',
         'Set-PvePermission',
 
+        # API Tokens
+        'Get-PveApiToken',
+        'New-PveApiToken',
+        'Remove-PveApiToken',
+
         # Templates
         'Get-PveTemplate',
         'New-PveTemplate',
