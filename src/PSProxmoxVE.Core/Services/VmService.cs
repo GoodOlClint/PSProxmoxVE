@@ -23,6 +23,8 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Returns VMs. If <paramref name="node"/> is null, queries every cluster node.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">Optional cluster node name to filter VMs by node.</param>
         public PveVm[] GetVms(PveSession session, string? node = null)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -62,6 +64,9 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Returns a single VM by its ID on the specified node.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
         public PveVm GetVm(PveSession session, string node, int vmid)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -78,6 +83,9 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Returns the full configuration of a VM.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
         public PveVmConfig GetVmConfig(PveSession session, string node, int vmid)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -97,6 +105,10 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Updates one or more VM configuration settings. Changes are applied immediately (POST).
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
+        /// <param name="config">VM configuration parameters to update.</param>
         public void SetVmConfig(PveSession session, string node, int vmid, Dictionary<string, object> config)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -118,6 +130,9 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Creates a new VM. Returns the task UPID.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="config">VM configuration parameters.</param>
         public PveTask CreateVm(PveSession session, string node, Dictionary<string, object> config)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -134,14 +149,24 @@ namespace PSProxmoxVE.Core.Services
         }
 
         /// <summary>Starts a VM. Returns the task UPID.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
         public PveTask StartVm(PveSession session, string node, int vmid)
             => PostStatus(session, node, vmid, "start");
 
         /// <summary>Stops a VM (hard power-off). Returns the task UPID.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
         public PveTask StopVm(PveSession session, string node, int vmid)
             => PostStatus(session, node, vmid, "stop");
 
         /// <summary>Gracefully shuts down a VM. Returns the task UPID.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
+        /// <param name="timeoutSeconds">Optional shutdown timeout in seconds.</param>
         public PveTask ShutdownVm(PveSession session, string node, int vmid, int? timeoutSeconds = null)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -158,14 +183,23 @@ namespace PSProxmoxVE.Core.Services
         }
 
         /// <summary>Resets a VM (hard reset). Returns the task UPID.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
         public PveTask ResetVm(PveSession session, string node, int vmid)
             => PostStatus(session, node, vmid, "reset");
 
         /// <summary>Suspends a VM (writes RAM state to disk). Returns the task UPID.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
         public PveTask SuspendVm(PveSession session, string node, int vmid)
             => PostStatus(session, node, vmid, "suspend");
 
         /// <summary>Resumes a suspended VM. Returns the task UPID.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
         public PveTask ResumeVm(PveSession session, string node, int vmid)
             => PostStatus(session, node, vmid, "resume");
 
@@ -176,6 +210,10 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Removes a VM. Returns the task UPID.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
+        /// <param name="purge">If true, also removes all associated backup files and jobs.</param>
         public PveTask RemoveVm(PveSession session, string node, int vmid, bool purge = false)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -191,6 +229,13 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Clones a VM. Returns the task UPID.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The source VM ID to clone.</param>
+        /// <param name="newid">The VM ID for the new clone.</param>
+        /// <param name="name">Optional name for the cloned VM.</param>
+        /// <param name="targetNode">Optional target node for the clone.</param>
+        /// <param name="full">If true, creates a full clone; otherwise a linked clone.</param>
         public PveTask CloneVm(
             PveSession session,
             string node,
@@ -220,6 +265,11 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Migrates a VM to another node. Returns the task UPID.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The source cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
+        /// <param name="targetNode">The target node to migrate to.</param>
+        /// <param name="online">If true, performs an online (live) migration.</param>
         public PveTask MigrateVm(
             PveSession session,
             string node,
@@ -246,6 +296,9 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Resizes a disk attached to a VM. Returns the task UPID.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
         /// <param name="disk">Disk identifier, e.g. "scsi0" or "virtio0".</param>
         /// <param name="size">
         /// New absolute size (e.g. "32G") or relative increase with "+" prefix (e.g. "+10G").

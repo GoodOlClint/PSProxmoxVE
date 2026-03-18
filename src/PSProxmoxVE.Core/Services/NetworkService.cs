@@ -23,6 +23,8 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Returns network interface configurations for a node.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
         /// <param name="type">
         /// Optional interface type filter (e.g. "bridge", "bond", "eth", "vlan", "alias").
         /// </param>
@@ -45,6 +47,9 @@ namespace PSProxmoxVE.Core.Services
         /// Creates a network interface on a node. Changes are pending until
         /// <see cref="ApplyNetworkConfig"/> is called. Returns the new interface config.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="config">Network interface configuration parameters.</param>
         public PveNetwork CreateNetwork(
             PveSession session,
             string node,
@@ -68,6 +73,10 @@ namespace PSProxmoxVE.Core.Services
         /// Updates an existing network interface on a node. Changes are pending until
         /// <see cref="ApplyNetworkConfig"/> is called.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="iface">The network interface name.</param>
+        /// <param name="config">Network interface configuration parameters to update.</param>
         public void SetNetwork(
             PveSession session,
             string node,
@@ -91,6 +100,9 @@ namespace PSProxmoxVE.Core.Services
         /// Removes a network interface from a node. Changes are pending until
         /// <see cref="ApplyNetworkConfig"/> is called.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="iface">The network interface name to remove.</param>
         public void RemoveNetwork(PveSession session, string node, string iface)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -104,6 +116,8 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Applies pending network configuration changes on a node. Returns the task UPID.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
         public PveTask ApplyNetworkConfig(PveSession session, string node)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -122,6 +136,7 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Returns all SDN zone definitions. Requires PVE 8.0+.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
         public PveSdnZone[] GetSdnZones(PveSession session)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -136,6 +151,7 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Returns all SDN VNet definitions. Requires PVE 8.0+.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
         public PveSdnVnet[] GetSdnVnets(PveSession session)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -150,6 +166,8 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Creates an SDN zone. Requires PVE 8.0+.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="config">SDN zone configuration parameters.</param>
         public PveSdnZone CreateSdnZone(
             PveSession session,
             Dictionary<string, object> config)
@@ -171,6 +189,8 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Removes an SDN zone. Requires PVE 8.0+.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="zone">The SDN zone identifier to remove.</param>
         public void RemoveSdnZone(PveSession session, string zone)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -184,6 +204,8 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Creates an SDN VNet. Requires PVE 8.0+.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="config">SDN VNet configuration parameters.</param>
         public PveSdnVnet CreateSdnVnet(
             PveSession session,
             Dictionary<string, object> config)
@@ -205,6 +227,8 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Removes an SDN VNet. Requires PVE 8.0+.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="vnet">The SDN VNet identifier to remove.</param>
         public void RemoveSdnVnet(PveSession session, string vnet)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));

@@ -18,6 +18,8 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Returns all VM templates. If <paramref name="node"/> is null, searches all cluster nodes.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">Optional cluster node name to filter templates by node.</param>
         public PveVm[] GetTemplates(PveSession session, string? node = null)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -29,6 +31,9 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Converts an existing VM into a template. Returns the task UPID.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
         /// <remarks>
         /// The VM must be stopped and must not already be a template.
         /// Once converted, this operation cannot be reversed via the API.
@@ -47,6 +52,9 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Removes a VM template (delegates to <see cref="VmService.RemoveVm"/>).
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
         /// <param name="purge">
         /// If true, also removes all associated backup files and jobs.
         /// </param>

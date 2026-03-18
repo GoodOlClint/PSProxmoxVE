@@ -372,7 +372,7 @@ namespace PSProxmoxVE.Core.Client
                 // Some endpoints return a plain string in "message"
                 var message = json["message"]?.ToString();
                 if (!string.IsNullOrWhiteSpace(message))
-                    return message;
+                    return message!;
             }
             catch
             {

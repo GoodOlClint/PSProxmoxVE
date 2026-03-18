@@ -16,6 +16,9 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Returns all snapshots for a VM.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
         public PveSnapshot[] GetSnapshots(PveSession session, string node, int vmid)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -31,6 +34,9 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Creates a snapshot of a VM. Returns the task UPID.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
         /// <param name="snapname">Snapshot name (alphanumeric, no spaces).</param>
         /// <param name="description">Optional description.</param>
         /// <param name="vmstate">Whether to save VM RAM state (live snapshot). Default false.</param>
@@ -63,6 +69,10 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Removes a snapshot from a VM. Returns the task UPID.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
+        /// <param name="snapname">The snapshot name to remove.</param>
         public PveTask RemoveSnapshot(
             PveSession session,
             string node,
@@ -82,6 +92,10 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Rolls a VM back to a snapshot. Returns the task UPID.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
+        /// <param name="snapname">The snapshot name to roll back to.</param>
         public PveTask RollbackSnapshot(
             PveSession session,
             string node,

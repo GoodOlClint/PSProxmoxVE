@@ -56,7 +56,7 @@ namespace PSProxmoxVE.Core.Tests.Authentication
         [InlineData(null)]
         [InlineData("")]
         [InlineData("   ")]
-        public void ValidateHostname_NullOrEmpty_Throws_ForCredentials(string hostname)
+        public void ValidateHostname_NullOrEmpty_Throws_ForCredentials(string? hostname)
         {
             Assert.Throws<ArgumentException>(() =>
                 PveAuthenticator.AuthenticateWithCredentials(hostname, ValidPort, false, "root@pam", "password"));
@@ -66,7 +66,7 @@ namespace PSProxmoxVE.Core.Tests.Authentication
         [InlineData(null)]
         [InlineData("")]
         [InlineData("   ")]
-        public void ValidateHostname_NullOrEmpty_Throws_ForApiToken(string hostname)
+        public void ValidateHostname_NullOrEmpty_Throws_ForApiToken(string? hostname)
         {
             Assert.Throws<ArgumentException>(() =>
                 PveAuthenticator.AuthenticateWithApiToken(hostname, ValidPort, false, "root@pam!mytoken=uuid"));
@@ -76,7 +76,7 @@ namespace PSProxmoxVE.Core.Tests.Authentication
         [InlineData(null)]
         [InlineData("")]
         [InlineData("   ")]
-        public void ValidateApiToken_NullOrEmpty_Throws(string token)
+        public void ValidateApiToken_NullOrEmpty_Throws(string? token)
         {
             Assert.Throws<ArgumentException>(() =>
                 PveAuthenticator.AuthenticateWithApiToken(ValidHostname, ValidPort, false, token));

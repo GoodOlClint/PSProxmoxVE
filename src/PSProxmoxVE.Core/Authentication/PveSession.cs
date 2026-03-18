@@ -14,7 +14,7 @@ namespace PSProxmoxVE.Core.Authentication
         public string? Ticket { get; }
         public string? CsrfToken { get; }
         public DateTime TicketExpiry { get; }
-        public PveVersion ServerVersion { get; internal set; }
+        public PveVersion? ServerVersion { get; internal set; }
 
         /// <summary>Returns true if the ticket has expired (only relevant for Ticket auth mode)</summary>
         public bool IsExpired

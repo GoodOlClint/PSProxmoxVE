@@ -18,6 +18,7 @@ namespace PSProxmoxVE.Core.Services
         // -------------------------------------------------------------------------
 
         /// <summary>Returns all users.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
         public PveUser[] GetUsers(PveSession session)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -29,6 +30,8 @@ namespace PSProxmoxVE.Core.Services
         }
 
         /// <summary>Returns a single user by their user ID (e.g. "admin@pam").</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="userId">The user ID in "username@realm" format.</param>
         public PveUser GetUser(PveSession session, string userId)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -48,6 +51,7 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Creates a new user account.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
         /// <param name="userId">User ID in "username@realm" format.</param>
         /// <param name="config">Additional fields (password, email, firstname, lastname, etc.).</param>
         public void CreateUser(
@@ -70,6 +74,8 @@ namespace PSProxmoxVE.Core.Services
         }
 
         /// <summary>Removes a user account.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="userId">The user ID in "username@realm" format.</param>
         public void RemoveUser(PveSession session, string userId)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -81,6 +87,9 @@ namespace PSProxmoxVE.Core.Services
         }
 
         /// <summary>Updates one or more properties of an existing user.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="userId">The user ID in "username@realm" format.</param>
+        /// <param name="config">User properties to update.</param>
         public void SetUser(
             PveSession session,
             string userId,
@@ -103,6 +112,8 @@ namespace PSProxmoxVE.Core.Services
         // -------------------------------------------------------------------------
 
         /// <summary>Returns all API tokens for the specified user.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="userId">The user ID in "username@realm" format.</param>
         public PveApiToken[] GetApiTokens(PveSession session, string userId)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -122,6 +133,7 @@ namespace PSProxmoxVE.Core.Services
         /// Creates a new API token for the specified user and returns the token object,
         /// including the secret <c>Value</c> (shown only once).
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
         /// <param name="userId">User ID in "username@realm" format.</param>
         /// <param name="tokenId">Token identifier (alphanumeric and hyphens).</param>
         /// <param name="comment">Optional description.</param>
@@ -161,6 +173,9 @@ namespace PSProxmoxVE.Core.Services
         }
 
         /// <summary>Removes an API token.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="userId">The user ID in "username@realm" format.</param>
+        /// <param name="tokenId">The token identifier to remove.</param>
         public void RemoveApiToken(PveSession session, string userId, string tokenId)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -179,6 +194,7 @@ namespace PSProxmoxVE.Core.Services
         // -------------------------------------------------------------------------
 
         /// <summary>Returns all roles.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
         public PveRole[] GetRoles(PveSession session)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -190,6 +206,7 @@ namespace PSProxmoxVE.Core.Services
         }
 
         /// <summary>Creates a new role.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
         /// <param name="roleId">Role name.</param>
         /// <param name="privileges">Comma-separated list of privilege strings.</param>
         public void CreateRole(PveSession session, string roleId, string? privileges = null)
@@ -206,6 +223,8 @@ namespace PSProxmoxVE.Core.Services
         }
 
         /// <summary>Removes a role.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="roleId">The role name to remove.</param>
         public void RemoveRole(PveSession session, string roleId)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -223,6 +242,7 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Returns the effective permissions (resolved privilege set) for a user or token.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
         /// <param name="userId">Optional user ID to query; defaults to the authenticated user.</param>
         /// <param name="path">Optional path to restrict the query.</param>
         public PvePermission[] GetPermissions(
@@ -262,6 +282,7 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Sets (adds or updates) an ACL entry.
         /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
         /// <param name="path">Access control path (e.g. "/", "/nodes/pve", "/vms/100").</param>
         /// <param name="roles">Comma-separated role IDs.</param>
         /// <param name="users">Comma-separated user IDs.</param>

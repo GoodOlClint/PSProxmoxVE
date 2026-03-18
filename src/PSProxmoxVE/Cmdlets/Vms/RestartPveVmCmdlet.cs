@@ -57,13 +57,13 @@ namespace PSProxmoxVE.Cmdlets.Vms
             var shutdownTask = vmService.ShutdownVm(session, Node, VmId, Timeout);
 
             if (Wait.IsPresent)
-                taskService.WaitForTask(session, shutdownTask.Node, shutdownTask.Upid, null, null, null);
+                taskService.WaitForTask(session, Node, shutdownTask.Upid, null, null, null);
 
             // Start
             var startTask = vmService.StartVm(session, Node, VmId);
 
             if (Wait.IsPresent)
-                startTask = taskService.WaitForTask(session, startTask.Node, startTask.Upid, null, null, null);
+                startTask = taskService.WaitForTask(session, Node, startTask.Upid, null, null, null);
 
             WriteObject(startTask);
         }

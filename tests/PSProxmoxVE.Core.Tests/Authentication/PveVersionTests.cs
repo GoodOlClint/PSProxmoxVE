@@ -42,7 +42,7 @@ namespace PSProxmoxVE.Core.Tests.Authentication
         [InlineData(null)]
         [InlineData("")]
         [InlineData("   ")]
-        public void Parse_NullOrEmpty_Throws(string input)
+        public void Parse_NullOrEmpty_Throws(string? input)
         {
             Assert.Throws<ArgumentException>(() => PveVersion.Parse(input));
         }
