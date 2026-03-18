@@ -56,9 +56,15 @@ variable "disk_storage" {
   default     = "nas-iscsi-lvm"
 }
 
-variable "iso_file_id" {
-  description = "Proxmox file ID of the auto-install PVE ISO (e.g. local:iso/proxmox-ve_9.1-1-auto.iso)"
+variable "iso_local_path" {
+  description = "Local path to the prepared auto-install PVE ISO on the runner"
   type        = string
+}
+
+variable "iso_storage" {
+  description = "Proxmox storage pool for uploading the ISO (must accept ISO content type)"
+  type        = string
+  default     = "local"
 }
 
 variable "network_bridge" {

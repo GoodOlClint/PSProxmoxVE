@@ -14,6 +14,16 @@ provider "proxmox" {
   insecure  = var.proxmox_insecure
 }
 
+resource "proxmox_virtual_environment_file" "auto_iso" {
+  content_type = "iso"
+  datastore_id = var.iso_storage
+  node_name    = var.target_node
+
+  source_file {
+    path = var.iso_local_path
+  }
+}
+
 resource "proxmox_virtual_environment_vm" "nested_pve" {
   name      = var.vm_name
   node_name = var.target_node
@@ -45,7 +55,7 @@ resource "proxmox_virtual_environment_vm" "nested_pve" {
   }
 
   cdrom {
-    file_id   = var.iso_file_id
+    file_id   = proxmox_virtual_environment_file.auto_iso.id
     interface = "ide2"
   }
 

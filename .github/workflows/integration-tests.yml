@@ -85,23 +85,6 @@ jobs:
             ${SCRIPTS_DIR}/first-boot.sh \
             "/tmp/${{ steps.iso.outputs.filename }}"
 
-      - name: Upload ISO to PVE storage
-        if: inputs.skip_provision != true
-        id: upload
-        shell: bash
-        env:
-          PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
-        run: |
-          bash ${SCRIPTS_DIR}/upload-to-pve.sh \
-            "$(echo '${{ secrets.PVE_ENDPOINT }}' | sed -E 's|https?://||;s|:.*||')" \
-            "${PVE_API_TOKEN}" \
-            "${{ secrets.PVE_TARGET_NODE }}" \
-            "local" \
-            "/tmp/${{ steps.iso.outputs.filename }}" \
-            "iso" | tee /tmp/upload-output.txt
-          ISO_VOLID=$(tail -1 /tmp/upload-output.txt)
-          echo "iso_volid=${ISO_VOLID}" >> "$GITHUB_OUTPUT"
-
       - name: Terraform init
         if: inputs.skip_provision != true
         shell: bash
@@ -117,7 +100,7 @@ jobs:
           TF_VAR_proxmox_endpoint: ${{ secrets.PVE_ENDPOINT }}
           TF_VAR_proxmox_api_token: ${{ secrets.PVE_API_TOKEN }}
           TF_VAR_target_node: ${{ secrets.PVE_TARGET_NODE }}
-          TF_VAR_iso_file_id: ${{ steps.upload.outputs.iso_volid }}
+          TF_VAR_iso_local_path: /tmp/${{ steps.iso.outputs.filename }}
           TF_VAR_test_vm_password: ${{ env.PVE_PASSWORD }}
         run: |
           terraform apply -auto-approve -input=false
@@ -236,18 +219,6 @@ jobs:
           TF_VAR_proxmox_endpoint: ${{ secrets.PVE_ENDPOINT }}
           TF_VAR_proxmox_api_token: ${{ secrets.PVE_API_TOKEN }}
           TF_VAR_target_node: ${{ secrets.PVE_TARGET_NODE }}
-          TF_VAR_iso_file_id: ${{ steps.upload.outputs.iso_volid }}
+          TF_VAR_iso_local_path: /tmp/${{ steps.iso.outputs.filename }}
           TF_VAR_test_vm_password: ${{ env.PVE_PASSWORD }}
         run: terraform destroy -auto-approve -input=false
-
-      - name: Clean up uploaded ISO
-        if: always() && inputs.skip_provision != true
-        shell: bash
-        env:
-          PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
-        run: |
-          PARENT_HOST=$(echo '${{ secrets.PVE_ENDPOINT }}' | sed -E 's|https?://||;s|:.*||')
-          bash ${SCRIPTS_DIR}/cleanup-pve-storage.sh \
-            "${PARENT_HOST}" \
-            "${PVE_API_TOKEN}" \
-            "${{ steps.upload.outputs.iso_volid }}" || true

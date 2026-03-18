@@ -2,6 +2,6 @@
 .terraform/
 *.tfvars
 !terraform.tfvars.example
-.terraform.lock.hcl
+# Keep .terraform.lock.hcl tracked for reproducible CI builds
 .api-token
 .build/

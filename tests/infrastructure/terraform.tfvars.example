@@ -3,12 +3,13 @@ proxmox_endpoint  = "https://pve.example.com:8006"
 proxmox_api_token = "root@pam!terraform=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 target_node       = "pve"
 
-# Auto-install ISO (prepared by scripts/prepare-auto-iso.sh, then uploaded)
-iso_file_id  = "local:iso/proxmox-ve_9.1-1-auto.iso"
-disk_storage = "local-lvm"
+# Local path to the prepared auto-install ISO (output of prepare-auto-iso.sh)
+iso_local_path = "/tmp/proxmox-ve_9.1-1-auto.iso"
+disk_storage   = "local-lvm"
 
 # Optional overrides
 # cores          = 4
 # memory         = 8192
 # disk_size      = 64
 # network_bridge = "vmbr0"
+# iso_storage    = "local"
