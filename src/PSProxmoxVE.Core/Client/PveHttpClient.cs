@@ -280,7 +280,7 @@ namespace PSProxmoxVE.Core.Client
 
             if (_session.AuthMode == PveAuthMode.ApiToken)
             {
-                request.Headers.Add("Authorization", $"PVEAPIToken={_session.ApiToken}");
+                request.Headers.TryAddWithoutValidation("Authorization", $"PVEAPIToken={_session.ApiToken}");
             }
             else
             {
