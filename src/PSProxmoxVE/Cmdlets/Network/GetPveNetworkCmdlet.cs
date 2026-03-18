@@ -39,7 +39,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
-            var resource = $"/nodes/{Node}/network";
+            var resource = $"nodes/{Node}/network";
             if (!string.IsNullOrEmpty(Type))
                 resource += $"?type={Uri.EscapeDataString(Type)}";
 

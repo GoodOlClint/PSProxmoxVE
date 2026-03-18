@@ -53,7 +53,7 @@ namespace PSProxmoxVE.Cmdlets.Tasks
             var deadline = Timeout.HasValue ? DateTime.UtcNow + Timeout.Value : DateTime.MaxValue;
 
             var encodedUpid  = Uri.EscapeDataString(Upid);
-            var statusResource = $"/nodes/{Node}/tasks/{encodedUpid}/status";
+            var statusResource = $"nodes/{Node}/tasks/{encodedUpid}/status";
 
             // Derive a short human-readable description from the UPID for progress display
             var taskDesc = Upid.Length > 50 ? Upid.Substring(0, 47) + "..." : Upid;

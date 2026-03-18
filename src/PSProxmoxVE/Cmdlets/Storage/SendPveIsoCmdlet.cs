@@ -58,33 +58,47 @@ namespace PSProxmoxVE.Cmdlets.Storage
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
-            var resource = $"/nodes/{Node}/storage/{Storage}/upload";
+            var resource = $"nodes/{Node}/storage/{Storage}/upload";
+            var totalBytes = new System.IO.FileInfo(Path).Length;
 
             var activityId = 1;
             var progressRecord = new ProgressRecord(activityId,
                 $"Uploading ISO to {Node}/{Storage}",
                 $"Uploading {fileName}...");
 
-            var json = client.UploadFileAsync(
-                resource,
-                Path,
-                formFields: new System.Collections.Generic.Dictionary<string, string>
-                {
-                    ["content"] = "iso"
-                },
-                checksum: Checksum,
-                checksumAlgorithm: ChecksumAlgorithm,
-                progressCallback: (bytesSent, total) =>
-                {
-                    if (total > 0)
+            // Track progress via an atomic counter updated from the upload thread.
+            // WriteProgress must be called from the pipeline thread — passing the
+            // callback directly would invoke it from the HTTP serialization thread
+            // and cause PowerShell to throw an InvalidOperationException mid-upload.
+            long progressBytes = 0;
+            var uploadTask = System.Threading.Tasks.Task.Run(() =>
+                client.UploadFileAsync(
+                    resource,
+                    Path,
+                    formFields: new System.Collections.Generic.Dictionary<string, string>
                     {
-                        var pct = (int)((bytesSent * 100L) / total);
-                        progressRecord.PercentComplete = pct;
-                        progressRecord.StatusDescription = $"{bytesSent / 1024 / 1024} MB / {total / 1024 / 1024} MB";
-                        WriteProgress(progressRecord);
-                    }
+                        ["content"] = "iso"
+                    },
+                    checksum: Checksum,
+                    checksumAlgorithm: ChecksumAlgorithm,
+                    progressCallback: (bytesSent, _) =>
+                        System.Threading.Interlocked.Exchange(ref progressBytes, bytesSent)));
+
+            // Poll progress on the pipeline thread while the upload runs.
+            while (!uploadTask.IsCompleted)
+            {
+                System.Threading.Thread.Sleep(500);
+                if (totalBytes > 0)
+                {
+                    var sent = System.Threading.Interlocked.Read(ref progressBytes);
+                    progressRecord.PercentComplete = (int)((sent * 100L) / totalBytes);
+                    progressRecord.StatusDescription =
+                        $"{sent / 1024 / 1024} MB / {totalBytes / 1024 / 1024} MB";
+                    WriteProgress(progressRecord);
                 }
-            ).GetAwaiter().GetResult();
+            }
+
+            var json = uploadTask.GetAwaiter().GetResult();
 
             progressRecord.RecordType = ProgressRecordType.Completed;
             WriteProgress(progressRecord);
@@ -105,7 +119,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
         private static PveTask WaitForTask(PveHttpClient client, string node, string upid)
         {
             var encodedUpid = Uri.EscapeDataString(upid);
-            var statusResource = $"/nodes/{node}/tasks/{encodedUpid}/status";
+            var statusResource = $"nodes/{node}/tasks/{encodedUpid}/status";
 
             while (true)
             {

@@ -32,7 +32,7 @@ namespace PSProxmoxVE.Cmdlets.Nodes
             try
             {
                 using var client = new PveHttpClient(session);
-                responseBody = client.GetAsync("/api2/json/nodes").GetAwaiter().GetResult();
+                responseBody = client.GetAsync("nodes").GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {

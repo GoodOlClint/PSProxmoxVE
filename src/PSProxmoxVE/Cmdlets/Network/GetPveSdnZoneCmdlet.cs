@@ -24,7 +24,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
-            var resource = "/cluster/sdn/zones";
+            var resource = "cluster/sdn/zones";
             var json = client.GetAsync(resource).GetAwaiter().GetResult();
             var root = JObject.Parse(json);
             var data = root["data"] as JArray ?? new JArray();

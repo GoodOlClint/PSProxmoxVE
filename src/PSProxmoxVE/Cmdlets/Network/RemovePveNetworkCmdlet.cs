@@ -29,7 +29,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
-            client.DeleteAsync($"/nodes/{Node}/network/{Iface}").GetAwaiter().GetResult();
+            client.DeleteAsync($"nodes/{Node}/network/{Iface}").GetAwaiter().GetResult();
         }
     }
 }

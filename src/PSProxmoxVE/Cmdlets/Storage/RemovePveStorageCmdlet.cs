@@ -27,7 +27,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
-            client.DeleteAsync($"/storage/{Storage}").GetAwaiter().GetResult();
+            client.DeleteAsync($"storage/{Storage}").GetAwaiter().GetResult();
         }
     }
 }

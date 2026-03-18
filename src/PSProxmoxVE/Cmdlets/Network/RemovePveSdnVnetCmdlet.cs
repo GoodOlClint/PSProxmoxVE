@@ -24,7 +24,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
-            client.DeleteAsync($"/cluster/sdn/vnets/{Vnet}").GetAwaiter().GetResult();
+            client.DeleteAsync($"cluster/sdn/vnets/{Vnet}").GetAwaiter().GetResult();
         }
     }
 }

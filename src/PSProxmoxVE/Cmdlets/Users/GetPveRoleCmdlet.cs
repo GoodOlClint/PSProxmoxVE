@@ -25,7 +25,7 @@ namespace PSProxmoxVE.Cmdlets.Users
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
-            var json = client.GetAsync("/access/roles").GetAwaiter().GetResult();
+            var json = client.GetAsync("access/roles").GetAwaiter().GetResult();
             var root = JObject.Parse(json);
             var data = root["data"] as JArray ?? new JArray();
 

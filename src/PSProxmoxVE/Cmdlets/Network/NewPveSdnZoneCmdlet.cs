@@ -72,7 +72,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             if (!string.IsNullOrEmpty(DnsZone))    data["dnszone"]    = DnsZone;
             if (!string.IsNullOrEmpty(Ipam))       data["ipam"]       = Ipam;
 
-            client.PostAsync("/cluster/sdn/zones", data).GetAwaiter().GetResult();
+            client.PostAsync("cluster/sdn/zones", data).GetAwaiter().GetResult();
         }
     }
 }

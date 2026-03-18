@@ -31,7 +31,7 @@ namespace PSProxmoxVE.Cmdlets.Nodes
         {
             var session = GetSession();
 
-            var resource = $"/api2/json/nodes/{Uri.EscapeDataString(Node)}/status";
+            var resource = $"nodes/{Uri.EscapeDataString(Node)}/status";
 
             string responseBody;
             try
@@ -56,8 +56,8 @@ namespace PSProxmoxVE.Cmdlets.Nodes
                 ?? throw new InvalidOperationException("Failed to deserialize node status.");
 
             // The /nodes/{node}/status response does not include the node name; populate it.
-            if (string.IsNullOrEmpty(status.Name))
-                status.Name = Node;
+            if (string.IsNullOrEmpty(status.Node))
+                status.Node = Node;
 
             WriteObject(status);
         }

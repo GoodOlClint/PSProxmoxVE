@@ -62,7 +62,7 @@ namespace PSProxmoxVE.Cmdlets.Users
             if (Propagate.IsPresent) data["propagate"] = "1";
             if (Delete.IsPresent)    data["delete"]    = "1";
 
-            client.PutAsync("/access/acl", data).GetAwaiter().GetResult();
+            client.PutAsync("access/acl", data).GetAwaiter().GetResult();
         }
     }
 }

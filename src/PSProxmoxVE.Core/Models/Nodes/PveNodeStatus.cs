@@ -15,7 +15,7 @@ public class PveNodeStatus
     /// </summary>
     [JsonPropertyName("node")]
     [JsonProperty("node")]
-    public string Name { get; set; } = string.Empty;
+    public string Node { get; set; } = string.Empty;
 
     /// <summary>
     /// The current status of the node (e.g., "online" or "offline").
@@ -141,7 +141,7 @@ public class PveNodeStatus
         var diskUsedGb = DiskUsed.HasValue ? $"{DiskUsed.Value / 1024 / 1024 / 1024} GB" : "N/A";
         var diskTotalGb = DiskTotal.HasValue ? $"{DiskTotal.Value / 1024 / 1024 / 1024} GB" : "N/A";
         var uptimeStr = Uptime.HasValue ? TimeSpan.FromSeconds(Uptime.Value).ToString(@"d\.hh\:mm\:ss") : "N/A";
-        return $"Node: {Name} | Status: {Status} | CPU: {cpuPct} | "
+        return $"Node: {Node} | Status: {Status} | CPU: {cpuPct} | "
              + $"Mem: {memUsedMb}/{memTotalMb} ({MemoryUsage:F1}%) | "
              + $"Disk: {diskUsedGb}/{diskTotalGb} | Uptime: {uptimeStr}";
     }

@@ -174,26 +174,22 @@ namespace PSProxmoxVE.Core.Client
         // -------------------------------------------------------------------------
 
         /// <summary>
-        /// Uploads a file (e.g. an ISO) to a Proxmox VE storage endpoint using a manually
-        /// constructed multipart/form-data body.
+        /// Uploads a file (e.g. an ISO) to a Proxmox VE storage endpoint using
+        /// MultipartFormDataContent.
         ///
         /// IMPORTANT — Bugzilla 7389 workaround:
         ///   https://bugzilla.proxmox.com/show_bug.cgi?id=7389
         ///
         ///   The Proxmox VE API rejects uploads when the multipart body contains
-        ///   "Content-Type" or "Content-Transfer-Encoding" headers on the file part,
-        ///   which is exactly what .NET's MultipartFormDataContent emits by default.
-        ///   To work around this, this method constructs the raw multipart body manually:
+        ///   "Content-Type" or "Content-Transfer-Encoding" headers on text parts,
+        ///   and also rejects a quoted boundary in the Content-Type header.
         ///
-        ///     * Text (form field) parts:  only Content-Disposition — no Content-Type,
-        ///                                 no Content-Transfer-Encoding.
-        ///     * File (binary) part:       Content-Disposition + Content-Type: application/octet-stream
-        ///                                 — no Content-Transfer-Encoding.
-        ///
-        ///   Do NOT refactor this to use MultipartFormDataContent unless the PVE API
-        ///   behaviour has been verified to have changed.
+        ///   Workaround:
+        ///     * Override the multipart Content-Type header to use an unquoted boundary.
+        ///     * Set ContentType = null on all StringContent text parts before adding them.
+        ///     * Use StreamContent for the file part (no Content-Transfer-Encoding added).
         /// </summary>
-        /// <param name="resource">Relative API resource path, e.g. "/nodes/pve/storage/local/upload"</param>
+        /// <param name="resource">Relative API resource path, e.g. "nodes/pve/storage/local/upload"</param>
         /// <param name="filePath">Absolute local path to the file to upload</param>
         /// <param name="formFields">Additional form fields (e.g. content type)</param>
         /// <param name="checksum">Optional file checksum value</param>
@@ -216,54 +212,86 @@ namespace PSProxmoxVE.Core.Client
             if (!File.Exists(filePath))
                 throw new FileNotFoundException("Upload file not found.", filePath);
 
-            // Build a random 32-char alphanumeric boundary
             var boundary = GenerateBoundary();
             var fileName = Path.GetFileName(filePath);
-            var fileInfo = new FileInfo(filePath);
-            var totalBytes = fileInfo.Length;
+            var totalBytes = new FileInfo(filePath).Length;
 
-            // Build the multipart body as a MemoryStream / streaming approach.
-            // We write preamble + form fields into a MemoryStream, then stream the
-            // file content, then write the closing boundary — all via a custom
-            // stream that concatenates them.
+            var multipart = new MultipartFormDataContent(boundary);
 
-            var preamble = BuildMultipartPreamble(boundary, fileName, formFields, checksum, checksumAlgorithm);
-            var closing = Encoding.UTF8.GetBytes($"\r\n--{boundary}--\r\n");
+            // Override Content-Type to use unquoted boundary (PVE rejects quoted boundaries).
+            multipart.Headers.ContentType =
+                MediaTypeHeaderValue.Parse($"multipart/form-data; boundary={boundary}");
 
-            // Total upload size (preamble + file content + closing)
-            var uploadSize = preamble.Length + totalBytes + closing.Length;
-
-            var content = new PushStreamContent(async (outputStream) =>
+            // Add text form fields.
+            // IMPORTANT — BZ 7389 workaround: PVE requires quoted name= values in
+            // Content-Disposition (e.g. name="content"), but .NET's
+            // MultipartFormDataContent.Add(part, name) emits name=content (unquoted),
+            // which PVE rejects with a broken-pipe / stream-copy error.
+            // Fix: set ContentDisposition manually with embedded quotes, then call
+            // multipart.Add(part) without a name so the header is not overwritten.
+            if (formFields != null)
             {
-                // Write preamble
-                await outputStream.WriteAsync(preamble, 0, preamble.Length).ConfigureAwait(false);
-
-                // Stream file in 4 MB chunks, reporting progress
-                const int chunkSize = 4 * 1024 * 1024;
-                var buffer = new byte[chunkSize];
-                long bytesSent = preamble.Length;
-
-                using (var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, chunkSize, useAsync: true))
+                foreach (var kvp in formFields)
                 {
-                    int bytesRead;
-                    while ((bytesRead = await fileStream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
+                    var part = new StringContent(kvp.Value, Encoding.UTF8);
+                    part.Headers.ContentType = null;
+                    part.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data")
                     {
-                        await outputStream.WriteAsync(buffer, 0, bytesRead).ConfigureAwait(false);
-                        bytesSent += bytesRead;
-                        progressCallback?.Invoke(bytesSent, uploadSize);
-                    }
+                        Name = $"\"{kvp.Key}\""
+                    };
+                    multipart.Add(part);
                 }
+            }
 
-                // Write closing boundary
-                await outputStream.WriteAsync(closing, 0, closing.Length).ConfigureAwait(false);
-            }, uploadSize);
+            if (!string.IsNullOrEmpty(checksumAlgorithm) && !string.IsNullOrEmpty(checksum))
+            {
+                var algPart = new StringContent(checksumAlgorithm!, Encoding.UTF8);
+                algPart.Headers.ContentType = null;
+                algPart.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data") { Name = "\"checksum-algorithm\"" };
+                multipart.Add(algPart);
+            }
 
-            content.Headers.ContentType = MediaTypeHeaderValue.Parse($"multipart/form-data; boundary=\"{boundary}\"");
+            if (!string.IsNullOrEmpty(checksum))
+            {
+                var csPart = new StringContent(checksum!, Encoding.UTF8);
+                csPart.Headers.ContentType = null;
+                csPart.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data") { Name = "\"checksum\"" };
+                multipart.Add(csPart);
+            }
 
-            var request = BuildRequest(HttpMethod.Post, resource, mutating: true);
-            request.Content = content;
+            // File part — StreamContent does not add Content-Transfer-Encoding.
+            var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read,
+                bufferSize: 4 * 1024 * 1024, useAsync: true);
+            try
+            {
+                Stream uploadStream = progressCallback != null
+                    ? (Stream)new ProgressStream(fileStream, totalBytes, progressCallback)
+                    : fileStream;
 
-            return await SendAsync(request, resource, "POST").ConfigureAwait(false);
+                // ContentDisposition MUST come before ContentType in the part headers.
+                // PVE closes the connection if ContentType appears first (server-side parse order sensitivity).
+                var fileContent = new StreamContent(uploadStream);
+                fileContent.Headers.ContentDisposition = new ContentDispositionHeaderValue("form-data")
+                {
+                    Name = "\"filename\"",
+                    FileName = $"\"{fileName}\""
+                };
+                fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/octet-stream");
+                multipart.Add(fileContent);
+
+                var request = BuildRequest(HttpMethod.Post, resource, mutating: true);
+                request.Content = multipart;
+
+                return await SendAsync(request, resource, "POST").ConfigureAwait(false);
+            }
+            finally
+            {
+#if NET48
+                fileStream.Dispose();
+#else
+                await fileStream.DisposeAsync().ConfigureAwait(false);
+#endif
+            }
         }
 
         // -------------------------------------------------------------------------
@@ -366,64 +394,6 @@ namespace PSProxmoxVE.Core.Client
             return sb.ToString();
         }
 
-        /// <summary>
-        /// Builds the multipart preamble bytes: all form fields + the beginning of the file part
-        /// (Content-Disposition + Content-Type only; no Content-Transfer-Encoding per bugzilla 7389).
-        /// </summary>
-        private static byte[] BuildMultipartPreamble(
-            string boundary,
-            string fileName,
-            Dictionary<string, string>? formFields,
-            string? checksum,
-            string? checksumAlgorithm)
-        {
-            var sb = new StringBuilder();
-
-            // Text form fields — Content-Disposition only, no Content-Type
-            if (formFields != null)
-            {
-                foreach (var kvp in formFields)
-                {
-                    sb.Append($"--{boundary}\r\n");
-                    sb.Append($"Content-Disposition: form-data; name=\"{kvp.Key}\"\r\n");
-                    sb.Append("\r\n");
-                    sb.Append(kvp.Value);
-                    sb.Append("\r\n");
-                }
-            }
-
-            if (!string.IsNullOrEmpty(checksum) && !string.IsNullOrEmpty(checksumAlgorithm))
-            {
-                sb.Append($"--{boundary}\r\n");
-                sb.Append($"Content-Disposition: form-data; name=\"checksum-algorithm\"\r\n");
-                sb.Append("\r\n");
-                sb.Append(checksumAlgorithm);
-                sb.Append("\r\n");
-
-                sb.Append($"--{boundary}\r\n");
-                sb.Append($"Content-Disposition: form-data; name=\"checksum\"\r\n");
-                sb.Append("\r\n");
-                sb.Append(checksum);
-                sb.Append("\r\n");
-            }
-            else if (!string.IsNullOrEmpty(checksum))
-            {
-                sb.Append($"--{boundary}\r\n");
-                sb.Append($"Content-Disposition: form-data; name=\"checksum\"\r\n");
-                sb.Append("\r\n");
-                sb.Append(checksum);
-                sb.Append("\r\n");
-            }
-
-            // File part header — Content-Disposition + Content-Type; no Content-Transfer-Encoding
-            sb.Append($"--{boundary}\r\n");
-            sb.Append($"Content-Disposition: form-data; name=\"filename\"; filename=\"{fileName}\"\r\n");
-            sb.Append("Content-Type: application/octet-stream\r\n");
-            sb.Append("\r\n");
-
-            return Encoding.UTF8.GetBytes(sb.ToString());
-        }
-
         public void Dispose()
         {
             if (!_disposed)
@@ -434,34 +404,48 @@ namespace PSProxmoxVE.Core.Client
         }
 
         // -------------------------------------------------------------------------
-        // Helper: push-stream HttpContent for streaming uploads
+        // Helper: progress-reporting stream wrapper for uploads
         // -------------------------------------------------------------------------
 
         /// <summary>
-        /// An <see cref="HttpContent"/> implementation that writes its body by invoking a
-        /// caller-supplied async delegate, enabling streaming without buffering the entire
-        /// payload into memory.
+        /// Wraps an inner stream and invokes a progress callback as bytes are read,
+        /// enabling upload progress reporting for file uploads.
         /// </summary>
-        private sealed class PushStreamContent : HttpContent
+        private sealed class ProgressStream : Stream
         {
-            private readonly Func<Stream, Task> _onStreamAvailable;
-            private readonly long _contentLength;
+            private readonly Stream _inner;
+            private readonly long _totalBytes;
+            private readonly Action<long, long> _callback;
+            private long _bytesRead;
 
-            public PushStreamContent(Func<Stream, Task> onStreamAvailable, long contentLength)
+            public ProgressStream(Stream inner, long totalBytes, Action<long, long> callback)
             {
-                _onStreamAvailable = onStreamAvailable;
-                _contentLength = contentLength;
+                _inner = inner;
+                _totalBytes = totalBytes;
+                _callback = callback;
             }
 
-            protected override async Task SerializeToStreamAsync(Stream stream, TransportContext? context)
+            public override bool CanRead => _inner.CanRead;
+            public override bool CanSeek => _inner.CanSeek;
+            public override bool CanWrite => _inner.CanWrite;
+            public override long Length => _inner.Length;
+            public override long Position { get => _inner.Position; set => _inner.Position = value; }
+            public override void Flush() => _inner.Flush();
+            public override long Seek(long offset, SeekOrigin origin) => _inner.Seek(offset, origin);
+            public override void SetLength(long value) => _inner.SetLength(value);
+            public override void Write(byte[] buffer, int offset, int count) => _inner.Write(buffer, offset, count);
+
+            public override int Read(byte[] buffer, int offset, int count)
             {
-                await _onStreamAvailable(stream).ConfigureAwait(false);
+                var n = _inner.Read(buffer, offset, count);
+                if (n > 0) { _bytesRead += n; _callback(_bytesRead, _totalBytes); }
+                return n;
             }
 
-            protected override bool TryComputeLength(out long length)
+            protected override void Dispose(bool disposing)
             {
-                length = _contentLength;
-                return _contentLength >= 0;
+                if (disposing) _inner.Dispose();
+                base.Dispose(disposing);
             }
         }
     }

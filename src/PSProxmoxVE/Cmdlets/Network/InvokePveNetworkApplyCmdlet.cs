@@ -34,7 +34,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
-            var json = client.PutAsync($"/nodes/{Node}/network").GetAwaiter().GetResult();
+            var json = client.PutAsync($"nodes/{Node}/network").GetAwaiter().GetResult();
             var root = JObject.Parse(json);
             var upid = root["data"]?.ToString() ?? string.Empty;
 
@@ -51,7 +51,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         private static PveTask WaitForTask(PveHttpClient client, string node, string upid)
         {
             var encodedUpid = Uri.EscapeDataString(upid);
-            var statusResource = $"/nodes/{node}/tasks/{encodedUpid}/status";
+            var statusResource = $"nodes/{node}/tasks/{encodedUpid}/status";
             while (true)
             {
                 System.Threading.Thread.Sleep(2000);

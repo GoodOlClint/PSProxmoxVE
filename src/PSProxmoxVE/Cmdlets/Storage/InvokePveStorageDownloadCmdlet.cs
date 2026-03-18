@@ -51,7 +51,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
-            var resource = $"/nodes/{Node}/storage/{Storage}/download-url";
+            var resource = $"nodes/{Node}/storage/{Storage}/download-url";
             var data = new Dictionary<string, string>
             {
                 ["url"]      = Url,
@@ -76,7 +76,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
         private static PveTask WaitForTask(PveHttpClient client, string node, string upid)
         {
             var encodedUpid = Uri.EscapeDataString(upid);
-            var statusResource = $"/nodes/{node}/tasks/{encodedUpid}/status";
+            var statusResource = $"nodes/{node}/tasks/{encodedUpid}/status";
 
             while (true)
             {

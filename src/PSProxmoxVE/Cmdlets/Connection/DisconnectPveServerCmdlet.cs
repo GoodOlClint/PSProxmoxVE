@@ -37,7 +37,7 @@ namespace PSProxmoxVE.Cmdlets.Connection
                 try
                 {
                     using var client = new PveHttpClient(session);
-                    client.DeleteAsync("/api2/json/access/ticket").GetAwaiter().GetResult();
+                    client.DeleteAsync("access/ticket").GetAwaiter().GetResult();
                 }
                 catch (Exception ex)
                 {

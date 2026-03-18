@@ -40,7 +40,7 @@ namespace PSProxmoxVE.Cmdlets.Users
             };
             if (!string.IsNullOrEmpty(Privileges)) data["privs"] = Privileges;
 
-            client.PostAsync("/access/roles", data).GetAwaiter().GetResult();
+            client.PostAsync("access/roles", data).GetAwaiter().GetResult();
 
             WriteObject(new PveRole { RoleId = RoleId, Privileges = Privileges });
         }

@@ -88,7 +88,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             if (Autostart.IsPresent)                data["autostart"]    = "1";
             if (!string.IsNullOrEmpty(Comments))    data["comments"]     = Comments;
 
-            client.PostAsync($"/nodes/{Node}/network", data).GetAwaiter().GetResult();
+            client.PostAsync($"nodes/{Node}/network", data).GetAwaiter().GetResult();
         }
     }
 }

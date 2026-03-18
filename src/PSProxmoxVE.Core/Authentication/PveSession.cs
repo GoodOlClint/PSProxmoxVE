@@ -28,7 +28,7 @@ namespace PSProxmoxVE.Core.Authentication
         }
 
         /// <summary>Base URL for the Proxmox VE API</summary>
-        public string BaseUrl => $"https://{Hostname}:{Port}/api2/json";
+        public string BaseUrl => $"https://{Hostname}:{Port}/api2/json/";
 
         /// <summary>Creates a session using ticket-based authentication</summary>
         internal PveSession(

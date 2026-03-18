@@ -102,7 +102,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
             if (Shared.IsPresent)  data["shared"]  = "1";
             if (Disable.IsPresent) data["disable"] = "1";
 
-            client.PostAsync("/storage", data).GetAwaiter().GetResult();
+            client.PostAsync("storage", data).GetAwaiter().GetResult();
 
             // Return the storage object representing what was created
             var storage = new PveStorage

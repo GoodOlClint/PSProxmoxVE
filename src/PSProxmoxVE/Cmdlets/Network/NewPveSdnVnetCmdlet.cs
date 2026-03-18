@@ -51,7 +51,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             if (!string.IsNullOrEmpty(Alias))   data["alias"]     = Alias;
             if (VlanAware.IsPresent)             data["vlanaware"] = "1";
 
-            client.PostAsync("/cluster/sdn/vnets", data).GetAwaiter().GetResult();
+            client.PostAsync("cluster/sdn/vnets", data).GetAwaiter().GetResult();
         }
     }
 }

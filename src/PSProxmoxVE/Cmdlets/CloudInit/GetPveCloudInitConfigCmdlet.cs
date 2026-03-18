@@ -30,7 +30,7 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
-            var json = client.GetAsync($"/nodes/{Node}/qemu/{VmId}/config").GetAwaiter().GetResult();
+            var json = client.GetAsync($"nodes/{Node}/qemu/{VmId}/config").GetAwaiter().GetResult();
             var root = JObject.Parse(json);
             var data = root["data"];
 

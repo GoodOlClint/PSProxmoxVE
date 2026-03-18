@@ -95,7 +95,7 @@ namespace PSProxmoxVE.Core.Authentication
             string responseBody;
             using (var httpClient = new PveHttpClient(session))
             {
-                responseBody = httpClient.Get("/api2/json/version");
+                responseBody = httpClient.Get("version");
             }
 
             var json = JObject.Parse(responseBody);

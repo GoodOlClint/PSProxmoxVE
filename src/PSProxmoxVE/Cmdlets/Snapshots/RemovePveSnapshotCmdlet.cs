@@ -43,7 +43,7 @@ namespace PSProxmoxVE.Cmdlets.Snapshots
                 return;
             using var client = new PveHttpClient(session);
 
-            var json = client.DeleteAsync($"/nodes/{Node}/qemu/{VmId}/snapshot/{Name}").GetAwaiter().GetResult();
+            var json = client.DeleteAsync($"nodes/{Node}/qemu/{VmId}/snapshot/{Name}").GetAwaiter().GetResult();
             var root = JObject.Parse(json);
             var upid = root["data"]?.ToString() ?? string.Empty;
 
@@ -60,7 +60,7 @@ namespace PSProxmoxVE.Cmdlets.Snapshots
         private static PveTask WaitForTask(PveHttpClient client, string node, string upid)
         {
             var encodedUpid = Uri.EscapeDataString(upid);
-            var statusResource = $"/nodes/{node}/tasks/{encodedUpid}/status";
+            var statusResource = $"nodes/{node}/tasks/{encodedUpid}/status";
             while (true)
             {
                 System.Threading.Thread.Sleep(2000);

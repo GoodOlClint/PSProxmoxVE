@@ -37,7 +37,7 @@ namespace PSProxmoxVE.Cmdlets.Templates
             }
             else
             {
-                var nodesJson = client.GetAsync("/nodes").GetAwaiter().GetResult();
+                var nodesJson = client.GetAsync("nodes").GetAwaiter().GetResult();
                 var nodesRoot = JObject.Parse(nodesJson);
                 var nodesData = nodesRoot["data"] as JArray ?? new JArray();
                 foreach (var n in nodesData)
@@ -48,7 +48,7 @@ namespace PSProxmoxVE.Cmdlets.Templates
             {
                 if (string.IsNullOrEmpty(node)) continue;
 
-                var json = client.GetAsync($"/nodes/{node}/qemu").GetAwaiter().GetResult();
+                var json = client.GetAsync($"nodes/{node}/qemu").GetAwaiter().GetResult();
                 var root = JObject.Parse(json);
                 var data = root["data"] as JArray ?? new JArray();
 

@@ -72,7 +72,7 @@ namespace PSProxmoxVE.Core.Tests.Models
             var data = JObject.Parse(json)["data"];
             var status = data.ToObject<PveNodeStatus>();
             Assert.NotNull(status);
-            Assert.Equal("pve1", status.Name);
+            Assert.Equal("pve1", status.Node);
             Assert.Equal(68719476736L, status.MemoryTotal);
             Assert.Equal(17179869184L, status.MemoryUsed);
             Assert.Equal(864000L, status.Uptime);
