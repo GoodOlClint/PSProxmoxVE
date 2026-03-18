@@ -28,10 +28,12 @@ echo "  Answer file:  $ANSWER_FILE"
 echo "  First boot:   ${FIRST_BOOT:-none}"
 echo "  Output:       $OUTPUT_ISO"
 
+# Use /tmp for staging to avoid permission issues with the source ISO directory
 proxmox-auto-install-assistant prepare-iso \
     --fetch-from iso \
     --answer-file "$ANSWER_FILE" \
     "${FIRST_BOOT_ARGS[@]}" \
+    --tmp /tmp \
     --output "$OUTPUT_ISO" \
     "$BASE_ISO"
 
