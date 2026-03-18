@@ -57,9 +57,8 @@ variable "disk_storage" {
 }
 
 variable "iso_file_id" {
-  description = "Proxmox file ID of the PVE installation ISO (e.g. nas-nfs:iso/proxmox-ve_9.1-1.iso)"
+  description = "Proxmox file ID of the auto-install PVE ISO (e.g. local:iso/proxmox-ve_9.1-1-auto.iso)"
   type        = string
-  default     = "nas-nfs:iso/proxmox-ve_9.1-1.iso"
 }
 
 variable "network_bridge" {
@@ -68,32 +67,9 @@ variable "network_bridge" {
   default     = "Core"
 }
 
-variable "test_vm_ip" {
-  description = "Static IP address to assign to the nested PVE instance"
-  type        = string
-}
-
-variable "test_vm_gateway" {
-  description = "Default gateway for the nested PVE instance"
-  type        = string
-}
-
-variable "test_vm_netmask_bits" {
-  description = "CIDR prefix length for the nested PVE network (e.g. 24 for /24)"
-  type        = string
-  default     = "24"
-}
-
-variable "test_vm_dns" {
-  description = "DNS server for the nested PVE instance"
-  type        = string
-  default     = "1.1.1.1"
-}
-
 variable "test_vm_password" {
   description = "Root password for the nested PVE instance"
   type        = string
   sensitive   = true
   default     = "Testpass123!"
 }
-

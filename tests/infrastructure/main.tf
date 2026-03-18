@@ -12,11 +12,6 @@ provider "proxmox" {
   endpoint  = var.proxmox_endpoint
   api_token = var.proxmox_api_token
   insecure  = var.proxmox_insecure
-
-  ssh {
-    agent    = true
-    username = "root"
-  }
 }
 
 resource "proxmox_virtual_environment_vm" "nested_pve" {
@@ -61,6 +56,10 @@ resource "proxmox_virtual_environment_vm" "nested_pve" {
 
   operating_system {
     type = "l26"
+  }
+
+  agent {
+    enabled = true
   }
 
   started = true

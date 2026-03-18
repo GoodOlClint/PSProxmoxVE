@@ -5,13 +5,12 @@ fqdn = "pve-test.local"
 mailto = "test@test.local"
 timezone = "UTC"
 root_password = "${root_password}"
+reboot_on_error = true
+root_ssh_keys = []
+on_first_boot = "first-boot.sh"
 
 [network]
-source = "from-answer"
-cidr = "${cidr}"
-dns = "${dns}"
-gateway = "${gateway}"
-filter.ID_NET_NAME = "*"
+source = "from-dhcp"
 
 [disk-setup]
 filesystem = "ext4"

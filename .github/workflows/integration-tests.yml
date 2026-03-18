@@ -1,23 +1,17 @@
 name: Integration Tests
 
 # Real integration tests against a live Proxmox VE instance.
-# Runs on a self-hosted runner with network access to the PVE API.
+# By default, provisions a throwaway nested PVE VM via Terraform, runs tests,
+# then destroys it. Can also run against a pre-existing PVE with skip_provision.
 #
-# Triggers:
-#   - push to main (if self-hosted runner is available)
-#   - manual dispatch with optional host override
+# Required repository secrets (for provisioning):
+#   PVE_ENDPOINT       - Parent PVE API URL (e.g. https://pve.example.com:8006)
+#   PVE_API_TOKEN      - Parent PVE API token (for Terraform + uploads)
+#   PVE_TARGET_NODE    - Parent PVE node name
 #
-# Runner setup:
-#   See tests/infrastructure/runner/README.md for self-hosted runner
-#   installation instructions.
-#
-# Required repository secrets:
-#   PVETEST_HOST       - Hostname or IP of the PVE node
-#   PVETEST_PORT       - API port (default 8006)
-#   PVETEST_APITOKEN   - API token in USER@REALM!TOKENID=UUID format
-#   PVETEST_NODE       - Node name to run tests against
-#   PVETEST_STORAGE    - Storage name for upload tests
-#   PVETEST_ISO_PATH   - Path to a small test ISO on the runner
+# Optional secrets (for skip_provision mode):
+#   PVETEST_HOST       - Hostname or IP of a pre-existing nested PVE
+#   PVETEST_APITOKEN   - API token for the pre-existing nested PVE
 #
 # WARNING: Integration tests create and destroy real VMs, upload files,
 # and modify network configuration. Never run against production.
@@ -29,85 +23,191 @@ on:
     branches: [ main ]
   workflow_dispatch:
     inputs:
-      pve_host:
-        description: 'Proxmox VE host (overrides secret)'
+      pve_version:
+        description: 'PVE version to test (8 or 9)'
         required: false
-        type: string
-      skip_terraform:
-        description: 'Skip Terraform provisioning (use existing PVE)'
+        type: choice
+        options:
+          - '9'
+          - '8'
+        default: '9'
+      skip_provision:
+        description: 'Skip provisioning (use existing PVE from PVETEST_HOST secret)'
         required: false
         type: boolean
-        default: true
+        default: false
+
+env:
+  INFRA_DIR: tests/infrastructure
+  SCRIPTS_DIR: tests/infrastructure/scripts
+  PVE_PASSWORD: "Testpass123!"
 
 jobs:
-  # Gate job: only proceed if a self-hosted runner with the right labels
-  # picks up the job AND secrets are configured
   integration:
     runs-on: [self-hosted, proxmox, integration]
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Check required secrets
-        id: check-secrets
+      # ── Provision nested PVE ───────────────────────────────────────────
+
+      - name: Select PVE ISO
+        if: inputs.skip_provision != true
+        id: iso
         shell: bash
         run: |
-          if [ -z "${{ secrets.PVETEST_HOST }}" ] && [ -z "${{ inputs.pve_host }}" ]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-            echo "::warning::Integration tests skipped - PVETEST_HOST not configured"
-          elif [ -z "${{ secrets.PVETEST_APITOKEN }}" ]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-            echo "::warning::Integration tests skipped - PVETEST_APITOKEN not configured"
+          VERSION="${{ inputs.pve_version || '9' }}"
+          if [ "$VERSION" = "9" ]; then
+            echo "base=/opt/pve-isos/proxmox-ve_9.1-1.iso" >> "$GITHUB_OUTPUT"
+            echo "filename=proxmox-ve_9.1-1-auto.iso" >> "$GITHUB_OUTPUT"
           else
-            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "base=/opt/pve-isos/proxmox-ve_8.4-1.iso" >> "$GITHUB_OUTPUT"
+            echo "filename=proxmox-ve_8.4-1-auto.iso" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate answer file
+        if: inputs.skip_provision != true
+        shell: bash
+        run: |
+          sed "s/\${root_password}/${PVE_PASSWORD}/" \
+            ${INFRA_DIR}/answer.toml.tftpl > /tmp/answer.toml
+          echo "Generated answer file:"
+          cat /tmp/answer.toml
+
+      - name: Prepare auto-install ISO
+        if: inputs.skip_provision != true
+        shell: bash
+        run: |
+          bash ${SCRIPTS_DIR}/prepare-auto-iso.sh \
+            "${{ steps.iso.outputs.base }}" \
+            /tmp/answer.toml \
+            ${SCRIPTS_DIR}/first-boot.sh \
+            "/tmp/${{ steps.iso.outputs.filename }}"
+
+      - name: Upload ISO to PVE storage
+        if: inputs.skip_provision != true
+        id: upload
+        shell: bash
+        env:
+          PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
+        run: |
+          bash ${SCRIPTS_DIR}/upload-to-pve.sh \
+            "$(echo '${{ secrets.PVE_ENDPOINT }}' | sed -E 's|https?://||;s|:.*||')" \
+            "${PVE_API_TOKEN}" \
+            "${{ secrets.PVE_TARGET_NODE }}" \
+            "local" \
+            "/tmp/${{ steps.iso.outputs.filename }}" \
+            "iso" | tee /tmp/upload-output.txt
+          ISO_VOLID=$(tail -1 /tmp/upload-output.txt)
+          echo "iso_volid=${ISO_VOLID}" >> "$GITHUB_OUTPUT"
+
+      - name: Terraform init
+        if: inputs.skip_provision != true
+        shell: bash
+        working-directory: ${{ env.INFRA_DIR }}
+        run: terraform init -input=false
+
+      - name: Terraform apply
+        if: inputs.skip_provision != true
+        id: terraform
+        shell: bash
+        working-directory: ${{ env.INFRA_DIR }}
+        env:
+          TF_VAR_proxmox_endpoint: ${{ secrets.PVE_ENDPOINT }}
+          TF_VAR_proxmox_api_token: ${{ secrets.PVE_API_TOKEN }}
+          TF_VAR_target_node: ${{ secrets.PVE_TARGET_NODE }}
+          TF_VAR_iso_file_id: ${{ steps.upload.outputs.iso_volid }}
+          TF_VAR_test_vm_password: ${{ env.PVE_PASSWORD }}
+        run: |
+          terraform apply -auto-approve -input=false
+          echo "vm_id=$(terraform output -raw pve_test_vm_id)" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for install and create API token
+        if: inputs.skip_provision != true
+        id: provision
+        shell: bash
+        env:
+          PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
+        run: |
+          PARENT_HOST=$(echo '${{ secrets.PVE_ENDPOINT }}' | sed -E 's|https?://||;s|:.*||')
+          OUTPUT=$(bash ${SCRIPTS_DIR}/create-api-token.sh \
+            "${PARENT_HOST}" \
+            "${PVE_API_TOKEN}" \
+            "${{ steps.terraform.outputs.vm_id }}" \
+            "${PVE_PASSWORD}" \
+            900)
+          echo "$OUTPUT"
+          VM_IP=$(echo "$OUTPUT" | grep "^IP=" | cut -d= -f2)
+          VM_TOKEN=$(echo "$OUTPUT" | grep "^TOKEN=" | cut -d= -f2-)
+          echo "host=${VM_IP}" >> "$GITHUB_OUTPUT"
+          echo "token=${VM_TOKEN}" >> "$GITHUB_OUTPUT"
+
+      # ── Resolve test target ────────────────────────────────────────────
+
+      - name: Set test target
+        id: target
+        shell: bash
+        run: |
+          if [ "${{ inputs.skip_provision }}" = "true" ]; then
+            echo "host=${{ secrets.PVETEST_HOST }}" >> "$GITHUB_OUTPUT"
+            echo "port=${{ secrets.PVETEST_PORT || '8006' }}" >> "$GITHUB_OUTPUT"
+            echo "token=${{ secrets.PVETEST_APITOKEN }}" >> "$GITHUB_OUTPUT"
+            echo "node=${{ secrets.PVETEST_NODE || 'pve' }}" >> "$GITHUB_OUTPUT"
+            echo "storage=${{ secrets.PVETEST_STORAGE || 'local' }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "host=${{ steps.provision.outputs.host }}" >> "$GITHUB_OUTPUT"
+            echo "port=8006" >> "$GITHUB_OUTPUT"
+            echo "token=${{ steps.provision.outputs.token }}" >> "$GITHUB_OUTPUT"
+            echo "node=pve" >> "$GITHUB_OUTPUT"
+            echo "storage=local" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Verify PVE API reachable
-        if: steps.check-secrets.outputs.skip != 'true'
         shell: bash
-        env:
-          PVETEST_HOST: ${{ inputs.pve_host || secrets.PVETEST_HOST }}
-          PVETEST_PORT: ${{ secrets.PVETEST_PORT || '8006' }}
-          PVETEST_APITOKEN: ${{ secrets.PVETEST_APITOKEN }}
         run: |
-          echo "Testing connectivity to PVE API at ${PVETEST_HOST}:${PVETEST_PORT}..."
+          HOST="${{ steps.target.outputs.host }}"
+          PORT="${{ steps.target.outputs.port }}"
+          TOKEN="${{ steps.target.outputs.token }}"
+          echo "Testing connectivity to PVE API at ${HOST}:${PORT}..."
           if curl -sk --connect-timeout 10 \
-              -H "Authorization: PVEAPIToken=${PVETEST_APITOKEN}" \
-              "https://${PVETEST_HOST}:${PVETEST_PORT}/api2/json/nodes" | grep -q '"node"'; then
+              -H "Authorization: PVEAPIToken=${TOKEN}" \
+              "https://${HOST}:${PORT}/api2/json/nodes" | grep -q '"node"'; then
             echo "PVE API is responsive"
           else
-            echo "::error::Cannot reach PVE API at ${PVETEST_HOST}:${PVETEST_PORT}"
+            echo "::error::Cannot reach PVE API at ${HOST}:${PORT}"
             exit 1
           fi
 
+      # ── Build and test ─────────────────────────────────────────────────
+
       - name: Build module
-        if: steps.check-secrets.outputs.skip != 'true'
         run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework net9.0 --output ./publish/net9.0
 
       - name: Install Pester 5
-        if: steps.check-secrets.outputs.skip != 'true'
         shell: pwsh
         run: Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser
 
       - name: Copy module to module path
-        if: steps.check-secrets.outputs.skip != 'true'
         shell: pwsh
         run: |
           $modulePath = "$HOME/.local/share/powershell/Modules/PSProxmoxVE"
           New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
           Copy-Item -Path ./publish/net9.0/* -Destination $modulePath -Recurse -Force
 
+      - name: Create test ISO
+        shell: bash
+        run: dd if=/dev/urandom of=/tmp/pvetest.iso bs=1M count=1 2>/dev/null
+
       - name: Run integration tests
-        if: steps.check-secrets.outputs.skip != 'true'
         shell: pwsh
         env:
-          PVETEST_HOST: ${{ inputs.pve_host || secrets.PVETEST_HOST }}
-          PVETEST_PORT: ${{ secrets.PVETEST_PORT || '8006' }}
-          PVETEST_APITOKEN: ${{ secrets.PVETEST_APITOKEN }}
-          PVETEST_NODE: ${{ secrets.PVETEST_NODE }}
-          PVETEST_STORAGE: ${{ secrets.PVETEST_STORAGE }}
-          PVETEST_ISO_PATH: ${{ secrets.PVETEST_ISO_PATH }}
+          PVETEST_HOST: ${{ steps.target.outputs.host }}
+          PVETEST_PORT: ${{ steps.target.outputs.port }}
+          PVETEST_APITOKEN: ${{ steps.target.outputs.token }}
+          PVETEST_NODE: ${{ steps.target.outputs.node }}
+          PVETEST_STORAGE: ${{ steps.target.outputs.storage }}
+          PVETEST_ISO_PATH: /tmp/pvetest.iso
         run: |
           Import-Module Pester -MinimumVersion 5.0
           $config = New-PesterConfiguration
@@ -120,8 +220,34 @@ jobs:
           Invoke-Pester -Configuration $config
 
       - name: Upload test results
-        if: always() && steps.check-secrets.outputs.skip != 'true'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: integration-test-results
           path: TestResults/
+
+      # ── Teardown ───────────────────────────────────────────────────────
+
+      - name: Terraform destroy
+        if: always() && inputs.skip_provision != true
+        shell: bash
+        working-directory: ${{ env.INFRA_DIR }}
+        env:
+          TF_VAR_proxmox_endpoint: ${{ secrets.PVE_ENDPOINT }}
+          TF_VAR_proxmox_api_token: ${{ secrets.PVE_API_TOKEN }}
+          TF_VAR_target_node: ${{ secrets.PVE_TARGET_NODE }}
+          TF_VAR_iso_file_id: ${{ steps.upload.outputs.iso_volid }}
+          TF_VAR_test_vm_password: ${{ env.PVE_PASSWORD }}
+        run: terraform destroy -auto-approve -input=false
+
+      - name: Clean up uploaded ISO
+        if: always() && inputs.skip_provision != true
+        shell: bash
+        env:
+          PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
+        run: |
+          PARENT_HOST=$(echo '${{ secrets.PVE_ENDPOINT }}' | sed -E 's|https?://||;s|:.*||')
+          bash ${SCRIPTS_DIR}/cleanup-pve-storage.sh \
+            "${PARENT_HOST}" \
+            "${PVE_API_TOKEN}" \
+            "${{ steps.upload.outputs.iso_volid }}" || true
