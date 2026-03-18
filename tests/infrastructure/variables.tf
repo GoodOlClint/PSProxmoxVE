@@ -53,7 +53,7 @@ variable "disk_size" {
 variable "disk_storage" {
   description = "Proxmox storage pool for VM disks (must support raw format)"
   type        = string
-  default     = "nas-iscsi-lvm"
+  default     = "nas-iSCSI-lvm"
 }
 
 variable "iso_local_path" {
