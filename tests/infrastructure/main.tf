@@ -29,8 +29,9 @@ resource "proxmox_virtual_environment_vm" "nested_pve" {
   node_name = var.target_node
   vm_id     = var.vm_id
 
-  machine = "q35"
-  bios    = "ovmf"
+  machine    = "q35"
+  bios       = "ovmf"
+  boot_order = ["scsi0", "ide2"]
 
   cpu {
     type    = "host"
