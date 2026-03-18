@@ -81,15 +81,9 @@ jobs:
             exit 1
           fi
 
-      - name: Setup .NET
-        if: steps.check-secrets.outputs.skip != 'true'
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.x'
-
       - name: Build module
         if: steps.check-secrets.outputs.skip != 'true'
-        run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework net10.0 --output ./publish/net10.0
+        run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework net9.0 --output ./publish/net9.0
 
       - name: Install Pester 5
         if: steps.check-secrets.outputs.skip != 'true'
@@ -102,7 +96,7 @@ jobs:
         run: |
           $modulePath = "$HOME/.local/share/powershell/Modules/PSProxmoxVE"
           New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
-          Copy-Item -Path ./publish/net10.0/* -Destination $modulePath -Recurse -Force
+          Copy-Item -Path ./publish/net9.0/* -Destination $modulePath -Recurse -Force
 
       - name: Run integration tests
         if: steps.check-secrets.outputs.skip != 'true'
