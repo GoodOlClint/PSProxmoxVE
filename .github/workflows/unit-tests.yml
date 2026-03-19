@@ -8,6 +8,7 @@ on:
 
 jobs:
   pester-tests:
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -110,6 +111,9 @@ jobs:
       - name: Run Pester tests (PS 7.x)
         if: matrix.ps_version != '5.1'
         shell: pwsh
+        env:
+          DOTNET_ROOT: ''
+          DOTNET_MULTILEVEL_LOOKUP: ''
         run: |
           Import-Module Pester -MinimumVersion 5.0
           $config = New-PesterConfiguration

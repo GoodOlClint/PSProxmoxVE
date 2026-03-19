@@ -201,6 +201,8 @@ jobs:
       - name: Run integration tests
         shell: pwsh
         env:
+          DOTNET_ROOT: ''
+          DOTNET_MULTILEVEL_LOOKUP: ''
           PVETEST_HOST: ${{ steps.target.outputs.host }}
           PVETEST_PORT: ${{ steps.target.outputs.port }}
           PVETEST_APITOKEN: ${{ steps.target.outputs.token }}
