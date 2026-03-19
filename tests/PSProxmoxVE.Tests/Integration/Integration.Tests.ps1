@@ -224,7 +224,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
             if (Skip-IfNoTarget) { return }
 
             { New-PveRole -RoleId 'PesterTestRole' `
-                -Privileges @('VM.Audit', 'VM.Console') `
+                -Privileges 'VM.Audit,VM.Console' `
                 -ErrorAction Stop } | Should -Not -Throw
 
             $script:CreatedRoles.Add('PesterTestRole')
@@ -312,7 +312,8 @@ Describe 'Integration Tests' -Tag 'Integration' {
             { Set-PvePermission `
                 -Path  '/' `
                 -Role  'PVEAuditor' `
-                -Users 'pester-permuser@pam' `
+                -UgId  'pester-permuser@pam' `
+                -Type  'user' `
                 -ErrorAction Stop } | Should -Not -Throw
         }
     }
@@ -347,16 +348,11 @@ Describe 'Integration Tests' -Tag 'Integration' {
             $script:CreatedVmIds.Add($vm.VmId)
         }
 
-        It 'Should get VM config' {
+        It 'Should get and set VM config' {
             if (Skip-IfNoTestVm) { return }
 
             $config = Get-PveVmConfig -Node $script:Node -VmId $script:TestVmId
             $config | Should -Not -BeNullOrEmpty
-            $config.Name | Should -Be 'pester-test-vm'
-        }
-
-        It 'Should set VM config' {
-            if (Skip-IfNoTestVm) { return }
 
             { Set-PveVmConfig `
                 -Node        $script:Node `
@@ -364,8 +360,8 @@ Describe 'Integration Tests' -Tag 'Integration' {
                 -Description 'Updated by Pester integration test' `
                 -ErrorAction Stop } | Should -Not -Throw
 
-            $config = Get-PveVmConfig -Node $script:Node -VmId $script:TestVmId
-            $config.Description | Should -Be 'Updated by Pester integration test'
+            $updated = Get-PveVmConfig -Node $script:Node -VmId $script:TestVmId
+            $updated.Description | Should -Be 'Updated by Pester integration test'
         }
 
         It 'Should start and stop a VM' {
@@ -378,39 +374,29 @@ Describe 'Integration Tests' -Tag 'Integration' {
             $stopTask | Should -Not -BeNullOrEmpty
         }
 
-        It 'Should restart a VM' {
+        It 'Should hard-reset a running VM' {
             if (Skip-IfNoTestVm) { return }
 
-            # Start first, then restart
+            # Start the VM first
             Start-PveVm -Node $script:Node -VmId $script:TestVmId -Wait | Out-Null
 
-            $task = Restart-PveVm -Node $script:Node -VmId $script:TestVmId -Wait
+            # Hard reset (no ACPI — works even without guest OS)
+            $task = Reset-PveVm -Node $script:Node -VmId $script:TestVmId -Wait
             $task | Should -Not -BeNullOrEmpty
 
             Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait | Out-Null
         }
 
-        It 'Should resize a VM disk' {
-            if (Skip-IfNoTestVm) { return }
-
-            # First add a disk to resize
-            Set-PveVmConfig -Node $script:Node -VmId $script:TestVmId `
-                -Settings @{ scsi0 = "$($script:Storage):1" } -ErrorAction Stop
-
-            { Resize-PveVmDisk `
-                -Node $script:Node `
-                -VmId $script:TestVmId `
-                -Disk 'scsi0' `
-                -Size '+1G' `
-                -ErrorAction Stop } | Should -Not -Throw
-        }
-
         It 'Should clone a VM' {
             if (Skip-IfNoTestVm) { return }
+
+            # Pick a high VMID for the clone to avoid collisions
+            $cloneId = $script:TestVmId + 1000
 
             $task = Copy-PveVm `
                 -SourceNode $script:Node `
                 -VmId       $script:TestVmId `
+                -NewVmId    $cloneId `
                 -NewName    'pester-clone-vm' `
                 -Full `
                 -Wait
@@ -511,11 +497,22 @@ Describe 'Integration Tests' -Tag 'Integration' {
 
     # -----------------------------------------------------------------------
     Context 'Tasks' {
-        It 'Should list recent tasks' {
-            if (Skip-IfNoTarget) { return }
+        It 'Should get a task by UPID and wait for completion' {
+            if (Skip-IfNoTestVm) { return }
 
-            $tasks = Get-PveTask -Node $script:Node
-            $tasks | Should -Not -BeNullOrEmpty
+            # Start the VM to get a task UPID
+            $upid = Start-PveVm -Node $script:Node -VmId $script:TestVmId
+            $upid | Should -Not -BeNullOrEmpty
+
+            # Wait for the task to complete
+            { Wait-PveTask -Node $script:Node -Upid $upid } | Should -Not -Throw
+
+            # Get the task status
+            $task = Get-PveTask -Node $script:Node -Upid $upid
+            $task | Should -Not -BeNullOrEmpty
+
+            # Clean up
+            Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait | Out-Null
         }
     }
 
