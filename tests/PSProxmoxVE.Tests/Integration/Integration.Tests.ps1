@@ -643,6 +643,9 @@ Describe 'Integration Tests' -Tag 'Integration' {
             { New-PveTemplate -Node $script:Node -VmId $script:LinuxVmId -Confirm:$false -ErrorAction Stop } |
                 Should -Not -Throw
 
+            # Allow a moment for the template flag to propagate
+            Start-Sleep -Seconds 3
+
             # Verify it appears as a template
             $templates = Get-PveTemplate -Node $script:Node
             $templates | Where-Object { $_.VmId -eq $script:LinuxVmId } |
