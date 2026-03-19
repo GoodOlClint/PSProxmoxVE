@@ -10,15 +10,14 @@ if (Get-Module -Name PSProxmoxVE) { return }
 
 # 1. Try importing by module name (works in CI where the module is
 #    installed to a PSModulePath location via dotnet publish + copy).
-try {
+$available = Get-Module PSProxmoxVE -ListAvailable -ErrorAction SilentlyContinue
+if ($available) {
     Import-Module PSProxmoxVE -Force -ErrorAction Stop
     return
 }
-catch {
-    # Module not on PSModulePath — fall through to local-path discovery.
-}
 
-# 2. Discover the built DLL from the local source tree.
+# 2. Discover the module manifest (.psd1) from the local source tree.
+#    Loading via manifest ensures PS handles assembly resolution correctly.
 #    Prefer the framework that matches the running PowerShell edition.
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $moduleRoot = Join-Path $repoRoot 'src/PSProxmoxVE'
@@ -32,21 +31,21 @@ else {
 
 $searchPaths = foreach ($fw in $frameworks) {
     # Publish output (has all dependencies co-located)
-    Join-Path $repoRoot "publish/$fw/PSProxmoxVE.dll"
+    Join-Path $repoRoot "publish/$fw/PSProxmoxVE.psd1"
     # Build output
-    Join-Path $moduleRoot "bin/Debug/$fw/PSProxmoxVE.dll"
-    Join-Path $moduleRoot "bin/Release/$fw/PSProxmoxVE.dll"
+    Join-Path $moduleRoot "bin/Debug/$fw/PSProxmoxVE.psd1"
+    Join-Path $moduleRoot "bin/Release/$fw/PSProxmoxVE.psd1"
 }
 
-$moduleDll = $searchPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+$moduleManifest = $searchPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
 
-if ($null -eq $moduleDll) {
-    throw "PSProxmoxVE.dll not found. Build the project before running Pester tests."
+if ($null -eq $moduleManifest) {
+    throw "PSProxmoxVE module not found. Build the project before running Pester tests."
 }
 
 # Remove deps.json if present — it causes assembly resolution conflicts
 # when loading a binary module inside PowerShell's own .NET runtime.
-$depsJson = Join-Path (Split-Path $moduleDll) 'PSProxmoxVE.deps.json'
+$depsJson = Join-Path (Split-Path $moduleManifest) 'PSProxmoxVE.deps.json'
 if (Test-Path $depsJson) { Remove-Item $depsJson -Force }
 
-Import-Module $moduleDll -Force -ErrorAction Stop
+Import-Module $moduleManifest -Force -ErrorAction Stop
