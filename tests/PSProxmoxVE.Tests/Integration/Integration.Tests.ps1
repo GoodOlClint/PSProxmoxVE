@@ -55,7 +55,8 @@ BeforeAll {
 
     # Convenience accessors (only meaningful when SkipReason is null)
     $script:Host_    = [System.Environment]::GetEnvironmentVariable('PVETEST_HOST')
-    $script:Port     = [int]([System.Environment]::GetEnvironmentVariable('PVETEST_PORT') ?? '8006')
+    $portEnv = [System.Environment]::GetEnvironmentVariable('PVETEST_PORT')
+    $script:Port     = [int]$(if ($portEnv) { $portEnv } else { '8006' })
     $script:ApiToken = [System.Environment]::GetEnvironmentVariable('PVETEST_APITOKEN')
     $script:Node     = [System.Environment]::GetEnvironmentVariable('PVETEST_NODE')
     $script:Storage  = [System.Environment]::GetEnvironmentVariable('PVETEST_STORAGE')
