@@ -8,41 +8,108 @@ on:
 
 jobs:
   pester-tests:
-    runs-on: [self-hosted, proxmox, integration]
     timeout-minutes: 15
-    container:
-      image: mcr.microsoft.com/powershell:7.5-ubuntu-24.04
-      options: --user root
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            ps_version: '5.1'
+            framework: net48
+            shell: powershell
+          - os: windows-latest
+            ps_version: '7.5'
+            framework: net9.0
+            shell: pwsh
+          - os: ubuntu-latest
+            ps_version: '7.5'
+            framework: net9.0
+            shell: pwsh
+          - os: macos-latest
+            ps_version: '7.5'
+            framework: net9.0
+            shell: pwsh
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v5
 
-      - name: Install .NET SDK 9.0
-        run: |
-          apt-get update && apt-get install -y wget
-          wget -q https://dot.net/v1/dotnet-install.sh -O /tmp/dotnet-install.sh
-          chmod +x /tmp/dotnet-install.sh
-          /tmp/dotnet-install.sh --channel 9.0 --install-dir /usr/share/dotnet
-          ln -sf /usr/share/dotnet/dotnet /usr/local/bin/dotnet
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '9.0.x'
 
       - name: Build module
-        run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework net9.0 --output ./publish/net9.0
+        run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework ${{ matrix.framework }} --output ./publish/${{ matrix.framework }}
 
       - name: Remove deps.json from publish output
-        run: rm -f ./publish/net9.0/PSProxmoxVE.deps.json
+        shell: bash
+        run: rm -f ./publish/${{ matrix.framework }}/PSProxmoxVE.deps.json
 
-      - name: Install Pester and deploy module
+      - name: Install Pester 5 (PS 5.1)
+        if: matrix.ps_version == '5.1'
+        shell: powershell
+        run: |
+          Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser -SkipPublisherCheck
+
+      - name: Install Pester 5 (PS 7.x)
+        if: matrix.ps_version != '5.1'
         shell: pwsh
         run: |
-          Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope AllUsers
-          $modulePath = "/usr/local/share/powershell/Modules/PSProxmoxVE"
+          Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser
+
+      - name: Copy module to module path (PS 5.1)
+        if: matrix.ps_version == '5.1'
+        shell: powershell
+        run: |
+          $modulePath = "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\PSProxmoxVE"
           New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
-          Copy-Item -Path ./publish/net9.0/* -Destination $modulePath -Recurse -Force
+          Copy-Item -Path .\publish\${{ matrix.framework }}\* -Destination $modulePath -Recurse -Force
 
-      - name: Create TestResults directory
-        run: mkdir -p TestResults
+      - name: Copy module to module path (PS 7.x, Windows)
+        if: matrix.ps_version != '5.1' && matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $modulePath = "$env:USERPROFILE\Documents\PowerShell\Modules\PSProxmoxVE"
+          New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
+          Copy-Item -Path .\publish\${{ matrix.framework }}\* -Destination $modulePath -Recurse -Force
 
-      - name: Run Pester tests
+      - name: Copy module to module path (PS 7.x, non-Windows)
+        if: matrix.ps_version != '5.1' && matrix.os != 'windows-latest'
+        shell: pwsh
+        run: |
+          $modulePath = "$HOME/.local/share/powershell/Modules/PSProxmoxVE"
+          New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
+          Copy-Item -Path ./publish/${{ matrix.framework }}/* -Destination $modulePath -Recurse -Force
+
+      - name: Create TestResults directory (PS 5.1)
+        if: matrix.ps_version == '5.1'
+        shell: powershell
+        run: New-Item -ItemType Directory -Path TestResults -Force | Out-Null
+
+      - name: Create TestResults directory (PS 7.x)
+        if: matrix.ps_version != '5.1'
+        shell: pwsh
+        run: New-Item -ItemType Directory -Path TestResults -Force | Out-Null
+
+      - name: Run Pester tests (PS 5.1)
+        if: matrix.ps_version == '5.1'
+        shell: powershell
+        run: |
+          Import-Module Pester -MinimumVersion 5.0
+          $config = New-PesterConfiguration
+          $config.Run.Path = "tests/PSProxmoxVE.Tests"
+          $config.Run.Exit = $true
+          $config.Filter.ExcludeTag = @("Integration")
+          $config.Output.Verbosity = "Detailed"
+          $config.TestResult.Enabled = $true
+          $config.TestResult.OutputFormat = "NUnitXml"
+          $config.TestResult.OutputPath = "TestResults/pester-results.xml"
+          Invoke-Pester -Configuration $config
+
+      - name: Run Pester tests (PS 7.x)
+        if: matrix.ps_version != '5.1'
         shell: pwsh
         env:
           DOTNET_ROOT: ''
@@ -63,5 +130,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pester-results-linux-ps7
+          name: pester-results-${{ matrix.os }}-ps${{ matrix.ps_version }}
           path: TestResults/
