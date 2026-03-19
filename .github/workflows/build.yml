@@ -28,7 +28,7 @@ jobs:
         run: dotnet test tests/PSProxmoxVE.Core.Tests/PSProxmoxVE.Core.Tests.csproj --configuration Release --framework net48 --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-net48
           path: ./coverage
@@ -53,7 +53,7 @@ jobs:
         run: dotnet test tests/PSProxmoxVE.Core.Tests/PSProxmoxVE.Core.Tests.csproj --configuration Release --framework net9.0 --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-net9-${{ matrix.os }}
           path: ./coverage
