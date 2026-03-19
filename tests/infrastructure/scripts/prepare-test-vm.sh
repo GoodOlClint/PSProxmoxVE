@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Downloads a Debian cloud image, installs qemu-guest-agent via
-# virt-customize (which is already available on the nested PVE host),
-# creates a VM with the customized disk, and waits for the guest agent.
+# Downloads a Debian cloud image to the nested PVE, creates a VM, and uses
+# cloud-init custom user-data to install qemu-guest-agent on first boot.
 #
-# All heavy lifting happens on the nested PVE via SSH — no libguestfs
-# or large dependencies needed in the CI container.
+# No virt-customize or libguestfs needed — cloud-init handles the package
+# installation. A custom user-data snippet is SCP'd to the nested PVE's
+# snippets directory and referenced via --cicustom.
 #
 # Usage: prepare-test-vm.sh <nested-pve-ip> <root-password> <vm-id>
 #
@@ -21,29 +21,38 @@ CLOUD_IMAGE_URL="https://cloud.debian.org/images/cloud/bookworm/latest/debian-12
 
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 SSH_CMD="sshpass -p ${ROOT_PASS} ssh ${SSH_OPTS} root@${NESTED_IP}"
+SCP_CMD="sshpass -p ${ROOT_PASS} scp ${SSH_OPTS}"
 
 echo "=== Preparing test Linux VM (VMID ${VMID}) on ${NESTED_IP} ==="
 
-# Download image, customize, create VM — all on the nested PVE
-echo "Downloading and customizing Debian cloud image on nested PVE..."
+# Create cloud-init user-data snippet locally
+USERDATA=$(mktemp)
+cat > "${USERDATA}" <<'YAML'
+#cloud-config
+package_update: true
+packages:
+  - qemu-guest-agent
+runcmd:
+  - systemctl enable --now qemu-guest-agent
+YAML
+
+# Upload snippet to nested PVE
+echo "Uploading cloud-init user-data snippet..."
+${SSH_CMD} "mkdir -p /var/lib/vz/snippets"
+${SCP_CMD} "${USERDATA}" "root@${NESTED_IP}:/var/lib/vz/snippets/test-vm-userdata.yml"
+rm -f "${USERDATA}"
+
+# Download image and create VM — all on the nested PVE
+echo "Downloading Debian cloud image and creating VM on nested PVE..."
 ${SSH_CMD} bash <<REMOTE
 set -e
 
-# Ensure libguestfs-tools is available (not installed by default on fresh PVE)
-if ! command -v virt-customize &>/dev/null; then
-    echo "Installing libguestfs-tools..."
-    apt-get update -qq && apt-get install -y -qq libguestfs-tools
-fi
+# Enable snippets content type on local storage (disabled by default)
+pvesm set local --content iso,vztmpl,snippets
 
 # Download the cloud image
 echo "Downloading Debian cloud image..."
 curl -sL -o /tmp/debian-cloud.qcow2 "${CLOUD_IMAGE_URL}"
-
-# Install qemu-guest-agent into the image
-echo "Installing qemu-guest-agent into image..."
-virt-customize -a /tmp/debian-cloud.qcow2 \
-    --install qemu-guest-agent \
-    --run-command 'systemctl enable qemu-guest-agent'
 
 # Create the VM
 echo "Creating VM ${VMID}..."
@@ -56,7 +65,7 @@ qm create ${VMID} \
     --ostype l26 \
     --scsihw virtio-scsi-single
 
-# Import the customized disk
+# Import the disk
 echo "Importing disk..."
 qm importdisk ${VMID} /tmp/debian-cloud.qcow2 local-lvm 2>&1 | tail -1
 
@@ -69,11 +78,12 @@ qm set ${VMID} \
 # Add cloud-init drive
 qm set ${VMID} --ide2 local-lvm:cloudinit
 
-# Set cloud-init config
+# Set cloud-init config with custom user-data for guest-agent install
 qm set ${VMID} \
     --ciuser root \
     --cipassword "${ROOT_PASS}" \
-    --ipconfig0 ip=dhcp
+    --ipconfig0 ip=dhcp \
+    --cicustom "user=local:snippets/test-vm-userdata.yml"
 
 # Start the VM
 echo "Starting VM ${VMID}..."
@@ -83,9 +93,9 @@ qm start ${VMID}
 rm -f /tmp/debian-cloud.qcow2
 REMOTE
 
-# Wait for guest agent to respond
-echo "Waiting for guest agent on VM ${VMID}..."
-TIMEOUT=180
+# Wait for guest agent to respond (cloud-init needs time to install the package)
+echo "Waiting for guest agent on VM ${VMID} (cloud-init installing packages)..."
+TIMEOUT=300
 ELAPSED=0
 while [ $ELAPSED -lt $TIMEOUT ]; do
     if ${SSH_CMD} "qm agent ${VMID} ping" 2>/dev/null; then
@@ -93,8 +103,8 @@ while [ $ELAPSED -lt $TIMEOUT ]; do
         echo "LINUX_VMID=${VMID}"
         exit 0
     fi
-    sleep 5
-    ELAPSED=$((ELAPSED + 5))
+    sleep 10
+    ELAPSED=$((ELAPSED + 10))
     echo "  Waiting... (${ELAPSED}s / ${TIMEOUT}s)"
 done
 
