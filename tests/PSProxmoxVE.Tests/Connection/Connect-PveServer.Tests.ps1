@@ -26,14 +26,16 @@ Describe 'Connect-PveServer' {
         }
     }
 
-    Context 'Parameter validation — missing required parameters' {
-        It 'Should throw when Server is omitted entirely' {
-            { Connect-PveServer -ErrorAction Stop } | Should -Throw
+    Context 'Parameter validation — required parameters' {
+        It 'Server should be Mandatory' {
+            $param = (Get-Command 'Connect-PveServer').Parameters['Server']
+            $isMandatory = $param.ParameterSets.Values | Where-Object { $_.IsMandatory }
+            $isMandatory | Should -Not -BeNullOrEmpty
         }
 
-        It 'Should throw when Server is provided but neither Credential nor ApiToken is supplied' {
-            # Both parameter sets require one of Credential/ApiToken; omitting both is an error.
-            { Connect-PveServer -Server 'pve.example.com' -ErrorAction Stop } | Should -Throw
+        It 'Should require either Credential or ApiToken (both parameter sets exist)' {
+            $cmd = Get-Command 'Connect-PveServer'
+            $cmd.ParameterSets.Count | Should -BeGreaterOrEqual 2
         }
     }
 

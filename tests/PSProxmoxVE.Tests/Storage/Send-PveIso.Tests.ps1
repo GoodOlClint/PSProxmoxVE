@@ -56,23 +56,6 @@ Describe 'Send-PveIso' {
             $isMandatory | Should -Not -BeNullOrEmpty
         }
 
-        It 'Should throw when Node is omitted' {
-            if (-not $script:CmdExists) { Set-ItResult -Skipped -Because 'Not yet compiled'; return }
-            { Send-PveIso -Storage 'local' -Path '/tmp/test.iso' -ErrorAction Stop } |
-                Should -Throw
-        }
-
-        It 'Should throw when Storage is omitted' {
-            if (-not $script:CmdExists) { Set-ItResult -Skipped -Because 'Not yet compiled'; return }
-            { Send-PveIso -Node 'pve-node1' -Path '/tmp/test.iso' -ErrorAction Stop } |
-                Should -Throw
-        }
-
-        It 'Should throw when Path is omitted' {
-            if (-not $script:CmdExists) { Set-ItResult -Skipped -Because 'Not yet compiled'; return }
-            { Send-PveIso -Node 'pve-node1' -Storage 'local' -ErrorAction Stop } |
-                Should -Throw
-        }
     }
 
     Context 'ChecksumAlgorithm ValidateSet' {

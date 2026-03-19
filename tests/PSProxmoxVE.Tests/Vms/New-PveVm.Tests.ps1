@@ -42,10 +42,6 @@ Describe 'New-PveVm' {
     }
 
     Context 'Required parameter — Node' {
-        It 'Should throw when Node is omitted' {
-            { New-PveVm -ErrorAction Stop } | Should -Throw
-        }
-
         It 'Node should be Mandatory' {
             $nodeParam = (Get-Command 'New-PveVm').Parameters['Node']
             $isMandatory = $nodeParam.ParameterSets.Values | Where-Object { $_.IsMandatory }

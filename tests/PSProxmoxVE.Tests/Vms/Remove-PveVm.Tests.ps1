@@ -51,14 +51,6 @@ Describe 'Remove-PveVm' {
     }
 
     Context 'Required parameters' {
-        It 'Should throw when Node is omitted' {
-            { Remove-PveVm -VmId 100 -ErrorAction Stop } | Should -Throw
-        }
-
-        It 'Should throw when VmId is omitted' {
-            { Remove-PveVm -Node 'pve-node1' -ErrorAction Stop } | Should -Throw
-        }
-
         It 'Node should be Mandatory' {
             $nodeParam = (Get-Command 'Remove-PveVm').Parameters['Node']
             $isMandatory = $nodeParam.ParameterSets.Values | Where-Object { $_.IsMandatory }

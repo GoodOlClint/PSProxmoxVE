@@ -58,10 +58,6 @@ Describe 'New-PveContainer' {
             $isMandatory | Should -Not -BeNullOrEmpty
         }
 
-        It 'Should throw when Node is omitted' {
-            Skip-IfMissing 'New-PveContainer'
-            { New-PveContainer -ErrorAction Stop } | Should -Throw
-        }
     }
 
     Context 'Optional parameters' {
