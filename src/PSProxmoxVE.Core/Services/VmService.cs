@@ -353,5 +353,89 @@ namespace PSProxmoxVE.Core.Services
             task.Node = node;
             return task;
         }
+
+        // -------------------------------------------------------------------------
+        // QEMU Guest Agent
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Pings the QEMU guest agent on the specified VM. Returns true if responsive.
+        /// </summary>
+        public bool PingGuestAgent(PveSession session, string node, int vmid)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+
+            using var client = new PveHttpClient(session);
+            try
+            {
+                client.PostAsync($"nodes/{node}/qemu/{vmid}/agent/ping").GetAwaiter().GetResult();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Retrieves network interface information from the QEMU guest agent.
+        /// </summary>
+        public PveGuestNetworkInterface[] GetGuestNetworkInterfaces(PveSession session, string node, int vmid)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+
+            using var client = new PveHttpClient(session);
+            var response = client.GetAsync($"nodes/{node}/qemu/{vmid}/agent/network-get-interfaces")
+                .GetAwaiter().GetResult();
+            var data = JObject.Parse(response)["data"];
+            var result = data?["result"];
+            return result?.ToObject<PveGuestNetworkInterface[]>() ?? Array.Empty<PveGuestNetworkInterface>();
+        }
+
+        /// <summary>
+        /// Executes a command inside the guest via the QEMU guest agent.
+        /// Returns the PID of the spawned process.
+        /// </summary>
+        public int ExecuteGuestCommand(PveSession session, string node, int vmid,
+            string command, string[]? args = null)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (string.IsNullOrWhiteSpace(command)) throw new ArgumentNullException(nameof(command));
+
+            using var client = new PveHttpClient(session);
+            var data = new Dictionary<string, string>
+            {
+                ["command"] = command
+            };
+
+            if (args != null && args.Length > 0)
+            {
+                // PVE expects input-data for arguments passed as a JSON-encoded string array
+                var argsJson = Newtonsoft.Json.JsonConvert.SerializeObject(args);
+                data["input-data"] = argsJson;
+            }
+
+            var response = client.PostAsync($"nodes/{node}/qemu/{vmid}/agent/exec", data)
+                .GetAwaiter().GetResult();
+            var pid = JObject.Parse(response)["data"]?["pid"]?.ToObject<int>() ?? 0;
+            return pid;
+        }
+
+        /// <summary>
+        /// Gets the status/result of a guest agent exec command by PID.
+        /// </summary>
+        public JObject GetGuestExecStatus(PveSession session, string node, int vmid, int pid)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+
+            using var client = new PveHttpClient(session);
+            var response = client.GetAsync($"nodes/{node}/qemu/{vmid}/agent/exec-status?pid={pid}")
+                .GetAwaiter().GetResult();
+            return JObject.Parse(response)["data"] as JObject ?? new JObject();
+        }
     }
 }

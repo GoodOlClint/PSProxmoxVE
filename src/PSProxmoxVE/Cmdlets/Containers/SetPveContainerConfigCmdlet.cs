@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Management.Automation;
 using PSProxmoxVE.Core.Services;
@@ -77,6 +78,25 @@ namespace PSProxmoxVE.Cmdlets.Containers
         [Parameter(Mandatory = false)]
         public string? SearchDomain { get; set; }
 
+        /// <summary>
+        /// <para type="description">
+        /// Hashtable of additional configuration keys to set. Use this for any PVE config
+        /// option not exposed as a named parameter (e.g., net0, mp0, rootfs).
+        /// Values are merged after named parameters and can override them.
+        /// </para>
+        /// </summary>
+        [Parameter(Mandatory = false)]
+        public Hashtable? AdditionalConfig { get; set; }
+
+        /// <summary>
+        /// <para type="description">
+        /// Comma-separated list of configuration keys to delete.
+        /// Maps to the PVE API "delete" parameter.
+        /// </para>
+        /// </summary>
+        [Parameter(Mandatory = false)]
+        public string? Delete { get; set; }
+
         protected override void ProcessRecord()
         {
             if (!ShouldProcess($"Container {VmId} on node '{Node}'", "Set-PveContainerConfig"))
@@ -103,6 +123,15 @@ namespace PSProxmoxVE.Cmdlets.Containers
                 config["nameserver"] = Nameserver!;
             if (!string.IsNullOrEmpty(SearchDomain))
                 config["searchdomain"] = SearchDomain!;
+
+            if (AdditionalConfig != null)
+            {
+                foreach (DictionaryEntry entry in AdditionalConfig)
+                    config[entry.Key.ToString()!] = entry.Value ?? string.Empty;
+            }
+
+            if (!string.IsNullOrEmpty(Delete))
+                config["delete"] = Delete!;
 
             containerService.SetContainerConfig(session, Node, VmId, config);
         }

@@ -75,6 +75,11 @@
         'Set-PveVmConfig',
         'Resize-PveVmDisk',
 
+        # QEMU Guest Agent
+        'Test-PveVmGuestAgent',
+        'Get-PveVmGuestNetwork',
+        'Invoke-PveVmGuestExec',
+
         # Containers
         'Get-PveContainer',
         'New-PveContainer',

@@ -212,6 +212,22 @@ Describe 'Set-PveVmConfig' {
             $script:Cmd.Parameters['OsType'].ParameterType | Should -Be ([string])
         }
 
+        It 'Should have AdditionalConfig parameter (optional, Hashtable)' {
+            $script:Cmd.Parameters.ContainsKey('AdditionalConfig') | Should -BeTrue
+            $script:Cmd.Parameters['AdditionalConfig'].ParameterType | Should -Be ([hashtable])
+            $isMandatory = $script:Cmd.Parameters['AdditionalConfig'].ParameterSets.Values |
+                Where-Object { $_.IsMandatory }
+            $isMandatory | Should -BeNullOrEmpty
+        }
+
+        It 'Should have Delete parameter (optional, String)' {
+            $script:Cmd.Parameters.ContainsKey('Delete') | Should -BeTrue
+            $script:Cmd.Parameters['Delete'].ParameterType | Should -Be ([string])
+            $isMandatory = $script:Cmd.Parameters['Delete'].ParameterSets.Values |
+                Where-Object { $_.IsMandatory }
+            $isMandatory | Should -BeNullOrEmpty
+        }
+
         It 'Should have Session parameter (inherited from PveCmdletBase)' {
             $script:Cmd.Parameters.ContainsKey('Session') | Should -BeTrue
         }

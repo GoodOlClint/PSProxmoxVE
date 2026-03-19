@@ -1,0 +1,72 @@
+using System.Management.Automation;
+using PSProxmoxVE.Core.Services;
+
+namespace PSProxmoxVE.Cmdlets.Vms
+{
+    /// <summary>
+    /// <para type="synopsis">Executes a command inside a VM via the QEMU guest agent.</para>
+    /// <para type="description">
+    /// Sends a command to the QEMU guest agent running inside the specified VM for execution.
+    /// Returns the result including stdout, stderr, and exit code. The guest agent must be
+    /// installed and running inside the VM.
+    /// </para>
+    /// </summary>
+    [Cmdlet(VerbsLifecycle.Invoke, "PveVmGuestExec")]
+    [OutputType(typeof(PSObject))]
+    public sealed class InvokePveVmGuestExecCmdlet : PveCmdletBase
+    {
+        /// <summary>The Proxmox VE node name.</summary>
+        [Parameter(Mandatory = true, Position = 0)]
+        public string Node { get; set; } = string.Empty;
+
+        /// <summary>The VM identifier.</summary>
+        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true)]
+        public int VmId { get; set; }
+
+        /// <summary>The command to execute inside the guest.</summary>
+        [Parameter(Mandatory = true, Position = 2)]
+        public string Command { get; set; } = string.Empty;
+
+        /// <summary>Optional arguments to pass to the command.</summary>
+        [Parameter(Mandatory = false)]
+        public string[]? Args { get; set; }
+
+        protected override void ProcessRecord()
+        {
+            var session = GetSession();
+            var service = new VmService();
+
+            var pid = service.ExecuteGuestCommand(session, Node, VmId, Command, Args);
+
+            // Poll for completion
+            Newtonsoft.Json.Linq.JObject result;
+            do
+            {
+                System.Threading.Thread.Sleep(1000);
+                result = service.GetGuestExecStatus(session, Node, VmId, pid);
+            } while (result["exited"]?.ToObject<int>() != 1);
+
+            var output = new PSObject();
+            output.Properties.Add(new PSNoteProperty("ExitCode", result["exitcode"]?.ToObject<int>() ?? -1));
+            output.Properties.Add(new PSNoteProperty("Stdout", DecodeBase64(result["out-data"]?.ToString())));
+            output.Properties.Add(new PSNoteProperty("Stderr", DecodeBase64(result["err-data"]?.ToString())));
+            output.Properties.Add(new PSNoteProperty("Pid", pid));
+
+            WriteObject(output);
+        }
+
+        private static string DecodeBase64(string? encoded)
+        {
+            if (string.IsNullOrEmpty(encoded)) return string.Empty;
+            try
+            {
+                var bytes = System.Convert.FromBase64String(encoded);
+                return System.Text.Encoding.UTF8.GetString(bytes);
+            }
+            catch
+            {
+                return encoded!;
+            }
+        }
+    }
+}
