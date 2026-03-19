@@ -7,49 +7,28 @@ on:
     branches: [ main ]
 
 jobs:
-  build-net48:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v5
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '9.0.x'
-      - name: Restore dependencies
-        run: |
-          dotnet restore src/PSProxmoxVE/PSProxmoxVE.csproj
-          dotnet restore tests/PSProxmoxVE.Core.Tests/PSProxmoxVE.Core.Tests.csproj
-      - name: Build net48
-        run: |
-          dotnet build src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework net48 --no-restore
-          dotnet build tests/PSProxmoxVE.Core.Tests/PSProxmoxVE.Core.Tests.csproj --configuration Release --framework net48 --no-restore
-      - name: Test net48
-        run: dotnet test tests/PSProxmoxVE.Core.Tests/PSProxmoxVE.Core.Tests.csproj --configuration Release --framework net48 --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
-      - name: Upload coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-net48
-          path: ./coverage
+  build-and-test:
+    runs-on: [self-hosted, proxmox, integration]
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/dotnet/sdk:9.0
+      options: --user root
 
-  build-net9:
-    strategy:
-      matrix:
-        os: [windows-latest, ubuntu-latest]
-    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '9.0.x'
+
       - name: Restore dependencies
         run: dotnet restore
+
       - name: Build net9.0
         run: dotnet build --configuration Release --framework net9.0 --no-restore
+
       - name: Test net9.0
         run: dotnet test tests/PSProxmoxVE.Core.Tests/PSProxmoxVE.Core.Tests.csproj --configuration Release --framework net9.0 --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
+
       - name: Upload coverage
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-net9-${{ matrix.os }}
+          name: coverage-net9
           path: ./coverage
