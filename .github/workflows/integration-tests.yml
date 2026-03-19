@@ -5,6 +5,10 @@ name: Integration Tests
 # PVE 8 and PVE 9, runs tests against each, then destroys them.
 # Can also run against a pre-existing PVE with skip_provision.
 #
+# Architecture:
+#   build job   → GitHub-hosted runner, dotnet publish → upload artifact
+#   integration → self-hosted runner in Docker container, downloads artifact
+#
 # Required repository secrets (for provisioning):
 #   PVE_ENDPOINT       - Parent PVE API URL (e.g. https://pve.example.com:8006)
 #   PVE_API_TOKEN      - Parent PVE API token (for Terraform + uploads)
@@ -36,12 +40,43 @@ env:
   PVE_PASSWORD: "Testpass123!"
 
 jobs:
+  # ── Build module artifact (GitHub-hosted, no .NET SDK in container) ──
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Build module
+        run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework netstandard2.0 --output ./publish/netstandard2.0
+
+      - name: Clean publish output
+        run: rm -f ./publish/netstandard2.0/*.deps.json
+
+      - name: Upload module artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: module-integration
+          path: ./publish/netstandard2.0/
+
+  # ── Integration tests (self-hosted runner in Docker container) ───────
   integration:
+    needs: build
     runs-on: [self-hosted, proxmox, integration]
     timeout-minutes: 45
+    container:
+      image: ghcr.io/${{ github.repository }}/integration-test:latest
+      volumes:
+        - /opt/pve-isos:/opt/pve-isos
+        - /opt/pve-images:/opt/pve-images
     strategy:
       fail-fast: false
-      max-parallel: 1   # Single self-hosted runner — provision one at a time
+      max-parallel: 1
       matrix:
         pve_version: ['9', '8']
         include:
@@ -59,7 +94,13 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # ── Pre-flight cleanup ─────────────────────────────────────────────
+      - name: Download module artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: module-integration
+          path: ./publish/netstandard2.0/
+
+      # ── Pre-flight cleanup ───────────────────────────────────────────
 
       - name: Pre-flight cleanup
         if: inputs.skip_provision != true
@@ -74,7 +115,7 @@ jobs:
             "${{ matrix.iso_filename }}" \
             "${INFRA_DIR}"
 
-      # ── Provision nested PVE ───────────────────────────────────────────
+      # ── Provision nested PVE ─────────────────────────────────────────
 
       - name: Generate answer file
         if: inputs.skip_provision != true
@@ -133,14 +174,13 @@ jobs:
             900)
           VM_IP=$(echo "$OUTPUT" | grep "^IP=" | cut -d= -f2)
           VM_TOKEN=$(echo "$OUTPUT" | grep "^TOKEN=" | cut -d= -f2-)
-          # Mask sensitive values before they appear in logs
           echo "::add-mask::${VM_IP}"
           echo "::add-mask::${VM_TOKEN}"
           echo "Nested PVE ${{ matrix.pve_version }} ready at ${VM_IP}"
           echo "host=${VM_IP}" >> "$GITHUB_OUTPUT"
           echo "token=${VM_TOKEN}" >> "$GITHUB_OUTPUT"
 
-      # ── Resolve test target ────────────────────────────────────────────
+      # ── Resolve test target ──────────────────────────────────────────
 
       - name: Set test target
         id: target
@@ -176,9 +216,9 @@ jobs:
             exit 1
           fi
 
-      # ── Prepare test Linux VM ──────────────────────────────────────────
+      # ── Prepare test Linux VM ────────────────────────────────────────
 
-      - name: Build Alpine test image (cached)
+      - name: Build Alpine test image (cached on host)
         if: inputs.skip_provision != true
         shell: bash
         run: |
@@ -197,17 +237,7 @@ jobs:
           LINUX_VMID=$(echo "$OUTPUT" | grep "^LINUX_VMID=" | cut -d= -f2)
           echo "linux_vmid=${LINUX_VMID}" >> "$GITHUB_OUTPUT"
 
-      # ── Build and test ─────────────────────────────────────────────────
-
-      - name: Build module
-        run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework netstandard2.0 --output ./publish/netstandard2.0
-
-      - name: Clean publish output for PS module loading
-        run: rm -f ./publish/netstandard2.0/*.deps.json
-
-      - name: Install Pester 5
-        shell: pwsh
-        run: Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser
+      # ── Install module and run tests ─────────────────────────────────
 
       - name: Copy module to module path
         shell: pwsh
@@ -249,7 +279,7 @@ jobs:
           name: integration-test-results-pve${{ matrix.pve_version }}
           path: TestResults/
 
-      # ── Teardown ───────────────────────────────────────────────────────
+      # ── Teardown ─────────────────────────────────────────────────────
 
       - name: Terraform destroy
         if: always() && inputs.skip_provision != true
