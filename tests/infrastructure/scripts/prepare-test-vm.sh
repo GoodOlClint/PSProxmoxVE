@@ -1,54 +1,60 @@
 #!/usr/bin/env bash
-# Deploys the pre-built Alpine test image to a nested PVE instance and creates
-# a VM with guest agent enabled. Waits for the guest agent to respond.
+# Downloads a Debian cloud image, installs qemu-guest-agent via
+# virt-customize (which is already available on the nested PVE host),
+# creates a VM with the customized disk, and waits for the guest agent.
 #
-# The VM gets:
-#   - The Alpine cloud image imported as its boot disk
-#   - Cloud-init drive for initial configuration
-#   - Guest agent enabled (agent=1)
-#   - DHCP networking on vmbr0
+# All heavy lifting happens on the nested PVE via SSH — no libguestfs
+# or large dependencies needed in the CI container.
 #
-# Usage: prepare-test-vm.sh <nested-pve-ip> <root-password> <image-path> <vm-id>
+# Usage: prepare-test-vm.sh <nested-pve-ip> <root-password> <vm-id>
 #
 # Outputs (to stdout, for capture by caller):
 #   LINUX_VMID=<vm-id>
 
 set -euo pipefail
 
-NESTED_IP="${1:?Usage: prepare-test-vm.sh <ip> <password> <image-path> <vm-id>}"
+NESTED_IP="${1:?Usage: prepare-test-vm.sh <ip> <password> <vm-id>}"
 ROOT_PASS="$2"
-IMAGE_PATH="$3"
-VMID="$4"
+VMID="$3"
+
+CLOUD_IMAGE_URL="https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2"
 
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 SSH_CMD="sshpass -p ${ROOT_PASS} ssh ${SSH_OPTS} root@${NESTED_IP}"
-SCP_CMD="sshpass -p ${ROOT_PASS} scp ${SSH_OPTS}"
 
 echo "=== Preparing test Linux VM (VMID ${VMID}) on ${NESTED_IP} ==="
 
-# Copy image to nested PVE
-echo "Uploading Alpine image to nested PVE..."
-${SCP_CMD} "${IMAGE_PATH}" "root@${NESTED_IP}:/tmp/alpine-test.qcow2"
-
-# Create VM and import disk
-echo "Creating VM and importing disk..."
+# Download image, customize, create VM — all on the nested PVE
+echo "Downloading and customizing Debian cloud image on nested PVE..."
 ${SSH_CMD} bash <<REMOTE
 set -e
 
-# Create the VM shell
+# Download the cloud image
+echo "Downloading Debian cloud image..."
+curl -sL -o /tmp/debian-cloud.qcow2 "${CLOUD_IMAGE_URL}"
+
+# Install qemu-guest-agent into the image using PVE's built-in libguestfs
+echo "Installing qemu-guest-agent into image..."
+virt-customize -a /tmp/debian-cloud.qcow2 \
+    --install qemu-guest-agent \
+    --run-command 'systemctl enable qemu-guest-agent'
+
+# Create the VM
+echo "Creating VM ${VMID}..."
 qm create ${VMID} \
-    --name alpine-test \
-    --memory 256 \
+    --name debian-test \
+    --memory 512 \
     --cores 1 \
     --net0 virtio,bridge=vmbr0 \
     --agent 1 \
     --ostype l26 \
     --scsihw virtio-scsi-single
 
-# Import the disk image to local-lvm
-qm importdisk ${VMID} /tmp/alpine-test.qcow2 local-lvm 2>&1 | tail -1
+# Import the customized disk
+echo "Importing disk..."
+qm importdisk ${VMID} /tmp/debian-cloud.qcow2 local-lvm 2>&1 | tail -1
 
-# Attach the imported disk and configure boot
+# Attach disk and configure boot
 qm set ${VMID} \
     --scsi0 local-lvm:vm-${VMID}-disk-0 \
     --boot order=scsi0 \
@@ -57,22 +63,23 @@ qm set ${VMID} \
 # Add cloud-init drive
 qm set ${VMID} --ide2 local-lvm:cloudinit
 
-# Set cloud-init config (root user with password)
+# Set cloud-init config
 qm set ${VMID} \
     --ciuser root \
     --cipassword "${ROOT_PASS}" \
     --ipconfig0 ip=dhcp
 
 # Start the VM
+echo "Starting VM ${VMID}..."
 qm start ${VMID}
 
-# Clean up uploaded image
-rm -f /tmp/alpine-test.qcow2
+# Clean up
+rm -f /tmp/debian-cloud.qcow2
 REMOTE
 
 # Wait for guest agent to respond
 echo "Waiting for guest agent on VM ${VMID}..."
-TIMEOUT=120
+TIMEOUT=180
 ELAPSED=0
 while [ $ELAPSED -lt $TIMEOUT ]; do
     if ${SSH_CMD} "qm agent ${VMID} ping" 2>/dev/null; then

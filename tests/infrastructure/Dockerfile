@@ -15,9 +15,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     lsb-release \
     ca-certificates \
     python3 \
-    libguestfs-tools \
-    linux-image-generic \
-    qemu-utils \
     xorriso \
     && rm -rf /var/lib/apt/lists/*
 
@@ -64,7 +61,5 @@ RUN echo "=== Tool verification ===" && \
     curl --version | head -1 && \
     jq --version && \
     python3 --version && \
-    virt-customize --version && \
     ssh -V 2>&1 && \
-    scp 2>&1 | head -1 || true && \
     echo "=== All tools verified ==="
