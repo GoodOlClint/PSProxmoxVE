@@ -7,30 +7,20 @@ on:
     branches: [ main ]
 
 jobs:
-  pester-tests:
-    timeout-minutes: 15
+  # ── Build module artifacts (only job that needs .NET SDK) ──────────
+  build:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
-            ps_version: '5.1'
             framework: net48
-            shell: powershell
           - os: windows-latest
-            ps_version: '7.5'
             framework: net9.0
-            shell: pwsh
           - os: ubuntu-latest
-            ps_version: '7.5'
             framework: net9.0
-            shell: pwsh
-          - os: macos-latest
-            ps_version: '7.5'
-            framework: net9.0
-            shell: pwsh
-
-    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v5
@@ -46,6 +36,52 @@ jobs:
       - name: Clean publish output for PS module loading
         shell: bash
         run: rm -f ./publish/${{ matrix.framework }}/*.deps.json ./publish/${{ matrix.framework }}/*.runtimeconfig.json
+
+      - name: Upload module artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: module-${{ matrix.framework }}-${{ matrix.os }}
+          path: ./publish/${{ matrix.framework }}/
+
+  # ── Pester tests (no .NET SDK — just PowerShell + Pester) ─────────
+  pester-tests:
+    needs: build
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            ps_version: '5.1'
+            framework: net48
+            artifact_os: windows-latest
+            shell: powershell
+          - os: windows-latest
+            ps_version: '7.5'
+            framework: net9.0
+            artifact_os: windows-latest
+            shell: pwsh
+          - os: ubuntu-latest
+            ps_version: '7.5'
+            framework: net9.0
+            artifact_os: ubuntu-latest
+            shell: pwsh
+          - os: macos-latest
+            ps_version: '7.5'
+            framework: net9.0
+            artifact_os: ubuntu-latest
+            shell: pwsh
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download module artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: module-${{ matrix.framework }}-${{ matrix.artifact_os }}
+          path: ./publish/${{ matrix.framework }}/
 
       - name: Install Pester 5 (PS 5.1)
         if: matrix.ps_version == '5.1'
@@ -83,16 +119,6 @@ jobs:
           New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
           Copy-Item -Path ./publish/${{ matrix.framework }}/* -Destination $modulePath -Recurse -Force
 
-      - name: Create TestResults directory (PS 5.1)
-        if: matrix.ps_version == '5.1'
-        shell: powershell
-        run: New-Item -ItemType Directory -Path TestResults -Force | Out-Null
-
-      - name: Create TestResults directory (PS 7.x)
-        if: matrix.ps_version != '5.1'
-        shell: pwsh
-        run: New-Item -ItemType Directory -Path TestResults -Force | Out-Null
-
       - name: Run Pester tests (PS 5.1)
         if: matrix.ps_version == '5.1'
         shell: powershell
@@ -112,11 +138,6 @@ jobs:
         if: matrix.ps_version != '5.1'
         shell: pwsh
         run: |
-          # Prevent setup-dotnet's DOTNET_ROOT from overriding PS's bundled runtime
-          [Environment]::SetEnvironmentVariable('DOTNET_ROOT', $null)
-          [Environment]::SetEnvironmentVariable('DOTNET_MULTILEVEL_LOOKUP', $null)
-          $env:DOTNET_ROOT = $null
-          $env:DOTNET_MULTILEVEL_LOOKUP = $null
           Import-Module Pester -MinimumVersion 5.0
           $config = New-PesterConfiguration
           $config.Run.Path = "tests/PSProxmoxVE.Tests"
