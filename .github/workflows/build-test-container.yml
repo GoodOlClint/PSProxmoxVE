@@ -12,12 +12,19 @@ permissions:
   contents: read
   packages: write
 
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/psproxmoxve-integration:latest
+
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
+
+      - name: Lowercase image name
+        id: image
+        run: echo "name=${IMAGE,,}" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -32,4 +39,4 @@ jobs:
           context: tests/infrastructure
           file: tests/infrastructure/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository }}/integration-test:latest
+          tags: ${{ steps.image.outputs.name }}

@@ -70,7 +70,7 @@ jobs:
     runs-on: [self-hosted, proxmox, integration]
     timeout-minutes: 45
     container:
-      image: ghcr.io/${{ github.repository }}/integration-test:latest
+      image: ghcr.io/goodolclint/psproxmoxve-integration:latest
       volumes:
         - /opt/pve-isos:/opt/pve-isos
         - /opt/pve-images:/opt/pve-images
