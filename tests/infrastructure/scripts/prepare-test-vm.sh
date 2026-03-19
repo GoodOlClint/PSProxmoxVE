@@ -21,8 +21,8 @@ VMID="$3"
 NODE="$4"
 API_TOKEN="$5"
 
-CLOUD_IMAGE_URL="https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2"
-CLOUD_IMAGE_FILENAME="debian-12-genericcloud-amd64.qcow2"
+CLOUD_IMAGE_URL="https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
+CLOUD_IMAGE_FILENAME="noble-server-cloudimg-amd64.img"
 
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 SSH_CMD="sshpass -p ${ROOT_PASS} ssh ${SSH_OPTS} root@${NESTED_IP}"
@@ -47,7 +47,7 @@ ${SCP_CMD} "${USERDATA}" "root@${NESTED_IP}:/var/lib/vz/snippets/test-vm-userdat
 rm -f "${USERDATA}"
 
 # ── Step 2: Download cloud image (PSProxmoxVE cmdlet) ────────────────
-echo "Downloading Debian cloud image via Invoke-PveStorageDownload..."
+echo "Downloading Ubuntu cloud image via Invoke-PveStorageDownload..."
 pwsh -NoProfile -Command "
     Import-Module PSProxmoxVE
     Connect-PveServer -Server '${NESTED_IP}' -ApiToken '${API_TOKEN}' -SkipCertificateCheck
@@ -80,8 +80,7 @@ echo "Importing disk and configuring VM..."
 ${SSH_CMD} bash <<REMOTE
 set -e
 
-# Import the downloaded image as a disk
-# The image was downloaded to local storage ISO dir
+# Import the downloaded image as a disk (stored in local ISO dir by download-url API)
 qm importdisk ${VMID} /var/lib/vz/template/iso/${CLOUD_IMAGE_FILENAME} local-lvm 2>&1 | tail -1
 
 # Attach disk, enable agent, configure boot, add cloud-init
