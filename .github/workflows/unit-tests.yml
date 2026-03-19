@@ -43,9 +43,9 @@ jobs:
       - name: Build module
         run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework ${{ matrix.framework }} --output ./publish/${{ matrix.framework }}
 
-      - name: Remove deps.json from publish output
+      - name: Clean publish output for PS module loading
         shell: bash
-        run: rm -f ./publish/${{ matrix.framework }}/PSProxmoxVE.deps.json
+        run: rm -f ./publish/${{ matrix.framework }}/*.deps.json ./publish/${{ matrix.framework }}/*.runtimeconfig.json
 
       - name: Install Pester 5 (PS 5.1)
         if: matrix.ps_version == '5.1'
@@ -111,10 +111,12 @@ jobs:
       - name: Run Pester tests (PS 7.x)
         if: matrix.ps_version != '5.1'
         shell: pwsh
-        env:
-          DOTNET_ROOT: ''
-          DOTNET_MULTILEVEL_LOOKUP: ''
         run: |
+          # Prevent setup-dotnet's DOTNET_ROOT from overriding PS's bundled runtime
+          [Environment]::SetEnvironmentVariable('DOTNET_ROOT', $null)
+          [Environment]::SetEnvironmentVariable('DOTNET_MULTILEVEL_LOOKUP', $null)
+          $env:DOTNET_ROOT = $null
+          $env:DOTNET_MULTILEVEL_LOOKUP = $null
           Import-Module Pester -MinimumVersion 5.0
           $config = New-PesterConfiguration
           $config.Run.Path = "tests/PSProxmoxVE.Tests"

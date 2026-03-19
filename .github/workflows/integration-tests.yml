@@ -180,8 +180,8 @@ jobs:
       - name: Build module
         run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework net9.0 --output ./publish/net9.0
 
-      - name: Remove deps.json from publish output
-        run: rm -f ./publish/net9.0/PSProxmoxVE.deps.json
+      - name: Clean publish output for PS module loading
+        run: rm -f ./publish/net9.0/*.deps.json ./publish/net9.0/*.runtimeconfig.json
 
       - name: Install Pester 5
         shell: pwsh

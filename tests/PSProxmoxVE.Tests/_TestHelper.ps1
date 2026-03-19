@@ -8,6 +8,13 @@
 # If the module is already loaded, nothing to do.
 if (Get-Module -Name PSProxmoxVE) { return }
 
+# Ensure DOTNET_ROOT doesn't override PS's bundled runtime (CI sets this
+# via setup-dotnet and it can break binary module assembly resolution).
+if ($env:DOTNET_ROOT) {
+    $env:DOTNET_ROOT = $null
+    $env:DOTNET_MULTILEVEL_LOOKUP = $null
+}
+
 # 1. Try importing by module name (works in CI where the module is
 #    installed to a PSModulePath location via dotnet publish + copy).
 $available = Get-Module PSProxmoxVE -ListAvailable -ErrorAction SilentlyContinue
@@ -43,9 +50,10 @@ if ($null -eq $moduleManifest) {
     throw "PSProxmoxVE module not found. Build the project before running Pester tests."
 }
 
-# Remove deps.json if present — it causes assembly resolution conflicts
-# when loading a binary module inside PowerShell's own .NET runtime.
-$depsJson = Join-Path (Split-Path $moduleManifest) 'PSProxmoxVE.deps.json'
-if (Test-Path $depsJson) { Remove-Item $depsJson -Force }
+# Remove files that cause .NET assembly resolution conflicts when loading
+# a binary module inside PowerShell's own runtime.
+$moduleDir = Split-Path $moduleManifest
+Get-ChildItem $moduleDir -Filter '*.deps.json' -ErrorAction SilentlyContinue | Remove-Item -Force
+Get-ChildItem $moduleDir -Filter '*.runtimeconfig.json' -ErrorAction SilentlyContinue | Remove-Item -Force
 
 Import-Module $moduleManifest -Force -ErrorAction Stop
