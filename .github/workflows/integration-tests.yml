@@ -176,6 +176,27 @@ jobs:
             exit 1
           fi
 
+      # ── Prepare test Linux VM ──────────────────────────────────────────
+
+      - name: Build Alpine test image (cached)
+        if: inputs.skip_provision != true
+        shell: bash
+        run: |
+          bash ${SCRIPTS_DIR}/build-test-image.sh /opt/pve-images/alpine-guest-agent.qcow2
+
+      - name: Deploy test Linux VM to nested PVE
+        if: inputs.skip_provision != true
+        id: linux_vm
+        shell: bash
+        run: |
+          OUTPUT=$(bash ${SCRIPTS_DIR}/prepare-test-vm.sh \
+            "${{ steps.provision.outputs.host }}" \
+            "${PVE_PASSWORD}" \
+            "/opt/pve-images/alpine-guest-agent.qcow2" \
+            200)
+          LINUX_VMID=$(echo "$OUTPUT" | grep "^LINUX_VMID=" | cut -d= -f2)
+          echo "linux_vmid=${LINUX_VMID}" >> "$GITHUB_OUTPUT"
+
       # ── Build and test ─────────────────────────────────────────────────
 
       - name: Build module
@@ -209,6 +230,7 @@ jobs:
           PVETEST_STORAGE: ${{ steps.target.outputs.storage }}
           PVETEST_ISO_PATH: ${{ runner.temp }}/pvetest.iso
           PVETEST_PVE_VERSION: ${{ matrix.pve_version }}
+          PVETEST_LINUX_VMID: ${{ steps.linux_vm.outputs.linux_vmid }}
         run: |
           Import-Module Pester -MinimumVersion 5.0
           $config = New-PesterConfiguration

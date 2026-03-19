@@ -64,6 +64,8 @@ BeforeAll {
     $script:Storage  = [System.Environment]::GetEnvironmentVariable('PVETEST_STORAGE')
     $script:IsoPath  = [System.Environment]::GetEnvironmentVariable('PVETEST_ISO_PATH')
     $script:ExpectedPveVersion = [System.Environment]::GetEnvironmentVariable('PVETEST_PVE_VERSION')
+    $linuxVmEnv = [System.Environment]::GetEnvironmentVariable('PVETEST_LINUX_VMID')
+    $script:LinuxVmId = if ($linuxVmEnv) { [int]$linuxVmEnv } else { $null }
 
     # Track resources created during the run so AfterAll can clean up.
     $script:CreatedVmIds   = [System.Collections.Generic.List[int]]::new()
@@ -84,6 +86,15 @@ BeforeAll {
         if (Skip-IfNoTarget) { return $true }
         if ($null -eq $script:TestVmId) {
             Set-ItResult -Skipped -Because 'No test VM was created'
+            return $true
+        }
+        return $false
+    }
+
+    function script:Skip-IfNoLinuxVm {
+        if (Skip-IfNoTarget) { return $true }
+        if ($null -eq $script:LinuxVmId) {
+            Set-ItResult -Skipped -Because 'No Linux VM with guest agent available (PVETEST_LINUX_VMID not set)'
             return $true
         }
         return $false
@@ -500,16 +511,18 @@ Describe 'Integration Tests' -Tag 'Integration' {
         It 'Should get a task by UPID and wait for completion' {
             if (Skip-IfNoTestVm) { return }
 
-            # Start the VM to get a task UPID
-            $upid = Start-PveVm -Node $script:Node -VmId $script:TestVmId
-            $upid | Should -Not -BeNullOrEmpty
+            # Start the VM to get a task object
+            $startResult = Start-PveVm -Node $script:Node -VmId $script:TestVmId
+            $startResult | Should -Not -BeNullOrEmpty
+            $startResult.Upid | Should -Not -BeNullOrEmpty
 
             # Wait for the task to complete
-            { Wait-PveTask -Node $script:Node -Upid $upid } | Should -Not -Throw
+            { Wait-PveTask -Node $script:Node -Upid $startResult.Upid } | Should -Not -Throw
 
             # Get the task status
-            $task = Get-PveTask -Node $script:Node -Upid $upid
+            $task = Get-PveTask -Node $script:Node -Upid $startResult.Upid
             $task | Should -Not -BeNullOrEmpty
+            $task.IsSuccessful | Should -BeTrue
 
             # Clean up
             Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait | Out-Null
@@ -544,6 +557,87 @@ Describe 'Integration Tests' -Tag 'Integration' {
             # Get-PveCloudInitConfig should not throw even if the VM has no cloud-init drive.
             { Get-PveCloudInitConfig -Node $script:Node -VmId $script:TestVmId -ErrorAction Stop } |
                 Should -Not -Throw
+        }
+    }
+
+    # -----------------------------------------------------------------------
+    Context 'Guest Agent VM — Lifecycle' {
+        It 'Should have a running Linux VM with guest agent' {
+            if (Skip-IfNoLinuxVm) { return }
+
+            $vm = Get-PveVm -Node $script:Node |
+                Where-Object { $_.VmId -eq $script:LinuxVmId }
+            $vm | Should -Not -BeNullOrEmpty
+            $vm.Status | Should -Be 'running'
+        }
+
+        It 'Should gracefully restart a VM via ACPI (Restart-PveVm)' {
+            if (Skip-IfNoLinuxVm) { return }
+
+            $task = Restart-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait
+            $task | Should -Not -BeNullOrEmpty
+
+            # Wait a moment for the VM to come back up
+            Start-Sleep -Seconds 10
+            $vm = Get-PveVm -Node $script:Node |
+                Where-Object { $_.VmId -eq $script:LinuxVmId }
+            $vm.Status | Should -Be 'running'
+        }
+
+        It 'Should gracefully stop a VM via ACPI (Stop-PveVm)' {
+            if (Skip-IfNoLinuxVm) { return }
+
+            $task = Stop-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait
+            $task | Should -Not -BeNullOrEmpty
+
+            $vm = Get-PveVm -Node $script:Node |
+                Where-Object { $_.VmId -eq $script:LinuxVmId }
+            $vm.Status | Should -Be 'stopped'
+        }
+    }
+
+    # -----------------------------------------------------------------------
+    Context 'Templates — Convert and Clone' {
+        It 'Should convert the Linux VM to a template' {
+            if (Skip-IfNoLinuxVm) { return }
+
+            # Ensure stopped first
+            $vm = Get-PveVm -Node $script:Node |
+                Where-Object { $_.VmId -eq $script:LinuxVmId }
+            if ($vm.Status -eq 'running') {
+                Stop-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait | Out-Null
+            }
+
+            { New-PveTemplate -Node $script:Node -VmId $script:LinuxVmId -ErrorAction Stop } |
+                Should -Not -Throw
+
+            # Verify it appears as a template
+            $templates = Get-PveTemplate -Node $script:Node
+            $templates | Where-Object { $_.VmId -eq $script:LinuxVmId } |
+                Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should clone a VM from the template (New-PveVmFromTemplate)' {
+            if (Skip-IfNoLinuxVm) { return }
+
+            $cloneId = $script:LinuxVmId + 1000
+
+            $task = New-PveVmFromTemplate `
+                -TemplateNode $script:Node `
+                -VmId         $script:LinuxVmId `
+                -NewVmId      $cloneId `
+                -NewName      'pester-from-template' `
+                -Full `
+                -Wait
+
+            $task | Should -Not -BeNullOrEmpty
+
+            $cloned = Get-PveVm -Node $script:Node -Name 'pester-from-template' |
+                Select-Object -First 1
+            $cloned | Should -Not -BeNullOrEmpty
+
+            # Track for cleanup
+            $script:CreatedVmIds.Add($cloned.VmId)
         }
     }
 
