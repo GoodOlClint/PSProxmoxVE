@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libguestfs-tools \
     linux-image-generic \
     qemu-utils \
+    xorriso \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Microsoft repo (PowerShell) ───────────────────────────────────────
@@ -53,8 +54,17 @@ RUN pwsh -NoProfile -Command \
     'Set-PSRepository -Name PSGallery -InstallationPolicy Trusted; \
      Install-Module -Name Pester -MinimumVersion 5.0 -Scope AllUsers -Force'
 
-# ── Verify installs ──────────────────────────────────────────────────
-RUN pwsh --version && \
+# ── Verify all tools are present ──────────────────────────────────────
+RUN echo "=== Tool verification ===" && \
+    pwsh --version && \
     terraform --version && \
     proxmox-auto-install-assistant --version && \
-    sshpass -V | head -1
+    sshpass -V | head -1 && \
+    xorriso --version 2>&1 | head -1 && \
+    curl --version | head -1 && \
+    jq --version && \
+    python3 --version && \
+    virt-customize --version && \
+    ssh -V 2>&1 && \
+    scp 2>&1 | head -1 || true && \
+    echo "=== All tools verified ==="
