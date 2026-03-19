@@ -1,13 +1,11 @@
 name: Integration Tests
 
 # Real integration tests against a live Proxmox VE instance.
-# By default, provisions throwaway nested PVE VMs via Terraform for both
-# PVE 8 and PVE 9, runs tests against each, then destroys them.
-# Can also run against a pre-existing PVE with skip_provision.
 #
 # Architecture:
-#   build job   → GitHub-hosted runner, dotnet publish → upload artifact
-#   integration → self-hosted runner in Docker container, downloads artifact
+#   build           → GitHub-hosted, dotnet publish → upload artifact
+#   container-image → GitHub-hosted, build+push Docker image to GHCR
+#   integration     → self-hosted runner in Docker container
 #
 # Required repository secrets (for provisioning):
 #   PVE_ENDPOINT       - Parent PVE API URL (e.g. https://pve.example.com:8006)
@@ -18,8 +16,8 @@ name: Integration Tests
 #   PVETEST_HOST       - Hostname or IP of a pre-existing nested PVE
 #   PVETEST_APITOKEN   - API token for the pre-existing nested PVE
 #
-# WARNING: Integration tests create and destroy real resources (VMs, users,
-# tokens, network config, etc.) on the target node. Never run against production.
+# WARNING: Integration tests create and destroy real resources on the target
+# node. Never run against production.
 
 on:
   push:
@@ -34,13 +32,18 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: read
+  packages: write
+
 env:
   INFRA_DIR: tests/infrastructure
   SCRIPTS_DIR: tests/infrastructure/scripts
   PVE_PASSWORD: "Testpass123!"
+  TEST_IMAGE: ghcr.io/goodolclint/psproxmoxve-integration
 
 jobs:
-  # ── Build module artifact (GitHub-hosted, no .NET SDK in container) ──
+  # ── Build module artifact (GitHub-hosted) ────────────────────────────
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -64,13 +67,38 @@ jobs:
           name: module-integration
           path: ./publish/netstandard2.0/
 
+  # ── Build test container image (GitHub-hosted) ───────────────────────
+  container-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: tests/infrastructure
+          file: tests/infrastructure/Dockerfile
+          push: true
+          tags: ${{ env.TEST_IMAGE }}:${{ github.sha }},${{ env.TEST_IMAGE }}:latest
+
   # ── Integration tests (self-hosted runner in Docker container) ───────
   integration:
-    needs: build
+    needs: [build, container-image]
     runs-on: [self-hosted, proxmox, integration]
     timeout-minutes: 45
     container:
-      image: ghcr.io/goodolclint/psproxmoxve-integration:latest
+      image: ghcr.io/goodolclint/psproxmoxve-integration:${{ github.sha }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
       volumes:
         - /opt/pve-isos:/opt/pve-isos
         - /opt/pve-images:/opt/pve-images
@@ -218,7 +246,7 @@ jobs:
 
       # ── Prepare test Linux VM ────────────────────────────────────────
 
-      - name: Build Alpine test image (cached on host)
+      - name: Build Alpine test image (cached on host volume)
         if: inputs.skip_provision != true
         shell: bash
         run: |
