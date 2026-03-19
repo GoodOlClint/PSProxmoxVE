@@ -10,7 +10,7 @@ using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Exceptions;
 
-#if NET48
+#if NET48 || NETSTANDARD2_0
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 #endif
@@ -35,7 +35,7 @@ namespace PSProxmoxVE.Core.Client
             _session = session ?? throw new ArgumentNullException(nameof(session));
             _baseUrl = session.BaseUrl;
 
-#if NET48
+#if NET48 || NETSTANDARD2_0
             var handler = new HttpClientHandler();
             if (session.SkipCertificateCheck)
             {
@@ -75,7 +75,7 @@ namespace PSProxmoxVE.Core.Client
             _session = null;
             _baseUrl = $"https://{hostname}:{port}";
 
-#if NET48
+#if NET48 || NETSTANDARD2_0
             var handler = new HttpClientHandler();
             if (skipCertificateCheck)
             {
@@ -286,7 +286,7 @@ namespace PSProxmoxVE.Core.Client
             }
             finally
             {
-#if NET48
+#if NET48 || NETSTANDARD2_0
                 fileStream.Dispose();
 #else
                 await fileStream.DisposeAsync().ConfigureAwait(false);
