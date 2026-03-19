@@ -1,8 +1,9 @@
 name: Integration Tests
 
 # Real integration tests against a live Proxmox VE instance.
-# By default, provisions a throwaway nested PVE VM via Terraform, runs tests,
-# then destroys it. Can also run against a pre-existing PVE with skip_provision.
+# By default, provisions throwaway nested PVE VMs via Terraform for both
+# PVE 8 and PVE 9, runs tests against each, then destroys them.
+# Can also run against a pre-existing PVE with skip_provision.
 #
 # Required repository secrets (for provisioning):
 #   PVE_ENDPOINT       - Parent PVE API URL (e.g. https://pve.example.com:8006)
@@ -13,8 +14,8 @@ name: Integration Tests
 #   PVETEST_HOST       - Hostname or IP of a pre-existing nested PVE
 #   PVETEST_APITOKEN   - API token for the pre-existing nested PVE
 #
-# WARNING: Integration tests create and destroy real VMs, upload files,
-# and modify network configuration. Never run against production.
+# WARNING: Integration tests create and destroy real resources (VMs, users,
+# tokens, network config, etc.) on the target node. Never run against production.
 
 on:
   push:
@@ -23,14 +24,6 @@ on:
     branches: [ main ]
   workflow_dispatch:
     inputs:
-      pve_version:
-        description: 'PVE version to test (8 or 9)'
-        required: false
-        type: choice
-        options:
-          - '9'
-          - '8'
-        default: '9'
       skip_provision:
         description: 'Skip provisioning (use existing PVE from PVETEST_HOST secret)'
         required: false
@@ -46,6 +39,22 @@ jobs:
   integration:
     runs-on: [self-hosted, proxmox, integration]
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      max-parallel: 1   # Single self-hosted runner — provision one at a time
+      matrix:
+        pve_version: ['9', '8']
+        include:
+          - pve_version: '9'
+            iso_base: /opt/pve-isos/proxmox-ve_9.1-1.iso
+            iso_filename: proxmox-ve_9.1-1-auto.iso
+            vm_id: 99909
+            vm_name: pve-test-pve9
+          - pve_version: '8'
+            iso_base: /opt/pve-isos/proxmox-ve_8.4-1.iso
+            iso_filename: proxmox-ve_8.4-1-auto.iso
+            vm_id: 99908
+            vm_name: pve-test-pve8
 
     steps:
       - uses: actions/checkout@v5
@@ -55,24 +64,14 @@ jobs:
       - name: Pre-flight cleanup
         if: inputs.skip_provision != true
         shell: bash
-        id: iso
         env:
           PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
         run: |
-          VERSION="${{ inputs.pve_version || '9' }}"
-          if [ "$VERSION" = "9" ]; then
-            echo "base=/opt/pve-isos/proxmox-ve_9.1-1.iso" >> "$GITHUB_OUTPUT"
-            echo "filename=proxmox-ve_9.1-1-auto.iso" >> "$GITHUB_OUTPUT"
-          else
-            echo "base=/opt/pve-isos/proxmox-ve_8.4-1.iso" >> "$GITHUB_OUTPUT"
-            echo "filename=proxmox-ve_8.4-1-auto.iso" >> "$GITHUB_OUTPUT"
-          fi
-
           bash ${SCRIPTS_DIR}/preflight-cleanup.sh \
             "${{ secrets.PVE_ENDPOINT }}" \
             "${PVE_API_TOKEN}" \
-            99900 \
-            "auto.iso" \
+            ${{ matrix.vm_id }} \
+            "${{ matrix.iso_filename }}" \
             "${INFRA_DIR}"
 
       # ── Provision nested PVE ───────────────────────────────────────────
@@ -91,10 +90,10 @@ jobs:
         shell: bash
         run: |
           bash ${SCRIPTS_DIR}/prepare-auto-iso.sh \
-            "${{ steps.iso.outputs.base }}" \
+            "${{ matrix.iso_base }}" \
             ${RUNNER_TEMP}/answer.toml \
             ${SCRIPTS_DIR}/first-boot.sh \
-            "${{ runner.temp }}/${{ steps.iso.outputs.filename }}"
+            "${{ runner.temp }}/${{ matrix.iso_filename }}"
 
       - name: Terraform init
         if: inputs.skip_provision != true
@@ -111,8 +110,10 @@ jobs:
           TF_VAR_proxmox_endpoint: ${{ secrets.PVE_ENDPOINT }}
           TF_VAR_proxmox_api_token: ${{ secrets.PVE_API_TOKEN }}
           TF_VAR_target_node: ${{ secrets.PVE_TARGET_NODE }}
-          TF_VAR_iso_local_path: ${{ runner.temp }}/${{ steps.iso.outputs.filename }}
+          TF_VAR_iso_local_path: ${{ runner.temp }}/${{ matrix.iso_filename }}
           TF_VAR_test_vm_password: ${{ env.PVE_PASSWORD }}
+          TF_VAR_vm_id: ${{ matrix.vm_id }}
+          TF_VAR_vm_name: ${{ matrix.vm_name }}
         run: |
           terraform apply -auto-approve -input=false
           echo "vm_id=$(terraform output -raw pve_test_vm_id)" >> "$GITHUB_OUTPUT"
@@ -135,7 +136,7 @@ jobs:
           # Mask sensitive values before they appear in logs
           echo "::add-mask::${VM_IP}"
           echo "::add-mask::${VM_TOKEN}"
-          echo "Nested PVE ready at ${VM_IP}"
+          echo "Nested PVE ${{ matrix.pve_version }} ready at ${VM_IP}"
           echo "host=${VM_IP}" >> "$GITHUB_OUTPUT"
           echo "token=${VM_TOKEN}" >> "$GITHUB_OUTPUT"
 
@@ -165,7 +166,7 @@ jobs:
           HOST="${{ steps.target.outputs.host }}"
           PORT="${{ steps.target.outputs.port }}"
           TOKEN="${{ steps.target.outputs.token }}"
-          echo "Testing connectivity to PVE API at ${HOST}:${PORT}..."
+          echo "Testing connectivity to PVE ${{ matrix.pve_version }} API at ${HOST}:${PORT}..."
           if curl -sk --connect-timeout 10 \
               -H "Authorization: PVEAPIToken=${TOKEN}" \
               "https://${HOST}:${PORT}/api2/json/nodes" | grep -q '"node"'; then
@@ -207,6 +208,7 @@ jobs:
           PVETEST_NODE: ${{ steps.target.outputs.node }}
           PVETEST_STORAGE: ${{ steps.target.outputs.storage }}
           PVETEST_ISO_PATH: ${{ runner.temp }}/pvetest.iso
+          PVETEST_PVE_VERSION: ${{ matrix.pve_version }}
         run: |
           Import-Module Pester -MinimumVersion 5.0
           $config = New-PesterConfiguration
@@ -222,7 +224,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: integration-test-results
+          name: integration-test-results-pve${{ matrix.pve_version }}
           path: TestResults/
 
       # ── Teardown ───────────────────────────────────────────────────────
@@ -235,8 +237,10 @@ jobs:
           TF_VAR_proxmox_endpoint: ${{ secrets.PVE_ENDPOINT }}
           TF_VAR_proxmox_api_token: ${{ secrets.PVE_API_TOKEN }}
           TF_VAR_target_node: ${{ secrets.PVE_TARGET_NODE }}
-          TF_VAR_iso_local_path: ${{ runner.temp }}/${{ steps.iso.outputs.filename }}
+          TF_VAR_iso_local_path: ${{ runner.temp }}/${{ matrix.iso_filename }}
           TF_VAR_test_vm_password: ${{ env.PVE_PASSWORD }}
+          TF_VAR_vm_id: ${{ matrix.vm_id }}
+          TF_VAR_vm_name: ${{ matrix.vm_name }}
         run: |
           terraform init -input=false
           terraform destroy -auto-approve -input=false || true
@@ -251,6 +255,6 @@ jobs:
           bash ${SCRIPTS_DIR}/preflight-cleanup.sh \
             "${{ secrets.PVE_ENDPOINT }}" \
             "${PVE_API_TOKEN}" \
-            99900 \
-            "${{ steps.iso.outputs.filename }}" \
+            ${{ matrix.vm_id }} \
+            "${{ matrix.iso_filename }}" \
             "${INFRA_DIR}" || true

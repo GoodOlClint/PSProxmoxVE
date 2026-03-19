@@ -13,9 +13,11 @@
         PVETEST_NODE        - PVE node name (e.g. pve-test1)
         PVETEST_STORAGE     - Storage pool name for disk/ISO operations (e.g. local)
         PVETEST_ISO_PATH    - Local filesystem path to a small .iso for upload tests
+        PVETEST_PVE_VERSION - (optional) Expected PVE major version (8 or 9)
 
-    WARNING: These tests CREATE and DESTROY real resources (VMs, snapshots,
-    ISO uploads, etc.) on the target node. Never run against a production cluster.
+    WARNING: These tests CREATE and DESTROY real resources (VMs, users, tokens,
+    roles, snapshots, ISO uploads, etc.) on the target node.
+    Never run against a production cluster.
 
     To run:
         Invoke-Pester -Path ./tests/PSProxmoxVE.Tests -Tag Integration
@@ -61,23 +63,56 @@ BeforeAll {
     $script:Node     = [System.Environment]::GetEnvironmentVariable('PVETEST_NODE')
     $script:Storage  = [System.Environment]::GetEnvironmentVariable('PVETEST_STORAGE')
     $script:IsoPath  = [System.Environment]::GetEnvironmentVariable('PVETEST_ISO_PATH')
+    $script:ExpectedPveVersion = [System.Environment]::GetEnvironmentVariable('PVETEST_PVE_VERSION')
 
     # Track resources created during the run so AfterAll can clean up.
     $script:CreatedVmIds   = [System.Collections.Generic.List[int]]::new()
+    $script:CreatedUsers   = [System.Collections.Generic.List[string]]::new()
+    $script:CreatedRoles   = [System.Collections.Generic.List[string]]::new()
     $script:TestVmId       = $null
+
+    # Helper functions for skip logic
+    function script:Skip-IfNoTarget {
+        if ($script:SkipReason) {
+            Set-ItResult -Skipped -Because $script:SkipReason
+            return $true
+        }
+        return $false
+    }
+
+    function script:Skip-IfNoTestVm {
+        if (Skip-IfNoTarget) { return $true }
+        if ($null -eq $script:TestVmId) {
+            Set-ItResult -Skipped -Because 'No test VM was created'
+            return $true
+        }
+        return $false
+    }
 }
 
 AfterAll {
-    # Best-effort cleanup — remove any VMs created during the test run.
-    if ($null -eq $script:SkipReason -and $script:CreatedVmIds.Count -gt 0) {
-        foreach ($vmId in $script:CreatedVmIds) {
-            try {
-                Stop-PveVm -Node $script:Node -VmId $vmId -ErrorAction SilentlyContinue | Out-Null
-                Start-Sleep -Seconds 3
-                Remove-PveVm -Node $script:Node -VmId $vmId -Force -Purge -Confirm:$false -ErrorAction SilentlyContinue
-            }
-            catch { <# non-fatal #> }
+    if ($null -ne $script:SkipReason) { return }
+
+    # Best-effort cleanup — remove resources created during the test run.
+    # Order matters: tokens/permissions removed with users, VMs last.
+
+    foreach ($userId in $script:CreatedUsers) {
+        try { Remove-PveUser -UserId $userId -Confirm:$false -ErrorAction SilentlyContinue }
+        catch { <# non-fatal #> }
+    }
+
+    foreach ($roleId in $script:CreatedRoles) {
+        try { Remove-PveRole -RoleId $roleId -Confirm:$false -ErrorAction SilentlyContinue }
+        catch { <# non-fatal #> }
+    }
+
+    foreach ($vmId in $script:CreatedVmIds) {
+        try {
+            Stop-PveVm -Node $script:Node -VmId $vmId -ErrorAction SilentlyContinue | Out-Null
+            Start-Sleep -Seconds 3
+            Remove-PveVm -Node $script:Node -VmId $vmId -Force -Purge -Confirm:$false -ErrorAction SilentlyContinue
         }
+        catch { <# non-fatal #> }
     }
 }
 
@@ -89,7 +124,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
     # -----------------------------------------------------------------------
     Context 'Connection' {
         It 'Should connect to PVE server' {
-            if ($script:SkipReason) { Set-ItResult -Skipped -Because $script:SkipReason; return }
+            if (Skip-IfNoTarget) { return }
 
             $session = Connect-PveServer `
                 -Server  $script:Host_ `
@@ -106,26 +141,31 @@ Describe 'Integration Tests' -Tag 'Integration' {
         }
 
         It 'Should detect server version' {
-            if ($script:SkipReason) { Set-ItResult -Skipped -Because $script:SkipReason; return }
+            if (Skip-IfNoTarget) { return }
 
             $detail = Test-PveConnection -Detailed
             $detail                         | Should -Not -BeNullOrEmpty
             $detail.ServerVersion           | Should -Not -BeNullOrEmpty
             $detail.ServerVersion.Major     | Should -BeIn @(8, 9)
+
+            # If we know the expected version, verify it matches
+            if ($script:ExpectedPveVersion) {
+                $detail.ServerVersion.Major | Should -Be ([int]$script:ExpectedPveVersion)
+            }
         }
     }
 
     # -----------------------------------------------------------------------
     Context 'Nodes' {
         It 'Should list nodes' {
-            if ($script:SkipReason) { Set-ItResult -Skipped -Because $script:SkipReason; return }
+            if (Skip-IfNoTarget) { return }
 
             $nodes = Get-PveNode
             $nodes | Should -Not -BeNullOrEmpty
         }
 
         It 'Should get node status' {
-            if ($script:SkipReason) { Set-ItResult -Skipped -Because $script:SkipReason; return }
+            if (Skip-IfNoTarget) { return }
 
             $status = Get-PveNodeStatus -Node $script:Node
             $status            | Should -Not -BeNullOrEmpty
@@ -134,16 +174,160 @@ Describe 'Integration Tests' -Tag 'Integration' {
     }
 
     # -----------------------------------------------------------------------
+    Context 'User CRUD' {
+        It 'Should create a new user' {
+            if (Skip-IfNoTarget) { return }
+
+            { New-PveUser -UserId 'pester-user@pam' -ErrorAction Stop } |
+                Should -Not -Throw
+
+            $script:CreatedUsers.Add('pester-user@pam')
+        }
+
+        It 'Should list users and find the new user' {
+            if (Skip-IfNoTarget) { return }
+
+            $users = Get-PveUser
+            $users | Should -Not -BeNullOrEmpty
+            $users | Where-Object { $_.UserId -eq 'pester-user@pam' } |
+                Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should update user properties' {
+            if (Skip-IfNoTarget) { return }
+
+            { Set-PveUser -UserId 'pester-user@pam' `
+                -Comment 'Updated by Pester integration test' `
+                -ErrorAction Stop } | Should -Not -Throw
+
+            $user = Get-PveUser | Where-Object { $_.UserId -eq 'pester-user@pam' }
+            $user.Comment | Should -Be 'Updated by Pester integration test'
+        }
+
+        It 'Should remove the user' {
+            if (Skip-IfNoTarget) { return }
+
+            { Remove-PveUser -UserId 'pester-user@pam' -Confirm:$false -ErrorAction Stop } |
+                Should -Not -Throw
+
+            $script:CreatedUsers.Remove('pester-user@pam') | Out-Null
+
+            $users = Get-PveUser
+            $users | Where-Object { $_.UserId -eq 'pester-user@pam' } |
+                Should -BeNullOrEmpty
+        }
+    }
+
+    # -----------------------------------------------------------------------
+    Context 'Role CRUD' {
+        It 'Should create a new role' {
+            if (Skip-IfNoTarget) { return }
+
+            { New-PveRole -RoleId 'PesterTestRole' `
+                -Privileges @('VM.Audit', 'VM.Console') `
+                -ErrorAction Stop } | Should -Not -Throw
+
+            $script:CreatedRoles.Add('PesterTestRole')
+        }
+
+        It 'Should list roles and find the new role' {
+            if (Skip-IfNoTarget) { return }
+
+            $roles = Get-PveRole
+            $roles | Should -Not -BeNullOrEmpty
+            $roles | Where-Object { $_.RoleId -eq 'PesterTestRole' } |
+                Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should remove the role' {
+            if (Skip-IfNoTarget) { return }
+
+            { Remove-PveRole -RoleId 'PesterTestRole' -Confirm:$false -ErrorAction Stop } |
+                Should -Not -Throw
+
+            $script:CreatedRoles.Remove('PesterTestRole') | Out-Null
+        }
+    }
+
+    # -----------------------------------------------------------------------
+    Context 'API Token CRUD' {
+        BeforeAll {
+            # Create a user to hold the test token
+            if ($null -eq $script:SkipReason) {
+                New-PveUser -UserId 'pester-tokenuser@pam' -ErrorAction SilentlyContinue
+                $script:CreatedUsers.Add('pester-tokenuser@pam')
+            }
+        }
+
+        It 'Should create an API token' {
+            if (Skip-IfNoTarget) { return }
+
+            $result = New-PveApiToken `
+                -UserId  'pester-tokenuser@pam' `
+                -TokenId 'pester-token' `
+                -ErrorAction Stop
+
+            $result | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should list API tokens for the user' {
+            if (Skip-IfNoTarget) { return }
+
+            $tokens = Get-PveApiToken -UserId 'pester-tokenuser@pam'
+            $tokens | Should -Not -BeNullOrEmpty
+            $tokens | Where-Object { $_.TokenId -eq 'pester-token' } |
+                Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should remove the API token' {
+            if (Skip-IfNoTarget) { return }
+
+            { Remove-PveApiToken `
+                -UserId  'pester-tokenuser@pam' `
+                -TokenId 'pester-token' `
+                -Confirm:$false `
+                -ErrorAction Stop } | Should -Not -Throw
+        }
+    }
+
+    # -----------------------------------------------------------------------
+    Context 'Permissions' {
+        BeforeAll {
+            # Create a user and role for permission testing
+            if ($null -eq $script:SkipReason) {
+                New-PveUser -UserId 'pester-permuser@pam' -ErrorAction SilentlyContinue
+                $script:CreatedUsers.Add('pester-permuser@pam')
+            }
+        }
+
+        It 'Should list permissions' {
+            if (Skip-IfNoTarget) { return }
+
+            { Get-PvePermission -ErrorAction Stop } | Should -Not -Throw
+        }
+
+        It 'Should set a permission' {
+            if (Skip-IfNoTarget) { return }
+
+            { Set-PvePermission `
+                -Path  '/' `
+                -Role  'PVEAuditor' `
+                -Users 'pester-permuser@pam' `
+                -ErrorAction Stop } | Should -Not -Throw
+        }
+    }
+
+    # -----------------------------------------------------------------------
     Context 'VMs' {
         It 'Should list VMs' {
-            if ($script:SkipReason) { Set-ItResult -Skipped -Because $script:SkipReason; return }
+            if (Skip-IfNoTarget) { return }
 
             # Does not assert count — the node may have zero VMs.
             { Get-PveVm -Node $script:Node -ErrorAction Stop } | Should -Not -Throw
         }
 
         It 'Should create a test VM' {
-            if ($script:SkipReason) { Set-ItResult -Skipped -Because $script:SkipReason; return }
+            if (Skip-IfNoTarget) { return }
 
             $task = New-PveVm `
                 -Node    $script:Node `
@@ -163,13 +347,29 @@ Describe 'Integration Tests' -Tag 'Integration' {
             $script:CreatedVmIds.Add($vm.VmId)
         }
 
-        It 'Should start and stop a VM' {
-            if ($script:SkipReason) { Set-ItResult -Skipped -Because $script:SkipReason; return }
+        It 'Should get VM config' {
+            if (Skip-IfNoTestVm) { return }
 
-            if ($null -eq $script:TestVmId) {
-                Set-ItResult -Skipped -Because 'No test VM was created'
-                return
-            }
+            $config = Get-PveVmConfig -Node $script:Node -VmId $script:TestVmId
+            $config | Should -Not -BeNullOrEmpty
+            $config.Name | Should -Be 'pester-test-vm'
+        }
+
+        It 'Should set VM config' {
+            if (Skip-IfNoTestVm) { return }
+
+            { Set-PveVmConfig `
+                -Node        $script:Node `
+                -VmId        $script:TestVmId `
+                -Description 'Updated by Pester integration test' `
+                -ErrorAction Stop } | Should -Not -Throw
+
+            $config = Get-PveVmConfig -Node $script:Node -VmId $script:TestVmId
+            $config.Description | Should -Be 'Updated by Pester integration test'
+        }
+
+        It 'Should start and stop a VM' {
+            if (Skip-IfNoTestVm) { return }
 
             $startTask = Start-PveVm -Node $script:Node -VmId $script:TestVmId -Wait
             $startTask | Should -Not -BeNullOrEmpty
@@ -178,19 +378,39 @@ Describe 'Integration Tests' -Tag 'Integration' {
             $stopTask | Should -Not -BeNullOrEmpty
         }
 
+        It 'Should restart a VM' {
+            if (Skip-IfNoTestVm) { return }
+
+            # Start first, then restart
+            Start-PveVm -Node $script:Node -VmId $script:TestVmId -Wait | Out-Null
+
+            $task = Restart-PveVm -Node $script:Node -VmId $script:TestVmId -Wait
+            $task | Should -Not -BeNullOrEmpty
+
+            Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait | Out-Null
+        }
+
+        It 'Should resize a VM disk' {
+            if (Skip-IfNoTestVm) { return }
+
+            # First add a disk to resize
+            Set-PveVmConfig -Node $script:Node -VmId $script:TestVmId `
+                -Settings @{ scsi0 = "$($script:Storage):1" } -ErrorAction Stop
+
+            { Resize-PveVmDisk `
+                -Node $script:Node `
+                -VmId $script:TestVmId `
+                -Disk 'scsi0' `
+                -Size '+1G' `
+                -ErrorAction Stop } | Should -Not -Throw
+        }
+
         It 'Should clone a VM' {
-            if ($script:SkipReason) { Set-ItResult -Skipped -Because $script:SkipReason; return }
-
-            $templateVm = Get-PveVm -Node $script:Node -TemplatesOnly | Select-Object -First 1
-
-            if ($null -eq $templateVm) {
-                Set-ItResult -Skipped -Because 'No template VM available on the test node'
-                return
-            }
+            if (Skip-IfNoTestVm) { return }
 
             $task = Copy-PveVm `
                 -SourceNode $script:Node `
-                -VmId       $templateVm.VmId `
+                -VmId       $script:TestVmId `
                 -NewName    'pester-clone-vm' `
                 -Full `
                 -Wait
@@ -206,16 +426,73 @@ Describe 'Integration Tests' -Tag 'Integration' {
     }
 
     # -----------------------------------------------------------------------
+    Context 'Snapshots' {
+        It 'Should create, list, and remove a snapshot' {
+            if (Skip-IfNoTestVm) { return }
+
+            # Ensure the VM is stopped for snapshot
+            $vm = Get-PveVm -Node $script:Node | Where-Object { $_.VmId -eq $script:TestVmId }
+            if ($vm.Status -eq 'running') {
+                Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait | Out-Null
+            }
+
+            $snapName = 'pester-snap'
+
+            # Create
+            $createTask = New-PveSnapshot `
+                -Node        $script:Node `
+                -VmId        $script:TestVmId `
+                -Name        $snapName `
+                -Description 'Created by Pester integration test' `
+                -Wait
+
+            $createTask | Should -Not -BeNullOrEmpty
+
+            # List and verify
+            $snapshots = Get-PveSnapshot -Node $script:Node -VmId $script:TestVmId
+            $snap = $snapshots | Where-Object { $_.Name -eq $snapName }
+            $snap | Should -Not -BeNullOrEmpty
+
+            # Restore
+            { Restore-PveSnapshot `
+                -Node    $script:Node `
+                -VmId    $script:TestVmId `
+                -Name    $snapName `
+                -Confirm:$false `
+                -Wait } | Should -Not -Throw
+
+            # Remove
+            $removeTask = Remove-PveSnapshot `
+                -Node    $script:Node `
+                -VmId    $script:TestVmId `
+                -Name    $snapName `
+                -Confirm:$false `
+                -Wait
+
+            $removeTask | Should -Not -BeNullOrEmpty
+        }
+    }
+
+    # -----------------------------------------------------------------------
     Context 'Storage' {
         It 'Should list storage' {
-            if ($script:SkipReason) { Set-ItResult -Skipped -Because $script:SkipReason; return }
+            if (Skip-IfNoTarget) { return }
 
             $storage = Get-PveStorage -Node $script:Node
             $storage | Should -Not -BeNullOrEmpty
         }
 
+        It 'Should list storage content' {
+            if (Skip-IfNoTarget) { return }
+
+            { Get-PveStorageContent `
+                -Node    $script:Node `
+                -Storage $script:Storage `
+                -ErrorAction Stop } | Should -Not -Throw
+        }
+
         It 'Should upload an ISO' {
-            if ($script:SkipReason) { Set-ItResult -Skipped -Because $script:SkipReason; return }
+            if (Skip-IfNoTarget) { return }
 
             if (-not (Test-Path $script:IsoPath)) {
                 Set-ItResult -Skipped -Because "ISO file not found at PVETEST_ISO_PATH: $($script:IsoPath)"
@@ -233,50 +510,19 @@ Describe 'Integration Tests' -Tag 'Integration' {
     }
 
     # -----------------------------------------------------------------------
-    Context 'Snapshots' {
-        It 'Should create and remove a snapshot' {
-            if ($script:SkipReason) { Set-ItResult -Skipped -Because $script:SkipReason; return }
+    Context 'Tasks' {
+        It 'Should list recent tasks' {
+            if (Skip-IfNoTarget) { return }
 
-            if ($null -eq $script:TestVmId) {
-                Set-ItResult -Skipped -Because 'No test VM was created'
-                return
-            }
-
-            # Ensure the VM is stopped for snapshot
-            $vm = Get-PveVm -Node $script:Node | Where-Object { $_.VmId -eq $script:TestVmId }
-            if ($vm.Status -eq 'running') {
-                Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait | Out-Null
-            }
-
-            $snapName = 'pester-snap'
-
-            $createTask = New-PveSnapshot `
-                -Node        $script:Node `
-                -VmId        $script:TestVmId `
-                -Name        $snapName `
-                -Description 'Created by Pester integration test' `
-                -Wait
-
-            $createTask | Should -Not -BeNullOrEmpty
-
-            $snapshots = Get-PveSnapshot -Node $script:Node -VmId $script:TestVmId
-            $snapshots | Where-Object { $_.Name -eq $snapName } | Should -Not -BeNullOrEmpty
-
-            $removeTask = Remove-PveSnapshot `
-                -Node    $script:Node `
-                -VmId    $script:TestVmId `
-                -Name    $snapName `
-                -Confirm:$false `
-                -Wait
-
-            $removeTask | Should -Not -BeNullOrEmpty
+            $tasks = Get-PveTask -Node $script:Node
+            $tasks | Should -Not -BeNullOrEmpty
         }
     }
 
     # -----------------------------------------------------------------------
     Context 'Network' {
         It 'Should list networks' {
-            if ($script:SkipReason) { Set-ItResult -Skipped -Because $script:SkipReason; return }
+            if (Skip-IfNoTarget) { return }
 
             $networks = Get-PveNetwork -Node $script:Node
             $networks | Should -Not -BeNullOrEmpty
@@ -284,21 +530,9 @@ Describe 'Integration Tests' -Tag 'Integration' {
     }
 
     # -----------------------------------------------------------------------
-    Context 'Users' {
-        It 'Should list users' {
-            if ($script:SkipReason) { Set-ItResult -Skipped -Because $script:SkipReason; return }
-
-            $users = Get-PveUser
-            $users | Should -Not -BeNullOrEmpty
-            # root@pam is always present
-            $users | Where-Object { $_.UserId -eq 'root@pam' } | Should -Not -BeNullOrEmpty
-        }
-    }
-
-    # -----------------------------------------------------------------------
     Context 'Templates' {
         It 'Should list templates' {
-            if ($script:SkipReason) { Set-ItResult -Skipped -Because $script:SkipReason; return }
+            if (Skip-IfNoTarget) { return }
 
             # Zero templates is acceptable; just verify the cmdlet does not throw.
             { Get-PveTemplate -Node $script:Node -ErrorAction Stop } | Should -Not -Throw
@@ -308,16 +542,35 @@ Describe 'Integration Tests' -Tag 'Integration' {
     # -----------------------------------------------------------------------
     Context 'Cloud-Init' {
         It 'Should get cloud-init config' {
-            if ($script:SkipReason) { Set-ItResult -Skipped -Because $script:SkipReason; return }
-
-            if ($null -eq $script:TestVmId) {
-                Set-ItResult -Skipped -Because 'No test VM available for cloud-init test'
-                return
-            }
+            if (Skip-IfNoTestVm) { return }
 
             # Get-PveCloudInitConfig should not throw even if the VM has no cloud-init drive.
             { Get-PveCloudInitConfig -Node $script:Node -VmId $script:TestVmId -ErrorAction Stop } |
                 Should -Not -Throw
+        }
+    }
+
+    # -----------------------------------------------------------------------
+    Context 'VM Cleanup' {
+        It 'Should remove a VM' {
+            if (Skip-IfNoTestVm) { return }
+
+            # Ensure stopped
+            $vm = Get-PveVm -Node $script:Node | Where-Object { $_.VmId -eq $script:TestVmId }
+            if ($vm.Status -eq 'running') {
+                Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait | Out-Null
+            }
+
+            { Remove-PveVm `
+                -Node    $script:Node `
+                -VmId    $script:TestVmId `
+                -Force `
+                -Purge `
+                -Confirm:$false `
+                -ErrorAction Stop } | Should -Not -Throw
+
+            $script:CreatedVmIds.Remove($script:TestVmId) | Out-Null
+            $script:TestVmId = $null
         }
     }
 }
