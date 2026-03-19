@@ -608,7 +608,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
                 Stop-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait | Out-Null
             }
 
-            { New-PveTemplate -Node $script:Node -VmId $script:LinuxVmId -ErrorAction Stop } |
+            { New-PveTemplate -Node $script:Node -VmId $script:LinuxVmId -Confirm:$false -ErrorAction Stop } |
                 Should -Not -Throw
 
             # Verify it appears as a template
