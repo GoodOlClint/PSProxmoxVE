@@ -89,6 +89,22 @@ jobs:
           push: true
           tags: ${{ env.TEST_IMAGE }}:${{ github.sha }},${{ env.TEST_IMAGE }}:latest
 
+  # ── Clean up old container images from GHCR ──────────────────────────
+  cleanup-images:
+    needs: integration
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Delete old container image versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: psproxmoxve-integration
+          package-type: container
+          min-versions-to-keep: 1
+          delete-only-untagged-versions: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+
   # ── Integration tests (self-hosted runner in Docker container) ───────
   integration:
     needs: [build, container-image]
