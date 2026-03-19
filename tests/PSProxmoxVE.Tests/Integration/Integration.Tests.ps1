@@ -561,6 +561,38 @@ Describe 'Integration Tests' -Tag 'Integration' {
     }
 
     # -----------------------------------------------------------------------
+    Context 'Guest Agent — Cmdlets' {
+        It 'Should ping guest agent (Test-PveVmGuestAgent)' {
+            if (Skip-IfNoLinuxVm) { return }
+
+            $result = Test-PveVmGuestAgent -Node $script:Node -VmId $script:LinuxVmId
+            $result | Should -BeTrue
+        }
+
+        It 'Should discover guest network interfaces (Get-PveVmGuestNetwork)' {
+            if (Skip-IfNoLinuxVm) { return }
+
+            $interfaces = Get-PveVmGuestNetwork -Node $script:Node -VmId $script:LinuxVmId
+            $interfaces | Should -Not -BeNullOrEmpty
+
+            # Should have at least one interface with an IPv4 address
+            $withIp = $interfaces | Where-Object {
+                $_.IpAddresses | Where-Object { $_.Type -eq 'ipv4' -and $_.Address -ne '127.0.0.1' }
+            }
+            $withIp | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should execute a command in guest (Invoke-PveVmGuestExec)' {
+            if (Skip-IfNoLinuxVm) { return }
+
+            $result = Invoke-PveVmGuestExec -Node $script:Node -VmId $script:LinuxVmId -Command 'hostname'
+            $result | Should -Not -BeNullOrEmpty
+            $result.ExitCode | Should -Be 0
+            $result.Stdout | Should -Not -BeNullOrEmpty
+        }
+    }
+
+    # -----------------------------------------------------------------------
     Context 'Guest Agent VM — Lifecycle' {
         It 'Should have a running Linux VM with guest agent' {
             if (Skip-IfNoLinuxVm) { return }

@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
-# Prepares a Debian cloud image VM with qemu-guest-agent on the nested PVE.
+# Prepares an Ubuntu cloud image VM with qemu-guest-agent on the nested PVE.
 #
-# Uses PSProxmoxVE cmdlets where possible (we're integration testing the module
-# after all), SSH/SCP only for operations the API doesn't expose:
-#   - SCP the cloud-init snippet (no snippet upload API)
-#   - pvesm set to enable snippets content type
-#   - qm importdisk (no API equivalent)
-#   - qm set for --scsi0, --cicustom, --boot, --agent (Set-PveVmConfig doesn't expose these)
+# Uses PSProxmoxVE cmdlets for all supported operations:
+#   - Invoke-PveStorageDownload (cloud image download)
+#   - New-PveVm (VM creation)
+#   - Set-PveVmConfig -AdditionalConfig (disk/boot/agent/cloud-init config)
+#   - Set-PveCloudInitConfig (user/password/IP)
+#   - Start-PveVm (boot)
+#   - Test-PveVmGuestAgent (agent ping)
+#
+# SSH/SCP only for operations without API support:
+#   - pvesm set (enable snippets content type)
+#   - SCP snippet upload (no snippet API)
+#   - qm importdisk (no disk import API)
 #
 # Usage: prepare-test-vm.sh <nested-pve-ip> <root-password> <vm-id> <node> <api-token>
 #
@@ -28,6 +34,8 @@ SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLeve
 SSH_CMD="sshpass -p ${ROOT_PASS} ssh ${SSH_OPTS} root@${NESTED_IP}"
 SCP_CMD="sshpass -p ${ROOT_PASS} scp ${SSH_OPTS}"
 
+CONNECT_CMD="Connect-PveServer -Server '${NESTED_IP}' -ApiToken '${API_TOKEN}' -SkipCertificateCheck"
+
 echo "=== Preparing test Linux VM (VMID ${VMID}) on ${NESTED_IP} ==="
 
 # ── Step 1: Upload cloud-init snippet (SSH — no API for snippets) ────
@@ -46,92 +54,76 @@ ${SSH_CMD} "mkdir -p /var/lib/vz/snippets && pvesm set local --content iso,vztmp
 ${SCP_CMD} "${USERDATA}" "root@${NESTED_IP}:/var/lib/vz/snippets/test-vm-userdata.yml"
 rm -f "${USERDATA}"
 
-# ── Step 2: Download cloud image (PSProxmoxVE cmdlet) ────────────────
+# ── Step 2: Download cloud image (module cmdlet) ─────────────────────
 echo "Downloading Ubuntu cloud image via Invoke-PveStorageDownload..."
 pwsh -NoProfile -Command "
-    Import-Module PSProxmoxVE
-    Connect-PveServer -Server '${NESTED_IP}' -ApiToken '${API_TOKEN}' -SkipCertificateCheck
+    Import-Module PSProxmoxVE; ${CONNECT_CMD}
     Invoke-PveStorageDownload \
-        -Node '${NODE}' \
-        -Storage 'local' \
-        -Url '${CLOUD_IMAGE_URL}' \
-        -Filename '${CLOUD_IMAGE_FILENAME}' \
-        -ContentType 'iso' \
-        -Wait
+        -Node '${NODE}' -Storage 'local' \
+        -Url '${CLOUD_IMAGE_URL}' -Filename '${CLOUD_IMAGE_FILENAME}' \
+        -ContentType 'iso' -Wait
 "
 
-# ── Step 3: Create VM (PSProxmoxVE cmdlet) ───────────────────────────
+# ── Step 3: Create VM (module cmdlet) ────────────────────────────────
 echo "Creating VM ${VMID} via New-PveVm..."
 pwsh -NoProfile -Command "
-    Import-Module PSProxmoxVE
-    Connect-PveServer -Server '${NESTED_IP}' -ApiToken '${API_TOKEN}' -SkipCertificateCheck
-    New-PveVm \
-        -Node '${NODE}' \
-        -VmId ${VMID} \
-        -Name 'debian-test' \
-        -Memory 512 \
-        -Cores 1 \
-        -OsType 'l26' \
-        -Wait
+    Import-Module PSProxmoxVE; ${CONNECT_CMD}
+    New-PveVm -Node '${NODE}' -VmId ${VMID} -Name 'ubuntu-test' \
+        -Memory 512 -Cores 1 -OsType 'l26' -Wait
 "
 
-# ── Step 4: Import disk and configure (SSH — no importdisk API) ──────
-echo "Importing disk and configuring VM..."
-${SSH_CMD} bash <<REMOTE
-set -e
+# ── Step 4: Import disk (SSH — no importdisk API) ────────────────────
+echo "Importing disk image..."
+${SSH_CMD} "qm importdisk ${VMID} /var/lib/vz/template/iso/${CLOUD_IMAGE_FILENAME} local-lvm 2>&1 | tail -1"
 
-# Import the downloaded image as a disk (stored in local ISO dir by download-url API)
-qm importdisk ${VMID} /var/lib/vz/template/iso/${CLOUD_IMAGE_FILENAME} local-lvm 2>&1 | tail -1
+# ── Step 5: Configure VM (module cmdlet — AdditionalConfig) ──────────
+echo "Configuring VM via Set-PveVmConfig -AdditionalConfig..."
+pwsh -NoProfile -Command "
+    Import-Module PSProxmoxVE; ${CONNECT_CMD}
+    Set-PveVmConfig -Node '${NODE}' -VmId ${VMID} -AdditionalConfig @{
+        scsihw   = 'virtio-scsi-single'
+        scsi0    = 'local-lvm:vm-${VMID}-disk-0'
+        boot     = 'order=scsi0'
+        serial0  = 'socket'
+        agent    = '1'
+        net0     = 'virtio,bridge=vmbr0'
+        ide2     = 'local-lvm:cloudinit'
+        cicustom = 'user=local:snippets/test-vm-userdata.yml'
+    }
+"
 
-# Attach disk, enable agent, configure boot, add cloud-init
-qm set ${VMID} \
-    --scsihw virtio-scsi-single \
-    --scsi0 local-lvm:vm-${VMID}-disk-0 \
-    --boot order=scsi0 \
-    --serial0 socket \
-    --agent 1 \
-    --net0 virtio,bridge=vmbr0 \
-    --ide2 local-lvm:cloudinit \
-    --cicustom "user=local:snippets/test-vm-userdata.yml"
-REMOTE
-
-# ── Step 5: Set cloud-init config (PSProxmoxVE cmdlet) ───────────────
+# ── Step 6: Set cloud-init config (module cmdlet) ────────────────────
 echo "Setting cloud-init config via Set-PveCloudInitConfig..."
 pwsh -NoProfile -Command "
-    Import-Module PSProxmoxVE
-    Connect-PveServer -Server '${NESTED_IP}' -ApiToken '${API_TOKEN}' -SkipCertificateCheck
-    Set-PveCloudInitConfig \
-        -Node '${NODE}' \
-        -VmId ${VMID} \
+    Import-Module PSProxmoxVE; ${CONNECT_CMD}
+    Set-PveCloudInitConfig -Node '${NODE}' -VmId ${VMID} \
         -CiUser 'root' \
         -Password (ConvertTo-SecureString '${ROOT_PASS}' -AsPlainText -Force) \
         -IpConfig0 'ip=dhcp'
-    # Note: Invoke-PveCloudInitRegenerate has a bug (returns cloud-config
-    # content as UPID). Skipping — PVE regenerates cloud-init on VM start.
 "
 
-# ── Step 6: Start VM (PSProxmoxVE cmdlet) ────────────────────────────
+# ── Step 7: Start VM (module cmdlet) ─────────────────────────────────
 echo "Starting VM ${VMID} via Start-PveVm..."
 pwsh -NoProfile -Command "
-    Import-Module PSProxmoxVE
-    Connect-PveServer -Server '${NESTED_IP}' -ApiToken '${API_TOKEN}' -SkipCertificateCheck
+    Import-Module PSProxmoxVE; ${CONNECT_CMD}
     Start-PveVm -Node '${NODE}' -VmId ${VMID} -Wait
 "
 
-# ── Step 7: Wait for guest agent ─────────────────────────────────────
+# ── Step 8: Wait for guest agent (module cmdlet) ─────────────────────
 echo "Waiting for guest agent on VM ${VMID} (cloud-init installing packages)..."
-TIMEOUT=300
-ELAPSED=0
-while [ $ELAPSED -lt $TIMEOUT ]; do
-    if ${SSH_CMD} "qm agent ${VMID} ping" 2>/dev/null; then
-        echo "Guest agent responding on VM ${VMID}"
-        echo "LINUX_VMID=${VMID}"
-        exit 0
-    fi
-    sleep 10
-    ELAPSED=$((ELAPSED + 10))
-    echo "  Waiting... (${ELAPSED}s / ${TIMEOUT}s)"
-done
+pwsh -NoProfile -Command "
+    Import-Module PSProxmoxVE; ${CONNECT_CMD}
+    \$timeout = 300; \$elapsed = 0
+    while (\$elapsed -lt \$timeout) {
+        if (Test-PveVmGuestAgent -Node '${NODE}' -VmId ${VMID}) {
+            Write-Host 'Guest agent responding on VM ${VMID}'
+            exit 0
+        }
+        Start-Sleep -Seconds 10
+        \$elapsed += 10
+        Write-Host \"  Waiting... (\${elapsed}s / \${timeout}s)\"
+    }
+    throw 'Timeout waiting for guest agent on VM ${VMID}'
+"
 
-echo "ERROR: Timeout waiting for guest agent on VM ${VMID}" >&2
-exit 1
+echo "LINUX_VMID=${VMID}"
