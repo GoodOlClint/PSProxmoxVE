@@ -264,6 +264,15 @@ jobs:
             exit 1
           fi
 
+      # ── Install module ────────────────────────────────────────────────
+
+      - name: Copy module to module path
+        shell: pwsh
+        run: |
+          $modulePath = "$HOME/.local/share/powershell/Modules/PSProxmoxVE"
+          New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
+          Copy-Item -Path ./publish/netstandard2.0/* -Destination $modulePath -Recurse -Force
+
       # ── Prepare test Linux VM ────────────────────────────────────────
 
       - name: Deploy test Linux VM to nested PVE
@@ -280,14 +289,7 @@ jobs:
           LINUX_VMID=$(echo "$OUTPUT" | grep "^LINUX_VMID=" | cut -d= -f2)
           echo "linux_vmid=${LINUX_VMID}" >> "$GITHUB_OUTPUT"
 
-      # ── Install module and run tests ─────────────────────────────────
-
-      - name: Copy module to module path
-        shell: pwsh
-        run: |
-          $modulePath = "$HOME/.local/share/powershell/Modules/PSProxmoxVE"
-          New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
-          Copy-Item -Path ./publish/netstandard2.0/* -Destination $modulePath -Recurse -Force
+      # ── Run tests ─────────────────────────────────────────────────────
 
       - name: Create test ISO
         shell: bash
