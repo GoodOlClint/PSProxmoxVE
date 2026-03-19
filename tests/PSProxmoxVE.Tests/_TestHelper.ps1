@@ -44,4 +44,9 @@ if ($null -eq $moduleDll) {
     throw "PSProxmoxVE.dll not found. Build the project before running Pester tests."
 }
 
+# Remove deps.json if present — it causes assembly resolution conflicts
+# when loading a binary module inside PowerShell's own .NET runtime.
+$depsJson = Join-Path (Split-Path $moduleDll) 'PSProxmoxVE.deps.json'
+if (Test-Path $depsJson) { Remove-Item $depsJson -Force }
+
 Import-Module $moduleDll -Force -ErrorAction Stop

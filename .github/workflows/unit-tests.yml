@@ -42,6 +42,10 @@ jobs:
       - name: Build module
         run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework ${{ matrix.framework }} --output ./publish/${{ matrix.framework }}
 
+      - name: Remove deps.json from publish output
+        shell: bash
+        run: rm -f ./publish/${{ matrix.framework }}/PSProxmoxVE.deps.json
+
       - name: Install Pester 5 (PS 5.1)
         if: matrix.ps_version == '5.1'
         shell: powershell
