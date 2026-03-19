@@ -1,23 +1,28 @@
 #!/usr/bin/env bash
-# Downloads a Debian cloud image to the nested PVE, creates a VM, and uses
-# cloud-init custom user-data to install qemu-guest-agent on first boot.
+# Prepares a Debian cloud image VM with qemu-guest-agent on the nested PVE.
 #
-# No virt-customize or libguestfs needed — cloud-init handles the package
-# installation. A custom user-data snippet is SCP'd to the nested PVE's
-# snippets directory and referenced via --cicustom.
+# Uses PSProxmoxVE cmdlets where possible (we're integration testing the module
+# after all), SSH/SCP only for operations the API doesn't expose:
+#   - SCP the cloud-init snippet (no snippet upload API)
+#   - pvesm set to enable snippets content type
+#   - qm importdisk (no API equivalent)
+#   - qm set for --scsi0, --cicustom, --boot, --agent (Set-PveVmConfig doesn't expose these)
 #
-# Usage: prepare-test-vm.sh <nested-pve-ip> <root-password> <vm-id>
+# Usage: prepare-test-vm.sh <nested-pve-ip> <root-password> <vm-id> <node> <api-token>
 #
 # Outputs (to stdout, for capture by caller):
 #   LINUX_VMID=<vm-id>
 
 set -euo pipefail
 
-NESTED_IP="${1:?Usage: prepare-test-vm.sh <ip> <password> <vm-id>}"
+NESTED_IP="${1:?Usage: prepare-test-vm.sh <ip> <password> <vm-id> <node> <api-token>}"
 ROOT_PASS="$2"
 VMID="$3"
+NODE="$4"
+API_TOKEN="$5"
 
 CLOUD_IMAGE_URL="https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2"
+CLOUD_IMAGE_FILENAME="debian-12-genericcloud-amd64.qcow2"
 
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 SSH_CMD="sshpass -p ${ROOT_PASS} ssh ${SSH_OPTS} root@${NESTED_IP}"
@@ -25,7 +30,8 @@ SCP_CMD="sshpass -p ${ROOT_PASS} scp ${SSH_OPTS}"
 
 echo "=== Preparing test Linux VM (VMID ${VMID}) on ${NESTED_IP} ==="
 
-# Create cloud-init user-data snippet locally
+# ── Step 1: Upload cloud-init snippet (SSH — no API for snippets) ────
+echo "Uploading cloud-init user-data snippet..."
 USERDATA=$(mktemp)
 cat > "${USERDATA}" <<'YAML'
 #cloud-config
@@ -36,64 +42,83 @@ runcmd:
   - systemctl enable --now qemu-guest-agent
 YAML
 
-# Upload snippet to nested PVE
-echo "Uploading cloud-init user-data snippet..."
-${SSH_CMD} "mkdir -p /var/lib/vz/snippets"
+${SSH_CMD} "mkdir -p /var/lib/vz/snippets && pvesm set local --content iso,vztmpl,snippets"
 ${SCP_CMD} "${USERDATA}" "root@${NESTED_IP}:/var/lib/vz/snippets/test-vm-userdata.yml"
 rm -f "${USERDATA}"
 
-# Download image and create VM — all on the nested PVE
-echo "Downloading Debian cloud image and creating VM on nested PVE..."
+# ── Step 2: Download cloud image (PSProxmoxVE cmdlet) ────────────────
+echo "Downloading Debian cloud image via Invoke-PveStorageDownload..."
+pwsh -NoProfile -Command "
+    Import-Module PSProxmoxVE
+    Connect-PveServer -Server '${NESTED_IP}' -ApiToken '${API_TOKEN}' -SkipCertificateCheck
+    Invoke-PveStorageDownload \
+        -Node '${NODE}' \
+        -Storage 'local' \
+        -Url '${CLOUD_IMAGE_URL}' \
+        -Filename '${CLOUD_IMAGE_FILENAME}' \
+        -ContentType 'iso' \
+        -Wait
+"
+
+# ── Step 3: Create VM (PSProxmoxVE cmdlet) ───────────────────────────
+echo "Creating VM ${VMID} via New-PveVm..."
+pwsh -NoProfile -Command "
+    Import-Module PSProxmoxVE
+    Connect-PveServer -Server '${NESTED_IP}' -ApiToken '${API_TOKEN}' -SkipCertificateCheck
+    New-PveVm \
+        -Node '${NODE}' \
+        -VmId ${VMID} \
+        -Name 'debian-test' \
+        -Memory 512 \
+        -Cores 1 \
+        -OsType 'l26' \
+        -Wait
+"
+
+# ── Step 4: Import disk and configure (SSH — no importdisk API) ──────
+echo "Importing disk and configuring VM..."
 ${SSH_CMD} bash <<REMOTE
 set -e
 
-# Enable snippets content type on local storage (disabled by default)
-pvesm set local --content iso,vztmpl,snippets
+# Import the downloaded image as a disk
+# The image was downloaded to local storage ISO dir
+qm importdisk ${VMID} /var/lib/vz/template/iso/${CLOUD_IMAGE_FILENAME} local-lvm 2>&1 | tail -1
 
-# Download the cloud image
-echo "Downloading Debian cloud image..."
-curl -sL -o /tmp/debian-cloud.qcow2 "${CLOUD_IMAGE_URL}"
-
-# Create the VM
-echo "Creating VM ${VMID}..."
-qm create ${VMID} \
-    --name debian-test \
-    --memory 512 \
-    --cores 1 \
-    --net0 virtio,bridge=vmbr0 \
-    --agent 1 \
-    --ostype l26 \
-    --scsihw virtio-scsi-single
-
-# Import the disk
-echo "Importing disk..."
-qm importdisk ${VMID} /tmp/debian-cloud.qcow2 local-lvm 2>&1 | tail -1
-
-# Attach disk and configure boot
+# Attach disk, enable agent, configure boot, add cloud-init
 qm set ${VMID} \
+    --scsihw virtio-scsi-single \
     --scsi0 local-lvm:vm-${VMID}-disk-0 \
     --boot order=scsi0 \
-    --serial0 socket
-
-# Add cloud-init drive
-qm set ${VMID} --ide2 local-lvm:cloudinit
-
-# Set cloud-init config with custom user-data for guest-agent install
-qm set ${VMID} \
-    --ciuser root \
-    --cipassword "${ROOT_PASS}" \
-    --ipconfig0 ip=dhcp \
+    --serial0 socket \
+    --agent 1 \
+    --net0 virtio,bridge=vmbr0 \
+    --ide2 local-lvm:cloudinit \
     --cicustom "user=local:snippets/test-vm-userdata.yml"
-
-# Start the VM
-echo "Starting VM ${VMID}..."
-qm start ${VMID}
-
-# Clean up
-rm -f /tmp/debian-cloud.qcow2
 REMOTE
 
-# Wait for guest agent to respond (cloud-init needs time to install the package)
+# ── Step 5: Set cloud-init config (PSProxmoxVE cmdlet) ───────────────
+echo "Setting cloud-init config via Set-PveCloudInitConfig..."
+pwsh -NoProfile -Command "
+    Import-Module PSProxmoxVE
+    Connect-PveServer -Server '${NESTED_IP}' -ApiToken '${API_TOKEN}' -SkipCertificateCheck
+    Set-PveCloudInitConfig \
+        -Node '${NODE}' \
+        -VmId ${VMID} \
+        -CiUser 'root' \
+        -Password (ConvertTo-SecureString '${ROOT_PASS}' -AsPlainText -Force) \
+        -IpConfig0 'ip=dhcp'
+    Invoke-PveCloudInitRegenerate -Node '${NODE}' -VmId ${VMID} -Wait
+"
+
+# ── Step 6: Start VM (PSProxmoxVE cmdlet) ────────────────────────────
+echo "Starting VM ${VMID} via Start-PveVm..."
+pwsh -NoProfile -Command "
+    Import-Module PSProxmoxVE
+    Connect-PveServer -Server '${NESTED_IP}' -ApiToken '${API_TOKEN}' -SkipCertificateCheck
+    Start-PveVm -Node '${NODE}' -VmId ${VMID} -Wait
+"
+
+# ── Step 7: Wait for guest agent ─────────────────────────────────────
 echo "Waiting for guest agent on VM ${VMID} (cloud-init installing packages)..."
 TIMEOUT=300
 ELAPSED=0

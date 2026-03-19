@@ -256,7 +256,9 @@ jobs:
           OUTPUT=$(bash ${SCRIPTS_DIR}/prepare-test-vm.sh \
             "${{ steps.provision.outputs.host }}" \
             "${PVE_PASSWORD}" \
-            200)
+            200 \
+            "${{ steps.target.outputs.node }}" \
+            "${{ steps.provision.outputs.token }}")
           LINUX_VMID=$(echo "$OUTPUT" | grep "^LINUX_VMID=" | cut -d= -f2)
           echo "linux_vmid=${LINUX_VMID}" >> "$GITHUB_OUTPUT"
 
