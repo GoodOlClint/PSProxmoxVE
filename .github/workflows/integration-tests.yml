@@ -119,6 +119,9 @@ jobs:
             vm_name: pve-test-pve8
 
     steps:
+      - name: Mask test password
+        run: echo "::add-mask::${PVE_PASSWORD}"
+
       - uses: actions/checkout@v5
 
       - name: Download module artifact

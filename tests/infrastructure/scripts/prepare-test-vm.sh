@@ -29,11 +29,17 @@ echo "Downloading and customizing Debian cloud image on nested PVE..."
 ${SSH_CMD} bash <<REMOTE
 set -e
 
+# Ensure libguestfs-tools is available (not installed by default on fresh PVE)
+if ! command -v virt-customize &>/dev/null; then
+    echo "Installing libguestfs-tools..."
+    apt-get update -qq && apt-get install -y -qq libguestfs-tools
+fi
+
 # Download the cloud image
 echo "Downloading Debian cloud image..."
 curl -sL -o /tmp/debian-cloud.qcow2 "${CLOUD_IMAGE_URL}"
 
-# Install qemu-guest-agent into the image using PVE's built-in libguestfs
+# Install qemu-guest-agent into the image
 echo "Installing qemu-guest-agent into image..."
 virt-customize -a /tmp/debian-cloud.qcow2 \
     --install qemu-guest-agent \
