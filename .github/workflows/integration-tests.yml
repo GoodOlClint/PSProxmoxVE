@@ -162,7 +162,7 @@ jobs:
             "${{ matrix.iso_base }}" \
             ${RUNNER_TEMP}/answer.toml \
             ${SCRIPTS_DIR}/first-boot.sh \
-            "${{ runner.temp }}/${{ matrix.iso_filename }}"
+            "${RUNNER_TEMP}/${{ matrix.iso_filename }}"
 
       - name: Terraform init
         if: inputs.skip_provision != true
@@ -179,11 +179,11 @@ jobs:
           TF_VAR_proxmox_endpoint: ${{ secrets.PVE_ENDPOINT }}
           TF_VAR_proxmox_api_token: ${{ secrets.PVE_API_TOKEN }}
           TF_VAR_target_node: ${{ secrets.PVE_TARGET_NODE }}
-          TF_VAR_iso_local_path: ${{ runner.temp }}/${{ matrix.iso_filename }}
           TF_VAR_test_vm_password: ${{ env.PVE_PASSWORD }}
           TF_VAR_vm_id: ${{ matrix.vm_id }}
           TF_VAR_vm_name: ${{ matrix.vm_name }}
         run: |
+          export TF_VAR_iso_local_path="${RUNNER_TEMP}/${{ matrix.iso_filename }}"
           terraform apply -auto-approve -input=false
           echo "vm_id=$(terraform output -raw pve_test_vm_id)" >> "$GITHUB_OUTPUT"
 
@@ -286,10 +286,10 @@ jobs:
           PVETEST_APITOKEN: ${{ steps.target.outputs.token }}
           PVETEST_NODE: ${{ steps.target.outputs.node }}
           PVETEST_STORAGE: ${{ steps.target.outputs.storage }}
-          PVETEST_ISO_PATH: ${{ runner.temp }}/pvetest.iso
           PVETEST_PVE_VERSION: ${{ matrix.pve_version }}
           PVETEST_LINUX_VMID: ${{ steps.linux_vm.outputs.linux_vmid }}
         run: |
+          $env:PVETEST_ISO_PATH = Join-Path $env:RUNNER_TEMP "pvetest.iso"
           Import-Module Pester -MinimumVersion 5.0
           $config = New-PesterConfiguration
           $config.Run.Path = "tests/PSProxmoxVE.Tests/Integration"
@@ -317,11 +317,11 @@ jobs:
           TF_VAR_proxmox_endpoint: ${{ secrets.PVE_ENDPOINT }}
           TF_VAR_proxmox_api_token: ${{ secrets.PVE_API_TOKEN }}
           TF_VAR_target_node: ${{ secrets.PVE_TARGET_NODE }}
-          TF_VAR_iso_local_path: ${{ runner.temp }}/${{ matrix.iso_filename }}
           TF_VAR_test_vm_password: ${{ env.PVE_PASSWORD }}
           TF_VAR_vm_id: ${{ matrix.vm_id }}
           TF_VAR_vm_name: ${{ matrix.vm_name }}
         run: |
+          export TF_VAR_iso_local_path="${RUNNER_TEMP}/${{ matrix.iso_filename }}"
           terraform init -input=false
           terraform destroy -auto-approve -input=false || true
           rm -f terraform.tfstate terraform.tfstate.backup .terraform.tfstate.lock.info
