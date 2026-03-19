@@ -10,8 +10,12 @@ set -e
 rm -f /etc/apt/sources.list.d/pve-enterprise.list /etc/apt/sources.list.d/pve-enterprise.sources
 rm -f /etc/apt/sources.list.d/ceph.list /etc/apt/sources.list.d/ceph.sources
 
-# Detect suite from existing debian.sources or default to trixie
-SUITE=$(grep -oP 'Suites:\s*\K\S+' /etc/apt/sources.list.d/debian.sources 2>/dev/null | head -1 || echo "trixie")
+# Detect Debian suite from os-release (works on both PVE 8/bookworm and PVE 9/trixie)
+SUITE=$(. /etc/os-release && echo "$VERSION_CODENAME")
+if [ -z "$SUITE" ]; then
+    # Fallback: try parsing apt sources
+    SUITE=$(grep -oP 'Suites:\s*\K\S+' /etc/apt/sources.list.d/debian.sources 2>/dev/null | head -1 || echo "bookworm")
+fi
 echo "deb http://download.proxmox.com/debian/pve ${SUITE} pve-no-subscription" > /etc/apt/sources.list.d/pve-no-subscription.list
 
 apt-get update -qq
