@@ -106,7 +106,8 @@ pwsh -NoProfile -Command "
         -CiUser 'root' \
         -Password (ConvertTo-SecureString '${ROOT_PASS}' -AsPlainText -Force) \
         -IpConfig0 'ip=dhcp'
-    Invoke-PveCloudInitRegenerate -Node '${NODE}' -VmId ${VMID} -Wait
+    # Note: Invoke-PveCloudInitRegenerate has a bug (returns cloud-config
+    # content as UPID). Skipping — PVE regenerates cloud-init on VM start.
 "
 
 # ── Step 6: Start VM (PSProxmoxVE cmdlet) ────────────────────────────
