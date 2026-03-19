@@ -11,6 +11,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_tasks.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var task = data.ToObject<PveTask>();
             Assert.NotNull(task);
             Assert.Equal("UPID:pve1:00001234:00ABCDEF:65F00000:qmstart:100:root@pam:", task.Upid);
@@ -21,6 +22,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_tasks.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var task = data.ToObject<PveTask>();
             Assert.NotNull(task);
             Assert.Equal("stopped", task.Status);
@@ -31,6 +33,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_tasks.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var task = data.ToObject<PveTask>();
             Assert.NotNull(task);
             Assert.Equal("OK", task.ExitStatus);
@@ -41,6 +44,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_tasks.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var task = data.ToObject<PveTask>();
             Assert.NotNull(task);
             Assert.True(task.IsSuccessful);
@@ -51,6 +55,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_task_running.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var task = data.ToObject<PveTask>();
             Assert.NotNull(task);
             Assert.Equal("UPID:pve1:00001234:00ABCDEF:65F00000:qmstart:100:root@pam:", task.Upid);
@@ -61,6 +66,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_task_running.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var task = data.ToObject<PveTask>();
             Assert.NotNull(task);
             Assert.Equal("running", task.Status);
@@ -71,6 +77,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_task_running.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var task = data.ToObject<PveTask>();
             Assert.NotNull(task);
             Assert.Null(task.ExitStatus);
@@ -81,6 +88,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_task_running.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var task = data.ToObject<PveTask>();
             Assert.NotNull(task);
             Assert.False(task.IsSuccessful);

@@ -54,7 +54,7 @@ namespace PSProxmoxVE.Cmdlets.Snapshots
             {
                 ["snapname"] = Name
             };
-            if (!string.IsNullOrEmpty(Description)) data["description"] = Description;
+            if (!string.IsNullOrEmpty(Description)) data["description"] = Description!;
             if (IncludeVmState.IsPresent)            data["vmstate"]     = "1";
 
             var json = client.PostAsync($"nodes/{Node}/qemu/{VmId}/snapshot", data).GetAwaiter().GetResult();

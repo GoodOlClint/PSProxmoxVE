@@ -33,7 +33,7 @@ namespace PSProxmoxVE.Cmdlets.Templates
 
             if (!string.IsNullOrEmpty(Node))
             {
-                nodesToQuery.Add(Node);
+                nodesToQuery.Add(Node!);
             }
             else
             {
@@ -62,7 +62,7 @@ namespace PSProxmoxVE.Cmdlets.Templates
 
                     if (!string.IsNullOrEmpty(Name) && vm.Name != null)
                     {
-                        var pattern = Name.Replace("*", "");
+                        var pattern = Name!.Replace("*", "");
                         if (Name.Contains("*"))
                         {
                             if (vm.Name.IndexOf(pattern, System.StringComparison.OrdinalIgnoreCase) < 0)

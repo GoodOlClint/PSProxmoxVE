@@ -11,6 +11,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_snapshots.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var snapshots = data.ToObject<PveSnapshot[]>();
             Assert.NotNull(snapshots);
             Assert.Equal(3, snapshots.Length);
@@ -21,6 +22,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_snapshots.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var snapshots = data.ToObject<PveSnapshot[]>();
             Assert.NotNull(snapshots);
             Assert.Equal("current", snapshots[0].Name);
@@ -31,6 +33,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_snapshots.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var snapshots = data.ToObject<PveSnapshot[]>();
             Assert.NotNull(snapshots);
             Assert.Equal("You are here!", snapshots[0].Description);
@@ -41,6 +44,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_snapshots.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var snapshots = data.ToObject<PveSnapshot[]>();
             Assert.NotNull(snapshots);
             Assert.Equal("snap1", snapshots[1].Name);
@@ -52,6 +56,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_snapshots.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var snapshots = data.ToObject<PveSnapshot[]>();
             Assert.NotNull(snapshots);
             Assert.Equal(1, snapshots[1].VmState);
@@ -62,6 +67,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_snapshots.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var snapshots = data.ToObject<PveSnapshot[]>();
             Assert.NotNull(snapshots);
             Assert.Equal("base", snapshots[1].Parent);
@@ -72,6 +78,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_snapshots.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var snapshots = data.ToObject<PveSnapshot[]>();
             Assert.NotNull(snapshots);
             Assert.Equal("base", snapshots[2].Name);
@@ -83,6 +90,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_snapshots.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var snapshots = data.ToObject<PveSnapshot[]>();
             Assert.NotNull(snapshots);
             Assert.Equal("snap1", snapshots[0].Parent);
@@ -93,6 +101,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_snapshots.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var snapshots = data.ToObject<PveSnapshot[]>();
             Assert.NotNull(snapshots);
             Assert.Equal(1709000000L, snapshots[2].SnapTime);

@@ -53,7 +53,7 @@ namespace PSProxmoxVE.Cmdlets.Users
             if (string.IsNullOrEmpty(UserId))
                 return true;
 
-            if (UserId.Contains("*"))
+            if (UserId!.Contains("*"))
             {
                 var pattern = UserId.Replace("*", "");
                 return user.UserId.IndexOf(pattern, System.StringComparison.OrdinalIgnoreCase) >= 0;

@@ -11,6 +11,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_storage.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var storages = data.ToObject<PveStorage[]>();
             Assert.NotNull(storages);
             Assert.Equal(3, storages.Length);
@@ -21,6 +22,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_storage.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var storages = data.ToObject<PveStorage[]>();
             Assert.NotNull(storages);
             Assert.Equal("local", storages[0].Storage);
@@ -31,6 +33,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_storage.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var storages = data.ToObject<PveStorage[]>();
             Assert.NotNull(storages);
             Assert.Equal("dir", storages[0].Type);
@@ -41,6 +44,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_storage.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var storages = data.ToObject<PveStorage[]>();
             Assert.NotNull(storages);
             Assert.Equal("iso,vztmpl,backup", storages[0].Content);
@@ -51,6 +55,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_storage.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var storages = data.ToObject<PveStorage[]>();
             Assert.NotNull(storages);
             Assert.Equal(107374182400L, storages[0].Total);
@@ -63,6 +68,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_storage.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var storages = data.ToObject<PveStorage[]>();
             Assert.NotNull(storages);
             Assert.Equal(1, storages[0].Enabled);
@@ -74,6 +80,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_storage.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var storages = data.ToObject<PveStorage[]>();
             Assert.NotNull(storages);
             var ceph = storages[2];
@@ -87,6 +94,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_storage_content.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var items = data.ToObject<PveStorageContent[]>();
             Assert.NotNull(items);
             Assert.Equal(2, items.Length);
@@ -97,6 +105,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_storage_content.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var items = data.ToObject<PveStorageContent[]>();
             Assert.NotNull(items);
             Assert.Equal("local:iso/ubuntu-24.04-live-server-amd64.iso", items[0].VolId);
@@ -107,6 +116,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_storage_content.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var items = data.ToObject<PveStorageContent[]>();
             Assert.NotNull(items);
             Assert.Equal("iso", items[0].Content);
@@ -118,6 +128,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_storage_content.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var items = data.ToObject<PveStorageContent[]>();
             Assert.NotNull(items);
             Assert.Equal(2774532096L, items[0].Size);
@@ -128,6 +139,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_storage_content.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var items = data.ToObject<PveStorageContent[]>();
             Assert.NotNull(items);
             // ISO items should not have a VmId or Notes

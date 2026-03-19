@@ -108,7 +108,7 @@ namespace PSProxmoxVE.Cmdlets.Tasks
                         };
 
                         if (!task.IsSuccessful && !string.IsNullOrEmpty(exitStatus) && exitStatus != "OK")
-                            throw new PveTaskFailedException(Upid, exitStatus);
+                            throw new PveTaskFailedException(Upid, exitStatus!);
 
                         WriteObject(task);
                         return;

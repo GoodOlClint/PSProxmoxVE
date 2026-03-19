@@ -38,7 +38,7 @@ namespace PSProxmoxVE.Cmdlets.Users
             {
                 ["roleid"] = RoleId
             };
-            if (!string.IsNullOrEmpty(Privileges)) data["privs"] = Privileges;
+            if (!string.IsNullOrEmpty(Privileges)) data["privs"] = Privileges!;
 
             client.PostAsync("access/roles", data).GetAwaiter().GetResult();
 

@@ -89,16 +89,16 @@ namespace PSProxmoxVE.Cmdlets.Storage
                 ["type"]    = Type
             };
 
-            if (!string.IsNullOrEmpty(Content))  data["content"]  = Content;
-            if (!string.IsNullOrEmpty(Path))      data["path"]     = Path;
-            if (!string.IsNullOrEmpty(Server))    data["server"]   = Server;
-            if (!string.IsNullOrEmpty(Export))    data["export"]   = Export;
-            if (!string.IsNullOrEmpty(VgName))    data["vgname"]   = VgName;
-            if (!string.IsNullOrEmpty(ThinPool))  data["thinpool"] = ThinPool;
-            if (!string.IsNullOrEmpty(Pool))      data["pool"]     = Pool;
-            if (!string.IsNullOrEmpty(CephPool))  data["pool"]     = CephPool;
-            if (!string.IsNullOrEmpty(MonHost))   data["monhost"]  = MonHost;
-            if (!string.IsNullOrEmpty(Nodes))     data["nodes"]    = Nodes;
+            if (!string.IsNullOrEmpty(Content))  data["content"]  = Content!;
+            if (!string.IsNullOrEmpty(Path))      data["path"]     = Path!;
+            if (!string.IsNullOrEmpty(Server))    data["server"]   = Server!;
+            if (!string.IsNullOrEmpty(Export))    data["export"]   = Export!;
+            if (!string.IsNullOrEmpty(VgName))    data["vgname"]   = VgName!;
+            if (!string.IsNullOrEmpty(ThinPool))  data["thinpool"] = ThinPool!;
+            if (!string.IsNullOrEmpty(Pool))      data["pool"]     = Pool!;
+            if (!string.IsNullOrEmpty(CephPool))  data["pool"]     = CephPool!;
+            if (!string.IsNullOrEmpty(MonHost))   data["monhost"]  = MonHost!;
+            if (!string.IsNullOrEmpty(Nodes))     data["nodes"]    = Nodes!;
             if (Shared.IsPresent)  data["shared"]  = "1";
             if (Disable.IsPresent) data["disable"] = "1";
 

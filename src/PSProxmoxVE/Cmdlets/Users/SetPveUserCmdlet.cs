@@ -65,11 +65,11 @@ namespace PSProxmoxVE.Cmdlets.Users
                 finally { Marshal.ZeroFreeGlobalAllocUnicode(ptr); }
             }
 
-            if (!string.IsNullOrEmpty(FirstName)) config["firstname"] = FirstName;
-            if (!string.IsNullOrEmpty(LastName))  config["lastname"]  = LastName;
-            if (!string.IsNullOrEmpty(Email))     config["email"]     = Email;
-            if (!string.IsNullOrEmpty(Groups))    config["groups"]    = Groups;
-            if (!string.IsNullOrEmpty(Comment))   config["comment"]   = Comment;
+            if (!string.IsNullOrEmpty(FirstName)) config["firstname"] = FirstName!;
+            if (!string.IsNullOrEmpty(LastName))  config["lastname"]  = LastName!;
+            if (!string.IsNullOrEmpty(Email))     config["email"]     = Email!;
+            if (!string.IsNullOrEmpty(Groups))    config["groups"]    = Groups!;
+            if (!string.IsNullOrEmpty(Comment))   config["comment"]   = Comment!;
             if (Expire.HasValue)                  config["expire"]    = Expire.Value;
             if (Enable.HasValue)                  config["enable"]    = Enable.Value ? "1" : "0";
 

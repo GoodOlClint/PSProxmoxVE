@@ -11,6 +11,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_vms.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var vms = data.ToObject<PveVm[]>();
             Assert.NotNull(vms);
             Assert.Equal(3, vms.Length);
@@ -21,6 +22,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_vms.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var vms = data.ToObject<PveVm[]>();
             Assert.NotNull(vms);
             Assert.Equal(100, vms[0].VmId);
@@ -31,6 +33,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_vms.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var vms = data.ToObject<PveVm[]>();
             Assert.NotNull(vms);
             Assert.Equal("test-vm-1", vms[0].Name);
@@ -41,6 +44,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_vms.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var vms = data.ToObject<PveVm[]>();
             Assert.NotNull(vms);
             Assert.Equal("running", vms[0].Status);
@@ -51,6 +55,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_vms.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var vms = data.ToObject<PveVm[]>();
             Assert.NotNull(vms);
             // Third entry is the template
@@ -64,6 +69,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_vms.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var vms = data.ToObject<PveVm[]>();
             Assert.NotNull(vms);
             Assert.Equal(0, vms[0].Template);
@@ -74,6 +80,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_vms.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var vms = data.ToObject<PveVm[]>();
             Assert.NotNull(vms);
             Assert.Equal(8589934592L, vms[0].MaxMem);
@@ -85,6 +92,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_vms.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var vms = data.ToObject<PveVm[]>();
             Assert.NotNull(vms);
             Assert.Equal(0L, vms[1].Uptime);
@@ -95,6 +103,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_vm_config.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var config = data.ToObject<PveVmConfig>();
             Assert.NotNull(config);
             Assert.Equal(4, config.Cores);
@@ -107,6 +116,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_vm_config.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var config = data.ToObject<PveVmConfig>();
             Assert.NotNull(config);
             Assert.Equal("ovmf", config.Bios);
@@ -118,6 +128,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_vm_config.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var config = data.ToObject<PveVmConfig>();
             Assert.NotNull(config);
             Assert.Equal("host", config.CpuType);
@@ -129,6 +140,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_vm_config.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var config = data.ToObject<PveVmConfig>();
             Assert.NotNull(config);
             Assert.NotNull(config.Net0);
@@ -140,6 +152,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_vm_config.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var config = data.ToObject<PveVmConfig>();
             Assert.NotNull(config);
             // Fields not present in fixture should be null
@@ -153,6 +166,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_vm_config.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var config = data.ToObject<PveVmConfig>();
             Assert.NotNull(config);
             Assert.Equal("admin", config.CiUser);

@@ -52,7 +52,7 @@ namespace PSProxmoxVE.Core.Services
             var versionStr = data?["version"]?.ToString();
             if (string.IsNullOrEmpty(versionStr))
                 throw new InvalidOperationException("Failed to retrieve PVE version from API response.");
-            return PveVersion.Parse(versionStr);
+            return PveVersion.Parse(versionStr!);
         }
     }
 }

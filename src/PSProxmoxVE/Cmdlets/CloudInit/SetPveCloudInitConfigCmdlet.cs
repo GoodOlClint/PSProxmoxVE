@@ -73,11 +73,11 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
 
             var config = new Dictionary<string, object>();
 
-            if (!string.IsNullOrEmpty(CiUser))        config["ciuser"]       = CiUser;
-            if (!string.IsNullOrEmpty(Hostname))     config["name"]         = Hostname;
-            if (!string.IsNullOrEmpty(IpConfig0))    config["ipconfig0"]    = IpConfig0;
-            if (!string.IsNullOrEmpty(Nameserver))   config["nameserver"]   = Nameserver;
-            if (!string.IsNullOrEmpty(Searchdomain)) config["searchdomain"] = Searchdomain;
+            if (!string.IsNullOrEmpty(CiUser))        config["ciuser"]       = CiUser!;
+            if (!string.IsNullOrEmpty(Hostname))     config["name"]         = Hostname!;
+            if (!string.IsNullOrEmpty(IpConfig0))    config["ipconfig0"]    = IpConfig0!;
+            if (!string.IsNullOrEmpty(Nameserver))   config["nameserver"]   = Nameserver!;
+            if (!string.IsNullOrEmpty(Searchdomain)) config["searchdomain"] = Searchdomain!;
 
             if (Password != null)
             {

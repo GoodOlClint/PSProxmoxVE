@@ -78,15 +78,15 @@ namespace PSProxmoxVE.Cmdlets.Network
                 ["type"]  = Type
             };
 
-            if (!string.IsNullOrEmpty(Address))     data["address"]      = Address;
-            if (!string.IsNullOrEmpty(Netmask))     data["netmask"]      = Netmask;
-            if (!string.IsNullOrEmpty(Gateway))     data["gateway"]      = Gateway;
-            if (!string.IsNullOrEmpty(BridgePorts)) data["bridge_ports"] = BridgePorts;
-            if (!string.IsNullOrEmpty(BondSlaves))  data["slaves"]       = BondSlaves;
+            if (!string.IsNullOrEmpty(Address))     data["address"]      = Address!;
+            if (!string.IsNullOrEmpty(Netmask))     data["netmask"]      = Netmask!;
+            if (!string.IsNullOrEmpty(Gateway))     data["gateway"]      = Gateway!;
+            if (!string.IsNullOrEmpty(BridgePorts)) data["bridge_ports"] = BridgePorts!;
+            if (!string.IsNullOrEmpty(BondSlaves))  data["slaves"]       = BondSlaves!;
             if (VlanId.HasValue)                    data["vlan-id"]      = VlanId.Value.ToString();
             if (Mtu.HasValue)                       data["mtu"]          = Mtu.Value.ToString();
             if (Autostart.IsPresent)                data["autostart"]    = "1";
-            if (!string.IsNullOrEmpty(Comments))    data["comments"]     = Comments;
+            if (!string.IsNullOrEmpty(Comments))    data["comments"]     = Comments!;
 
             client.PostAsync($"nodes/{Node}/network", data).GetAwaiter().GetResult();
         }

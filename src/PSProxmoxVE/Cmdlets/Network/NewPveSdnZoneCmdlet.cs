@@ -64,13 +64,13 @@ namespace PSProxmoxVE.Cmdlets.Network
                 ["type"] = Type
             };
 
-            if (!string.IsNullOrEmpty(Peers))      data["peers"]      = Peers;
-            if (!string.IsNullOrEmpty(Bridge))     data["bridge"]     = Bridge;
+            if (!string.IsNullOrEmpty(Peers))      data["peers"]      = Peers!;
+            if (!string.IsNullOrEmpty(Bridge))     data["bridge"]     = Bridge!;
             if (Mtu.HasValue)                      data["mtu"]        = Mtu.Value.ToString();
-            if (!string.IsNullOrEmpty(Dns))        data["dns"]        = Dns;
-            if (!string.IsNullOrEmpty(ReverseDns)) data["reversedns"] = ReverseDns;
-            if (!string.IsNullOrEmpty(DnsZone))    data["dnszone"]    = DnsZone;
-            if (!string.IsNullOrEmpty(Ipam))       data["ipam"]       = Ipam;
+            if (!string.IsNullOrEmpty(Dns))        data["dns"]        = Dns!;
+            if (!string.IsNullOrEmpty(ReverseDns)) data["reversedns"] = ReverseDns!;
+            if (!string.IsNullOrEmpty(DnsZone))    data["dnszone"]    = DnsZone!;
+            if (!string.IsNullOrEmpty(Ipam))       data["ipam"]       = Ipam!;
 
             client.PostAsync("cluster/sdn/zones", data).GetAwaiter().GetResult();
         }

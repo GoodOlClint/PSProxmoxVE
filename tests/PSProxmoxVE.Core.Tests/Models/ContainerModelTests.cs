@@ -11,6 +11,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_containers.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var containers = data.ToObject<PveContainer[]>();
             Assert.NotNull(containers);
             Assert.Equal(2, containers.Length);
@@ -21,6 +22,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_containers.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var containers = data.ToObject<PveContainer[]>();
             Assert.NotNull(containers);
             Assert.Equal(200, containers[0].VmId);
@@ -31,6 +33,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_containers.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var containers = data.ToObject<PveContainer[]>();
             Assert.NotNull(containers);
             Assert.Equal("ct-web", containers[0].Name);
@@ -41,6 +44,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_containers.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var containers = data.ToObject<PveContainer[]>();
             Assert.NotNull(containers);
             Assert.Equal("running", containers[0].Status);
@@ -51,6 +55,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_containers.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var containers = data.ToObject<PveContainer[]>();
             Assert.NotNull(containers);
             Assert.Equal("pve1", containers[0].Node);
@@ -61,6 +66,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_containers.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var containers = data.ToObject<PveContainer[]>();
             Assert.NotNull(containers);
             Assert.Equal(2, containers[0].CpuCount);
@@ -72,6 +78,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_containers.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var containers = data.ToObject<PveContainer[]>();
             Assert.NotNull(containers);
             Assert.Equal(536870912L, containers[0].MaxSwap);
@@ -83,6 +90,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_containers.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var containers = data.ToObject<PveContainer[]>();
             Assert.NotNull(containers);
             Assert.Equal(1, containers[0].Unprivileged);
@@ -93,6 +101,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_containers.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var containers = data.ToObject<PveContainer[]>();
             Assert.NotNull(containers);
             Assert.Equal("ubuntu", containers[0].OsType);
@@ -103,6 +112,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_containers.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var containers = data.ToObject<PveContainer[]>();
             Assert.NotNull(containers);
             Assert.Equal(201, containers[1].VmId);
@@ -115,6 +125,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_containers.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var containers = data.ToObject<PveContainer[]>();
             Assert.NotNull(containers);
             // Tags field is only in the first container

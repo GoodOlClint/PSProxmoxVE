@@ -11,6 +11,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_cluster_status.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var entries = data.ToObject<PveClusterStatus[]>();
             Assert.NotNull(entries);
             Assert.Equal(4, entries.Length);
@@ -21,6 +22,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_cluster_status.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var entries = data.ToObject<PveClusterStatus[]>();
             Assert.NotNull(entries);
             Assert.Equal("cluster", entries[0].Type);
@@ -31,6 +33,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_cluster_status.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var entries = data.ToObject<PveClusterStatus[]>();
             Assert.NotNull(entries);
             Assert.Equal("testcluster", entries[0].Name);
@@ -41,6 +44,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_cluster_status.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var entries = data.ToObject<PveClusterStatus[]>();
             Assert.NotNull(entries);
             Assert.Equal(3, entries[0].Nodes);
@@ -51,6 +55,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_cluster_status.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var entries = data.ToObject<PveClusterStatus[]>();
             Assert.NotNull(entries);
             Assert.Equal(1, entries[0].Quorate);
@@ -61,6 +66,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_cluster_status.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var entries = data.ToObject<PveClusterStatus[]>();
             Assert.NotNull(entries);
             Assert.Equal("node", entries[1].Type);
@@ -71,6 +77,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_cluster_status.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var entries = data.ToObject<PveClusterStatus[]>();
             Assert.NotNull(entries);
             Assert.Equal("192.168.1.10", entries[1].Ip);
@@ -81,6 +88,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_cluster_status.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var entries = data.ToObject<PveClusterStatus[]>();
             Assert.NotNull(entries);
             Assert.Equal(1, entries[1].Online);
@@ -91,6 +99,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_cluster_status.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var entries = data.ToObject<PveClusterStatus[]>();
             Assert.NotNull(entries);
             Assert.Equal(1, entries[1].Local);
@@ -101,6 +110,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_cluster_status.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var entries = data.ToObject<PveClusterStatus[]>();
             Assert.NotNull(entries);
             // Fourth entry (index 3) is pve3 which is offline
@@ -113,6 +123,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_cluster_status.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var entries = data.ToObject<PveClusterStatus[]>();
             Assert.NotNull(entries);
             // Cluster-type entry should not have node-specific fields
@@ -125,6 +136,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_cluster_status.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var entries = data.ToObject<PveClusterStatus[]>();
             Assert.NotNull(entries);
             // Node-type entries should not have cluster-specific fields

@@ -11,6 +11,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_nodes.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var nodes = data.ToObject<PveNode[]>();
             Assert.NotNull(nodes);
             Assert.Equal(2, nodes.Length);
@@ -25,6 +26,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_nodes.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var nodes = data.ToObject<PveNode[]>();
             Assert.NotNull(nodes);
             Assert.Equal("pve2", nodes[1].Name);
@@ -38,6 +40,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve8_nodes.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var nodes = data.ToObject<PveNode[]>();
             Assert.NotNull(nodes);
             Assert.Single(nodes);
@@ -49,6 +52,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve8_nodes.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var nodes = data.ToObject<PveNode[]>();
             Assert.NotNull(nodes);
             Assert.Equal(4, nodes[0].CpuCount);
@@ -60,6 +64,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_node_status.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var status = data.ToObject<PveNodeStatus>();
             Assert.NotNull(status);
             Assert.Equal(0.125, status.CpuUsage);
@@ -70,6 +75,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_node_status.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var status = data.ToObject<PveNodeStatus>();
             Assert.NotNull(status);
             Assert.Equal("pve1", status.Node);
@@ -83,6 +89,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_node_status.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var status = data.ToObject<PveNodeStatus>();
             Assert.NotNull(status);
             Assert.NotNull(status.MemoryUsage);
@@ -95,6 +102,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_nodes.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var nodes = data.ToObject<PveNode[]>();
             Assert.NotNull(nodes);
             Assert.NotNull(nodes[0].LoadAverage);

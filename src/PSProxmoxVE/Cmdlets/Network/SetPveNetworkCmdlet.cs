@@ -76,17 +76,17 @@ namespace PSProxmoxVE.Cmdlets.Network
 
             var data = new Dictionary<string, string>();
 
-            if (!string.IsNullOrEmpty(Address))     data["address"]      = Address;
-            if (!string.IsNullOrEmpty(Netmask))     data["netmask"]      = Netmask;
-            if (!string.IsNullOrEmpty(Gateway))     data["gateway"]      = Gateway;
-            if (!string.IsNullOrEmpty(Address6))    data["address6"]     = Address6;
+            if (!string.IsNullOrEmpty(Address))     data["address"]      = Address!;
+            if (!string.IsNullOrEmpty(Netmask))     data["netmask"]      = Netmask!;
+            if (!string.IsNullOrEmpty(Gateway))     data["gateway"]      = Gateway!;
+            if (!string.IsNullOrEmpty(Address6))    data["address6"]     = Address6!;
             if (Netmask6.HasValue)                  data["netmask6"]     = Netmask6.Value.ToString();
-            if (!string.IsNullOrEmpty(Gateway6))    data["gateway6"]     = Gateway6;
-            if (!string.IsNullOrEmpty(BridgePorts)) data["bridge_ports"] = BridgePorts;
-            if (!string.IsNullOrEmpty(BondSlaves))  data["slaves"]       = BondSlaves;
+            if (!string.IsNullOrEmpty(Gateway6))    data["gateway6"]     = Gateway6!;
+            if (!string.IsNullOrEmpty(BridgePorts)) data["bridge_ports"] = BridgePorts!;
+            if (!string.IsNullOrEmpty(BondSlaves))  data["slaves"]       = BondSlaves!;
             if (Mtu.HasValue)                       data["mtu"]          = Mtu.Value.ToString();
             if (Autostart.IsPresent)                data["autostart"]    = "1";
-            if (!string.IsNullOrEmpty(Comments))    data["comments"]     = Comments;
+            if (!string.IsNullOrEmpty(Comments))    data["comments"]     = Comments!;
 
             client.PutAsync($"nodes/{Node}/network/{Iface}", data).GetAwaiter().GetResult();
         }

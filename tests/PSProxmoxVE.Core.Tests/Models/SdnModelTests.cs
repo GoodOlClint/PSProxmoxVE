@@ -11,6 +11,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_sdn_zones.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var zones = data.ToObject<PveSdnZone[]>();
             Assert.NotNull(zones);
             Assert.Equal(2, zones.Length);
@@ -21,6 +22,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_sdn_zones.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var zones = data.ToObject<PveSdnZone[]>();
             Assert.NotNull(zones);
             Assert.Equal("localzone", zones[0].Zone);
@@ -31,6 +33,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_sdn_zones.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var zones = data.ToObject<PveSdnZone[]>();
             Assert.NotNull(zones);
             Assert.Equal("simple", zones[0].Type);
@@ -41,6 +44,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_sdn_zones.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var zones = data.ToObject<PveSdnZone[]>();
             Assert.NotNull(zones);
             Assert.Equal("vxlanzone", zones[1].Zone);
@@ -52,6 +56,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_sdn_zones.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var zones = data.ToObject<PveSdnZone[]>();
             Assert.NotNull(zones);
             // Comments field is not present in the fixture
@@ -63,6 +68,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_sdn_vnets.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var vnets = data.ToObject<PveSdnVnet[]>();
             Assert.NotNull(vnets);
             Assert.Equal(2, vnets.Length);
@@ -73,6 +79,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_sdn_vnets.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var vnets = data.ToObject<PveSdnVnet[]>();
             Assert.NotNull(vnets);
             Assert.Equal("myvnet", vnets[0].Vnet);
@@ -83,6 +90,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_sdn_vnets.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var vnets = data.ToObject<PveSdnVnet[]>();
             Assert.NotNull(vnets);
             Assert.Equal("localzone", vnets[0].Zone);
@@ -93,6 +101,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_sdn_vnets.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var vnets = data.ToObject<PveSdnVnet[]>();
             Assert.NotNull(vnets);
             Assert.Equal(100, vnets[0].Tag);
@@ -103,6 +112,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_sdn_vnets.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var vnets = data.ToObject<PveSdnVnet[]>();
             Assert.NotNull(vnets);
             Assert.Equal("My VNET", vnets[0].Alias);
@@ -113,6 +123,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_sdn_vnets.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var vnets = data.ToObject<PveSdnVnet[]>();
             Assert.NotNull(vnets);
             Assert.Equal("prodnet", vnets[1].Vnet);
@@ -125,6 +136,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_sdn_vnets.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var vnets = data.ToObject<PveSdnVnet[]>();
             Assert.NotNull(vnets);
             // Comments not present in fixture entries

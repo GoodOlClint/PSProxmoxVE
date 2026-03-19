@@ -11,6 +11,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_networks.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var networks = data.ToObject<PveNetwork[]>();
             Assert.NotNull(networks);
             Assert.Equal(2, networks.Length);
@@ -21,6 +22,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_networks.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var networks = data.ToObject<PveNetwork[]>();
             Assert.NotNull(networks);
             Assert.Equal("vmbr0", networks[0].Iface);
@@ -31,6 +33,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_networks.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var networks = data.ToObject<PveNetwork[]>();
             Assert.NotNull(networks);
             Assert.Equal("bridge", networks[0].Type);
@@ -41,6 +44,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_networks.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var networks = data.ToObject<PveNetwork[]>();
             Assert.NotNull(networks);
             Assert.Equal("192.168.1.10", networks[0].Address);
@@ -53,6 +57,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_networks.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var networks = data.ToObject<PveNetwork[]>();
             Assert.NotNull(networks);
             Assert.Equal("192.168.1.10/24", networks[0].Cidr);
@@ -63,6 +68,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_networks.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var networks = data.ToObject<PveNetwork[]>();
             Assert.NotNull(networks);
             Assert.Equal("enp0s31f6", networks[0].BridgePorts);
@@ -73,6 +79,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_networks.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var networks = data.ToObject<PveNetwork[]>();
             Assert.NotNull(networks);
             Assert.Equal(1, networks[0].Autostart);
@@ -83,6 +90,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_networks.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var networks = data.ToObject<PveNetwork[]>();
             Assert.NotNull(networks);
             // No VLAN on primary bridge
@@ -95,6 +103,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_networks.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var networks = data.ToObject<PveNetwork[]>();
             Assert.NotNull(networks);
             Assert.Equal("vmbr1", networks[1].Iface);

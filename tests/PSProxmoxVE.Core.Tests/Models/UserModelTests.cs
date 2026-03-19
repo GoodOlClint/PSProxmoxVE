@@ -11,6 +11,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_users.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var users = data.ToObject<PveUser[]>();
             Assert.NotNull(users);
             Assert.Equal(3, users.Length);
@@ -21,6 +22,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_users.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var users = data.ToObject<PveUser[]>();
             Assert.NotNull(users);
             Assert.Equal("root@pam", users[0].UserId);
@@ -31,6 +33,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_users.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var users = data.ToObject<PveUser[]>();
             Assert.NotNull(users);
             Assert.Equal("Root", users[0].FirstName);
@@ -42,6 +45,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_users.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var users = data.ToObject<PveUser[]>();
             Assert.NotNull(users);
             Assert.Equal("root@example.com", users[0].Email);
@@ -52,6 +56,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_users.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var users = data.ToObject<PveUser[]>();
             Assert.NotNull(users);
             Assert.Equal(1, users[0].Enabled);
@@ -62,6 +67,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_users.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var users = data.ToObject<PveUser[]>();
             Assert.NotNull(users);
             Assert.Equal("admin@pve", users[1].UserId);
@@ -73,6 +79,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_users.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var users = data.ToObject<PveUser[]>();
             Assert.NotNull(users);
             Assert.Equal("readonly@pve", users[2].UserId);
@@ -84,6 +91,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_users.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var users = data.ToObject<PveUser[]>();
             Assert.NotNull(users);
             // Root user has no groups in fixture
@@ -95,6 +103,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_roles.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var roles = data.ToObject<PveRole[]>();
             Assert.NotNull(roles);
             Assert.Equal(2, roles.Length);
@@ -105,6 +114,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_roles.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var roles = data.ToObject<PveRole[]>();
             Assert.NotNull(roles);
             Assert.Equal("Administrator", roles[0].RoleId);
@@ -115,6 +125,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_roles.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var roles = data.ToObject<PveRole[]>();
             Assert.NotNull(roles);
             Assert.Equal(1, roles[0].Special);
@@ -125,6 +136,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_roles.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var roles = data.ToObject<PveRole[]>();
             Assert.NotNull(roles);
             Assert.NotNull(roles[0].Privileges);
@@ -136,6 +148,7 @@ namespace PSProxmoxVE.Core.Tests.Models
         {
             var json = TestHelper.LoadFixture("pve9_roles.json");
             var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
             var roles = data.ToObject<PveRole[]>();
             Assert.NotNull(roles);
             Assert.Equal("PVEAuditor", roles[1].RoleId);
