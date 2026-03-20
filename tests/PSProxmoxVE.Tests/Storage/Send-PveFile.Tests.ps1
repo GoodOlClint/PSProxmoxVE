@@ -1,7 +1,7 @@
 #Requires -Module Pester
 <#
 .SYNOPSIS
-    Pester 5 tests for Send-PveIso.
+    Pester 5 tests for Send-PveFile.
     All tests are fully offline — no live Proxmox VE target is required.
     If the cmdlet is not yet compiled the tests are marked Skipped.
 #>
@@ -9,30 +9,30 @@
 BeforeAll {
     . $PSScriptRoot/../_TestHelper.ps1
 
-    $script:CmdExists = $null -ne (Get-Command 'Send-PveIso' -ErrorAction SilentlyContinue)
+    $script:CmdExists = $null -ne (Get-Command 'Send-PveFile' -ErrorAction SilentlyContinue)
 }
 
-Describe 'Send-PveIso' {
+Describe 'Send-PveFile' {
 
     Context 'Manifest declaration' {
         It 'Should be declared in CmdletsToExport' {
             $manifestPath = Join-Path (Get-Module PSProxmoxVE).ModuleBase 'PSProxmoxVE.psd1'
             if (-not (Test-Path $manifestPath)) { Set-ItResult -Skipped -Because 'Manifest not found'; return }
             $manifest = Import-PowerShellDataFile $manifestPath
-            $manifest.CmdletsToExport | Should -Contain 'Send-PveIso'
+            $manifest.CmdletsToExport | Should -Contain 'Send-PveFile'
         }
     }
 
     Context 'Command existence' {
         It 'Should be available after module import' {
             if (-not $script:CmdExists) { Set-ItResult -Skipped -Because 'Not yet compiled'; return }
-            (Get-Command 'Send-PveIso').CommandType | Should -Be 'Cmdlet'
+            (Get-Command 'Send-PveFile').CommandType | Should -Be 'Cmdlet'
         }
     }
 
     Context 'Required parameters' {
         BeforeAll {
-            $script:Cmd = Get-Command 'Send-PveIso' -ErrorAction SilentlyContinue
+            $script:Cmd = Get-Command 'Send-PveFile' -ErrorAction SilentlyContinue
         }
 
         It 'Should have Node parameter (Mandatory)' {
@@ -60,7 +60,7 @@ Describe 'Send-PveIso' {
 
     Context 'ChecksumAlgorithm ValidateSet' {
         BeforeAll {
-            $script:Cmd = Get-Command 'Send-PveIso' -ErrorAction SilentlyContinue
+            $script:Cmd = Get-Command 'Send-PveFile' -ErrorAction SilentlyContinue
         }
 
         It 'Should have ChecksumAlgorithm parameter' {
@@ -108,9 +108,30 @@ Describe 'Send-PveIso' {
         }
     }
 
+    Context 'ContentType parameter' {
+        BeforeAll {
+            $script:Cmd = Get-Command 'Send-PveFile' -ErrorAction SilentlyContinue
+        }
+
+        It 'Should have ContentType parameter' {
+            if (-not $script:CmdExists) { Set-ItResult -Skipped -Because 'Not yet compiled'; return }
+            $script:Cmd.Parameters.ContainsKey('ContentType') | Should -BeTrue
+        }
+
+        It 'ContentType should have a ValidateSet attribute with iso, vztmpl, import' {
+            if (-not $script:CmdExists) { Set-ItResult -Skipped -Because 'Not yet compiled'; return }
+            $validateSetAttr = $script:Cmd.Parameters['ContentType'].Attributes |
+                Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] } |
+                Select-Object -First 1
+            $validateSetAttr.ValidValues | Should -Contain 'iso'
+            $validateSetAttr.ValidValues | Should -Contain 'vztmpl'
+            $validateSetAttr.ValidValues | Should -Contain 'import'
+        }
+    }
+
     Context 'ShouldProcess support' {
         BeforeAll {
-            $script:Cmd = Get-Command 'Send-PveIso' -ErrorAction SilentlyContinue
+            $script:Cmd = Get-Command 'Send-PveFile' -ErrorAction SilentlyContinue
         }
 
         It 'Should support WhatIf' {
@@ -121,7 +142,7 @@ Describe 'Send-PveIso' {
 
     Context 'Optional parameters' {
         BeforeAll {
-            $script:Cmd = Get-Command 'Send-PveIso' -ErrorAction SilentlyContinue
+            $script:Cmd = Get-Command 'Send-PveFile' -ErrorAction SilentlyContinue
         }
 
         It 'Should have Checksum parameter' {
@@ -140,7 +161,7 @@ Describe 'Send-PveIso' {
             if (-not $script:CmdExists) { Set-ItResult -Skipped -Because 'Not yet compiled'; return }
             $tmpIso = [System.IO.Path]::GetTempFileName()
             try {
-                { Send-PveIso -Node 'pve-node1' -Storage 'local' -Path $tmpIso -Confirm:$false -ErrorAction Stop } |
+                { Send-PveFile -Node 'pve-node1' -Storage 'local' -Path $tmpIso -Confirm:$false -ErrorAction Stop } |
                     Should -Throw '*No active Proxmox VE session*'
             } finally { Remove-Item $tmpIso -ErrorAction SilentlyContinue }
         }

@@ -82,14 +82,17 @@ Get-PveVm -VmId 100 | Copy-PveVm -NewVmId 200 -NewName 'my-clone' -Full -Wait
 Get-PveVm -VmId 100 | Get-PveVmConfig
 ```
 
-### Upload an ISO
+### Upload Files
 
 ```powershell
 # Upload a local ISO file to Proxmox storage
-Send-PveIso -Node 'pve1' -Storage 'local' -Path './ubuntu-24.04-live-server-amd64.iso' -Wait
+Send-PveFile -Node 'pve1' -Storage 'local' -Path './ubuntu-24.04-live-server-amd64.iso' -Wait
+
+# Upload a disk image for VM import
+Send-PveFile -Node 'pve1' -Storage 'local' -Path './disk.qcow2' -ContentType 'import' -Wait
 ```
 
-> **Note:** `Send-PveIso` implements a workaround for a long-standing Proxmox API multipart parsing bug
+> **Note:** `Send-PveFile` implements a workaround for a long-standing Proxmox API multipart parsing bug
 > ([bugzilla 7389](https://bugzilla.proxmox.com/show_bug.cgi?id=7389)). Standard multipart HTTP libraries
 > (including .NET's `MultipartFormDataContent`) add sub-headers that Proxmox's `pveproxy` mishandles,
 > resulting in corrupt uploads. This cmdlet constructs the multipart body manually to ensure correct uploads
@@ -253,7 +256,7 @@ SDN management requires Proxmox VE 8.0 or later. Connected server is version 7.4
 |---|---|
 | `Get-PveStorage` | List storage pools |
 | `Get-PveStorageContent` | List storage content (ISOs, images, etc.) |
-| `Send-PveIso` | Upload a local ISO file |
+| `Send-PveFile` | Upload a file (ISO, disk image, template) to storage |
 | `Invoke-PveStorageDownload` | Download a URL to storage (server-side) |
 | `New-PveStorage` | Create a storage pool |
 | `Remove-PveStorage` | Remove a storage pool |

@@ -275,19 +275,17 @@ jobs:
 
       # ── Prepare test Linux VM ────────────────────────────────────────
 
-      - name: Deploy test Linux VM to nested PVE
+      - name: Prepare test environment on nested PVE
         if: inputs.skip_provision != true
-        id: linux_vm
+        id: test_env
         shell: bash
         run: |
-          OUTPUT=$(bash ${SCRIPTS_DIR}/prepare-test-vm.sh \
+          OUTPUT=$(bash ${SCRIPTS_DIR}/prepare-test-environment.sh \
             "${{ steps.provision.outputs.host }}" \
             "${PVE_PASSWORD}" \
-            200 \
-            "${{ steps.target.outputs.node }}" \
-            "${{ steps.provision.outputs.token }}")
-          LINUX_VMID=$(echo "$OUTPUT" | grep "^LINUX_VMID=" | cut -d= -f2)
-          echo "linux_vmid=${LINUX_VMID}" >> "$GITHUB_OUTPUT"
+            "${RUNNER_TEMP}")
+          CLOUD_IMAGE_PATH=$(echo "$OUTPUT" | grep "^CLOUD_IMAGE_PATH=" | cut -d= -f2)
+          echo "cloud_image_path=${CLOUD_IMAGE_PATH}" >> "$GITHUB_OUTPUT"
 
       # ── Run tests ─────────────────────────────────────────────────────
 
@@ -304,7 +302,8 @@ jobs:
           PVETEST_NODE: ${{ steps.target.outputs.node }}
           PVETEST_STORAGE: ${{ steps.target.outputs.storage }}
           PVETEST_PVE_VERSION: ${{ matrix.pve_version }}
-          PVETEST_LINUX_VMID: ${{ steps.linux_vm.outputs.linux_vmid }}
+          PVETEST_PASSWORD: ${{ env.PVE_PASSWORD }}
+          PVETEST_CLOUD_IMAGE_PATH: ${{ steps.test_env.outputs.cloud_image_path }}
         run: |
           $env:PVETEST_ISO_PATH = Join-Path $env:RUNNER_TEMP "pvetest.iso"
           Import-Module Pester -MinimumVersion 5.0

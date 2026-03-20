@@ -105,7 +105,7 @@
         # Storage
         'Get-PveStorage',
         'Get-PveStorageContent',
-        'Send-PveIso',
+        'Send-PveFile',
         'Invoke-PveStorageDownload',
         'New-PveStorage',
         'Remove-PveStorage',

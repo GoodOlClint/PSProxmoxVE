@@ -55,17 +55,20 @@ pveum user token add pester@pve pester-ci
 
 ## Environment Variables
 
-Set these before running the integration suite. All six are required; any missing variable
-causes every integration test to be skipped with a clear reason message.
+Set these before running the integration suite. The first six are required; any missing
+required variable causes every integration test to be skipped with a clear reason message.
 
-| Variable            | Description                                                           | Example value                                       |
-|---------------------|-----------------------------------------------------------------------|-----------------------------------------------------|
-| `PVETEST_HOST`      | Hostname or IP address of the test PVE node                          | `192.168.1.10` or `pve-test.internal`               |
-| `PVETEST_PORT`      | PVE API port                                                          | `8006`                                              |
-| `PVETEST_APITOKEN`  | API token in `USER@REALM!TOKENID=UUID` format                        | `pester@pve!pester-ci=xxxxxxxx-xxxx-xxxx-xxxx-xxxx` |
-| `PVETEST_NODE`      | Node name as it appears in `pvesh get /nodes`                        | `pve-test1`                                         |
-| `PVETEST_STORAGE`   | Storage pool to use for disk and ISO operations                       | `local`                                             |
-| `PVETEST_ISO_PATH`  | Local path to a small `.iso` file used for upload tests               | `/tmp/tinycorelinux.iso`                            |
+| Variable                 | Required | Description                                                           | Example value                                       |
+|--------------------------|----------|-----------------------------------------------------------------------|-----------------------------------------------------|
+| `PVETEST_HOST`           | Yes      | Hostname or IP address of the test PVE node                          | `192.168.1.10` or `pve-test.internal`               |
+| `PVETEST_PORT`           | Yes      | PVE API port                                                          | `8006`                                              |
+| `PVETEST_APITOKEN`       | Yes      | API token in `USER@REALM!TOKENID=UUID` format                        | `pester@pve!pester-ci=xxxxxxxx-xxxx-xxxx-xxxx-xxxx` |
+| `PVETEST_NODE`           | Yes      | Node name as it appears in `pvesh get /nodes`                        | `pve-test1`                                         |
+| `PVETEST_STORAGE`        | Yes      | Storage pool to use for disk and ISO operations                       | `local`                                             |
+| `PVETEST_ISO_PATH`       | Yes      | Local path to a small `.iso` file used for upload tests               | `/tmp/tinycorelinux.iso`                            |
+| `PVETEST_PASSWORD`       | No       | Root password for cloud-init Linux VM provisioning                    | `Testpass123!`                                      |
+| `PVETEST_CLOUD_IMAGE_URL`| No      | URL for cloud image download (defaults to Ubuntu Noble)               | `https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img` |
+| `PVETEST_PVE_VERSION`    | No       | Expected PVE major version (8 or 9)                                   | `9`                                                 |
 
 ### Setting variables (Bash / zsh)
 
@@ -76,6 +79,8 @@ export PVETEST_APITOKEN="pester@pve!pester-ci=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx
 export PVETEST_NODE="pve-test1"
 export PVETEST_STORAGE="local"
 export PVETEST_ISO_PATH="/tmp/tinycorelinux.iso"
+# Optional — required for Linux VM provisioning tests
+export PVETEST_PASSWORD="Testpass123!"
 ```
 
 ### Setting variables (PowerShell)
@@ -87,6 +92,8 @@ $env:PVETEST_APITOKEN  = 'pester@pve!pester-ci=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxx
 $env:PVETEST_NODE      = 'pve-test1'
 $env:PVETEST_STORAGE   = 'local'
 $env:PVETEST_ISO_PATH  = '/tmp/tinycorelinux.iso'
+# Optional — required for Linux VM provisioning tests
+$env:PVETEST_PASSWORD  = 'Testpass123!'
 ```
 
 ### GitHub Actions / CI
@@ -102,6 +109,7 @@ env:
   PVETEST_NODE:      ${{ secrets.PVETEST_NODE }}
   PVETEST_STORAGE:   ${{ secrets.PVETEST_STORAGE }}
   PVETEST_ISO_PATH:  ${{ secrets.PVETEST_ISO_PATH }}
+  PVETEST_PASSWORD:  ${{ secrets.PVETEST_PASSWORD }}
 ```
 
 ---
@@ -136,11 +144,13 @@ Invoke-Pester -Path ./tests/PSProxmoxVE.Tests -ExcludeTag Integration -Output De
 
 The integration tests:
 
-- **Create VMs** (named `pester-test-vm`, `pester-clone-vm`) on `PVETEST_NODE`
+- **Create VMs** (named `pester-test-vm`, `pester-clone-vm`, `pester-linux-vm`) on `PVETEST_NODE`
 - **Delete** those VMs after the test completes (via `AfterAll` cleanup)
-- **Start and stop** an existing stopped VM if one is available
+- **Provision a Linux VM** with cloud-init, guest agent, and disk import (when `PVETEST_PASSWORD` is set)
+- **Start and stop** VMs, including graceful ACPI shutdown via guest agent
 - **Create and delete a snapshot** on an existing stopped VM
 - **Upload an ISO** to `PVETEST_STORAGE`
+- **Download a cloud image** to PVE storage (when `PVETEST_PASSWORD` is set)
 
 The `AfterAll` block performs best-effort cleanup. If the test run is interrupted, leftover
 VMs named `pester-*` may remain on the test node and should be removed manually.

@@ -7,13 +7,15 @@
     They require a live, dedicated Proxmox VE test node and the following
     environment variables to be set:
 
-        PVETEST_HOST        - Hostname or IP of the PVE test node
-        PVETEST_PORT        - API port (usually 8006)
-        PVETEST_APITOKEN    - API token in the format USER@REALM!TOKENID=UUID
-        PVETEST_NODE        - PVE node name (e.g. pve-test1)
-        PVETEST_STORAGE     - Storage pool name for disk/ISO operations (e.g. local)
-        PVETEST_ISO_PATH    - Local filesystem path to a small .iso for upload tests
-        PVETEST_PVE_VERSION - (optional) Expected PVE major version (8 or 9)
+        PVETEST_HOST            - Hostname or IP of the PVE test node
+        PVETEST_PORT            - API port (usually 8006)
+        PVETEST_APITOKEN        - API token in the format USER@REALM!TOKENID=UUID
+        PVETEST_NODE            - PVE node name (e.g. pve-test1)
+        PVETEST_STORAGE         - Storage pool name for disk/ISO operations (e.g. local)
+        PVETEST_ISO_PATH        - Local filesystem path to a small .iso for upload tests
+        PVETEST_PVE_VERSION     - (optional) Expected PVE major version (8 or 9)
+        PVETEST_PASSWORD        - (optional) Root password for cloud-init Linux VM provisioning
+        PVETEST_CLOUD_IMAGE_PATH - (optional) Local path to a cloud image (.img) for VM provisioning
 
     WARNING: These tests CREATE and DESTROY real resources (VMs, users, tokens,
     roles, snapshots, ISO uploads, etc.) on the target node.
@@ -64,8 +66,9 @@ BeforeAll {
     $script:Storage  = [System.Environment]::GetEnvironmentVariable('PVETEST_STORAGE')
     $script:IsoPath  = [System.Environment]::GetEnvironmentVariable('PVETEST_ISO_PATH')
     $script:ExpectedPveVersion = [System.Environment]::GetEnvironmentVariable('PVETEST_PVE_VERSION')
-    $linuxVmEnv = [System.Environment]::GetEnvironmentVariable('PVETEST_LINUX_VMID')
-    $script:LinuxVmId = if ($linuxVmEnv) { [int]$linuxVmEnv } else { $null }
+    $script:Password = [System.Environment]::GetEnvironmentVariable('PVETEST_PASSWORD')
+    $script:CloudImagePath = [System.Environment]::GetEnvironmentVariable('PVETEST_CLOUD_IMAGE_PATH')
+    $script:LinuxVmId = $null
 
     # Track resources created during the run so AfterAll can clean up.
     $script:CreatedVmIds   = [System.Collections.Generic.List[int]]::new()
@@ -91,10 +94,19 @@ BeforeAll {
         return $false
     }
 
+    function script:Skip-IfNoPassword {
+        if (Skip-IfNoTarget) { return $true }
+        if (-not $script:Password -or -not $script:CloudImagePath) {
+            Set-ItResult -Skipped -Because 'PVETEST_PASSWORD and PVETEST_CLOUD_IMAGE_PATH required for Linux VM provisioning'
+            return $true
+        }
+        return $false
+    }
+
     function script:Skip-IfNoLinuxVm {
         if (Skip-IfNoTarget) { return $true }
         if ($null -eq $script:LinuxVmId) {
-            Set-ItResult -Skipped -Because 'No Linux VM with guest agent available (PVETEST_LINUX_VMID not set)'
+            Set-ItResult -Skipped -Because 'Linux VM was not provisioned (PVETEST_PASSWORD may not be set)'
             return $true
         }
         return $false
@@ -497,7 +509,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
             }
 
             {
-                Send-PveIso `
+                Send-PveFile `
                     -Node    $script:Node `
                     -Storage $script:Storage `
                     -Path    $script:IsoPath `
@@ -619,6 +631,102 @@ Describe 'Integration Tests' -Tag 'Integration' {
             # Get-PveCloudInitConfig should not throw even if the VM has no cloud-init drive.
             { Get-PveCloudInitConfig -Node $script:Node -VmId $script:TestVmId -ErrorAction Stop } |
                 Should -Not -Throw
+        }
+    }
+
+    # -----------------------------------------------------------------------
+    Context 'Linux VM — Provisioning' {
+        It 'Should upload cloud image to PVE storage (Send-PveFile)' {
+            if (Skip-IfNoPassword) { return }
+
+            $task = Send-PveFile `
+                -Node $script:Node -Storage $script:Storage `
+                -Path $script:CloudImagePath `
+                -ContentType 'import' -Wait
+
+            $task | Should -Not -BeNullOrEmpty
+            $task.IsSuccessful | Should -BeTrue
+        }
+
+        It 'Should create a Linux VM (New-PveVm)' {
+            if (Skip-IfNoPassword) { return }
+
+            $task = New-PveVm `
+                -Node $script:Node `
+                -Name 'pester-linux-vm' `
+                -Memory 512 -Cores 1 -OsType 'l26' -Wait
+
+            $task | Should -Not -BeNullOrEmpty
+
+            $vm = Get-PveVm -Node $script:Node -Name 'pester-linux-vm' |
+                Select-Object -First 1
+            $vm | Should -Not -BeNullOrEmpty
+
+            $script:LinuxVmId = $vm.VmId
+            $script:CreatedVmIds.Add($vm.VmId)
+        }
+
+        It 'Should import cloud image disk (Import-PveVmDisk)' {
+            if (Skip-IfNoLinuxVm) { return }
+
+            $cloudImageFilename = [System.IO.Path]::GetFileName($script:CloudImagePath)
+            $task = Import-PveVmDisk `
+                -Node $script:Node -VmId $script:LinuxVmId `
+                -Disk 'scsi0' -TargetStorage 'local-lvm' `
+                -Source "$($script:Storage):import/$cloudImageFilename" `
+                -Wait
+
+            $task | Should -Not -BeNullOrEmpty
+            $task.IsSuccessful | Should -BeTrue
+        }
+
+        It 'Should configure VM hardware (Set-PveVmConfig)' {
+            if (Skip-IfNoLinuxVm) { return }
+
+            { Set-PveVmConfig -Node $script:Node -VmId $script:LinuxVmId `
+                -AdditionalConfig @{
+                    scsihw   = 'virtio-scsi-single'
+                    boot     = 'order=scsi0'
+                    serial0  = 'socket'
+                    agent    = '1'
+                    net0     = 'virtio,bridge=vmbr0'
+                    ide2     = 'local-lvm:cloudinit'
+                    cicustom = "user=$($script:Storage):snippets/test-vm-userdata.yml"
+                } -ErrorAction Stop } | Should -Not -Throw
+        }
+
+        It 'Should set cloud-init config (Set-PveCloudInitConfig)' {
+            if (Skip-IfNoLinuxVm) { return }
+
+            { Set-PveCloudInitConfig -Node $script:Node -VmId $script:LinuxVmId `
+                -CiUser 'root' `
+                -Password (ConvertTo-SecureString $script:Password -AsPlainText -Force) `
+                -IpConfig0 'ip=dhcp' `
+                -ErrorAction Stop } | Should -Not -Throw
+        }
+
+        It 'Should start the Linux VM (Start-PveVm)' {
+            if (Skip-IfNoLinuxVm) { return }
+
+            $task = Start-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait
+            $task | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should wait for guest agent (Test-PveVmGuestAgent)' {
+            if (Skip-IfNoLinuxVm) { return }
+
+            $timeout = 300; $elapsed = 0
+            $agentReady = $false
+            while ($elapsed -lt $timeout) {
+                if (Test-PveVmGuestAgent -Node $script:Node -VmId $script:LinuxVmId) {
+                    $agentReady = $true
+                    break
+                }
+                Start-Sleep -Seconds 10
+                $elapsed += 10
+            }
+
+            $agentReady | Should -BeTrue -Because "Guest agent should respond within ${timeout}s"
         }
     }
 

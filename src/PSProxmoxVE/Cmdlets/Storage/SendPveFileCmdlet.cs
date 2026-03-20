@@ -8,31 +8,41 @@ using PSProxmoxVE.Core.Models.Vms;
 namespace PSProxmoxVE.Cmdlets.Storage
 {
     /// <summary>
-    /// <para type="synopsis">Uploads a local ISO file to a Proxmox VE storage.</para>
+    /// <para type="synopsis">Uploads a local file to a Proxmox VE storage.</para>
     /// <para type="description">
-    /// Uploads an ISO image from the local filesystem to the specified node/storage using
-    /// the Proxmox VE upload API. Streams the file in 4 MB chunks and reports progress
+    /// Uploads a file from the local filesystem to the specified node/storage using
+    /// the Proxmox VE upload API. Supports ISO images, container templates, and
+    /// disk images for import. Streams the file in chunks and reports progress
     /// via Write-Progress. Returns a PveTask representing the upload job.
     /// </para>
     /// </summary>
-    [Cmdlet(VerbsCommunications.Send, "PveIso", SupportsShouldProcess = true)]
+    [Cmdlet(VerbsCommunications.Send, "PveFile", SupportsShouldProcess = true)]
     [OutputType(typeof(PveTask))]
-    public class SendPveIsoCmdlet : PveCmdletBase
+    public class SendPveFileCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node to upload to.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
-        /// <summary>The target storage identifier (must support "iso" content).</summary>
+        /// <summary>The target storage identifier.</summary>
         [Parameter(Mandatory = true, Position = 1, HelpMessage = "The storage pool name.")]
         public string Storage { get; set; } = string.Empty;
 
         /// <summary>
-        /// The full local path to the ISO file to upload. The file must exist.
+        /// The full local path to the file to upload. The file must exist.
         /// </summary>
-        [Parameter(Mandatory = true, Position = 2, HelpMessage = "Local path to the ISO file to upload.")]
+        [Parameter(Mandatory = true, Position = 2, HelpMessage = "Local path to the file to upload.")]
         [FileExistsValidation]
         public string Path { get; set; } = string.Empty;
+
+        /// <summary>
+        /// The PVE storage content type. Determines where the file is stored:
+        /// "iso" for ISO images, "vztmpl" for container templates,
+        /// "import" for disk images and OVA files to be imported into VMs.
+        /// </summary>
+        [Parameter(Mandatory = false, Position = 3, HelpMessage = "Content type: iso, vztmpl, or import.")]
+        [ValidateSet("iso", "vztmpl", "import", IgnoreCase = true)]
+        public string ContentType { get; set; } = "iso";
 
         /// <summary>Optional checksum value to verify the uploaded file.</summary>
         [Parameter(Mandatory = false, HelpMessage = "Checksum value to verify the upload.")]
@@ -52,19 +62,19 @@ namespace PSProxmoxVE.Cmdlets.Storage
         protected override void ProcessRecord()
         {
             var fileName = System.IO.Path.GetFileName(Path);
-            if (!ShouldProcess($"{Node}/{Storage}/{fileName}", "Upload ISO"))
+            if (!ShouldProcess($"{Node}/{Storage}/{fileName}", $"Upload file (content={ContentType})"))
                 return;
 
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
-            WriteVerbose($"Uploading ISO to {Node}/{Storage}...");
+            WriteVerbose($"Uploading {fileName} to {Node}/{Storage} (content={ContentType})...");
             var resource = $"nodes/{Node}/storage/{Storage}/upload";
             var totalBytes = new System.IO.FileInfo(Path).Length;
 
             var activityId = 1;
             var progressRecord = new ProgressRecord(activityId,
-                $"Uploading ISO to {Node}/{Storage}",
+                $"Uploading to {Node}/{Storage}",
                 $"Uploading {fileName}...");
 
             // Track progress via an atomic counter updated from the upload thread.
@@ -78,7 +88,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
                     Path,
                     formFields: new System.Collections.Generic.Dictionary<string, string>
                     {
-                        ["content"] = "iso"
+                        ["content"] = ContentType
                     },
                     checksum: Checksum,
                     checksumAlgorithm: ChecksumAlgorithm,
