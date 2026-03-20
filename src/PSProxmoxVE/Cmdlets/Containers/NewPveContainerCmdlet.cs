@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Management.Automation;
 using System.Net;
 using System.Runtime.InteropServices;
+using Newtonsoft.Json.Linq;
+using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
 
@@ -133,7 +135,17 @@ namespace PSProxmoxVE.Cmdlets.Containers
             var config = new Dictionary<string, object>();
 
             if (VmId.HasValue)
+            {
                 config["vmid"] = VmId.Value.ToString();
+            }
+            else
+            {
+                // Auto-allocate the next available ID from the cluster.
+                using var allocClient = new PveHttpClient(session);
+                var nextIdJson = allocClient.GetAsync("cluster/nextid").GetAwaiter().GetResult();
+                var nextIdData = JObject.Parse(nextIdJson)["data"];
+                config["vmid"] = int.Parse(nextIdData!.ToString());
+            }
             if (!string.IsNullOrEmpty(Hostname))
                 config["hostname"] = Hostname!;
             if (Memory.HasValue)

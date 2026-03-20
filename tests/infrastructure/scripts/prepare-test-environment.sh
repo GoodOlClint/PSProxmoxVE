@@ -30,7 +30,7 @@ echo "=== Preparing test environment on ${NESTED_IP} ==="
 
 # Enable snippets and import content types on local storage
 echo "Configuring local storage content types..."
-${SSH_CMD} "mkdir -p /var/lib/vz/snippets && pvesm set local --content iso,vztmpl,snippets,import"
+${SSH_CMD} "mkdir -p /var/lib/vz/snippets && pvesm set local --content images,iso,vztmpl,snippets,import"
 
 # Upload cloud-init user-data snippet (no API for snippet upload)
 echo "Uploading cloud-init user-data snippet..."

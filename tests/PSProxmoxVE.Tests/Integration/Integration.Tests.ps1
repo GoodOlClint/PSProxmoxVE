@@ -464,17 +464,19 @@ Describe 'Integration Tests' -Tag 'Integration' {
             # Start the VM
             Start-PveVm -Node $script:Node -VmId $script:TestVmId -Wait | Out-Null
 
-            # Suspend
-            $suspendTask = Suspend-PveVm -Node $script:Node -VmId $script:TestVmId -Wait
-            $suspendTask | Should -Not -BeNullOrEmpty
+            # Suspend — sends QMP stop to QEMU
+            { Suspend-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -ErrorAction Stop } |
+                Should -Not -Throw
 
+            Start-Sleep -Seconds 3
             $vm = Get-PveVm -Node $script:Node | Where-Object { $_.VmId -eq $script:TestVmId }
             $vm.Status | Should -Be 'paused'
 
-            # Resume
-            $resumeTask = Resume-PveVm -Node $script:Node -VmId $script:TestVmId -Wait
-            $resumeTask | Should -Not -BeNullOrEmpty
+            # Resume — sends QMP cont to QEMU
+            { Resume-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -ErrorAction Stop } |
+                Should -Not -Throw
 
+            Start-Sleep -Seconds 2
             $vm = Get-PveVm -Node $script:Node | Where-Object { $_.VmId -eq $script:TestVmId }
             $vm.Status | Should -Be 'running'
 
@@ -742,7 +744,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
             if (Skip-IfNoTarget) { return }
             if ($script:SkipSdn) { Set-ItResult -Skipped -Because $script:SkipSdn; return }
 
-            { New-PveSdnZone -Zone 'pester-zone' -Type 'simple' -ErrorAction Stop } |
+            { New-PveSdnZone -Zone 'pesterz' -Type 'simple' -ErrorAction Stop } |
                 Should -Not -Throw
         }
 
@@ -752,7 +754,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
 
             $zones = Get-PveSdnZone
             $zones | Should -Not -BeNullOrEmpty
-            $zones | Where-Object { $_.Zone -eq 'pester-zone' } |
+            $zones | Where-Object { $_.Zone -eq 'pesterz' } |
                 Should -Not -BeNullOrEmpty
         }
 
@@ -760,7 +762,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
             if (Skip-IfNoTarget) { return }
             if ($script:SkipSdn) { Set-ItResult -Skipped -Because $script:SkipSdn; return }
 
-            { New-PveSdnVnet -Vnet 'pestervn' -Zone 'pester-zone' -ErrorAction Stop } |
+            { New-PveSdnVnet -Vnet 'pestervn' -Zone 'pesterz' -ErrorAction Stop } |
                 Should -Not -Throw
         }
 
@@ -794,7 +796,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
             if (Skip-IfNoTarget) { return }
             if ($script:SkipSdn) { Set-ItResult -Skipped -Because $script:SkipSdn; return }
 
-            { Remove-PveSdnSubnet -Vnet 'pestervn' -Subnet 'pestervn-10.99.0.0-24' `
+            { Remove-PveSdnSubnet -Vnet 'pestervn' -Subnet '10.99.0.0/24' `
                 -Confirm:$false -ErrorAction Stop } | Should -Not -Throw
         }
 
@@ -810,7 +812,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
             if (Skip-IfNoTarget) { return }
             if ($script:SkipSdn) { Set-ItResult -Skipped -Because $script:SkipSdn; return }
 
-            { Remove-PveSdnZone -Zone 'pester-zone' -Confirm:$false -ErrorAction Stop } |
+            { Remove-PveSdnZone -Zone 'pesterz' -Confirm:$false -ErrorAction Stop } |
                 Should -Not -Throw
         }
     }
