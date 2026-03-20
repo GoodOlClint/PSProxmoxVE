@@ -78,144 +78,27 @@ namespace PSProxmoxVE.Core.Models.Vms
         }
 
         /// <summary>
-        /// Extracts the .ovf XML content from a TAR archive.
-        /// Uses System.Formats.Tar on .NET 9+ and manual TAR parsing on older frameworks.
+        /// Extracts the .ovf XML content from a TAR archive using SharpCompress.
         /// </summary>
         private static string? ExtractOvfFromTar(string tarPath)
         {
-#if NET7_0_OR_GREATER
-            return ExtractOvfUsingSystemTar(tarPath);
-#else
-            return ExtractOvfManualTar(tarPath);
-#endif
-        }
-
-#if NET7_0_OR_GREATER
-        private static string? ExtractOvfUsingSystemTar(string tarPath)
-        {
             using var stream = File.OpenRead(tarPath);
-            using var reader = new System.Formats.Tar.TarReader(stream);
+            using var reader = SharpCompress.Readers.ReaderFactory.Open(stream);
 
-            System.Formats.Tar.TarEntry? entry;
-            while ((entry = reader.GetNextEntry()) != null)
+            while (reader.MoveToNextEntry())
             {
-                if (entry.Name.EndsWith(".ovf", StringComparison.OrdinalIgnoreCase) && entry.DataStream != null)
+                if (!reader.Entry.IsDirectory &&
+                    reader.Entry.Key != null &&
+                    reader.Entry.Key.EndsWith(".ovf", StringComparison.OrdinalIgnoreCase))
                 {
-                    using var sr = new StreamReader(entry.DataStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 4096, leaveOpen: true);
+                    using var entryStream = reader.OpenEntryStream();
+                    using var sr = new StreamReader(entryStream, Encoding.UTF8);
                     return sr.ReadToEnd();
                 }
             }
 
             return null;
         }
-#else
-        /// <summary>
-        /// Minimal TAR reader for netstandard2.0/net48.
-        /// TAR format: 512-byte header per file, name at offset 0 (100 bytes), size at offset 124 (12 bytes octal),
-        /// followed by file data padded to 512-byte boundary.
-        /// </summary>
-        private static string? ExtractOvfManualTar(string tarPath)
-        {
-            using var stream = File.OpenRead(tarPath);
-            var header = new byte[512];
-
-            while (true)
-            {
-                var bytesRead = ReadFull(stream, header, 0, 512);
-                if (bytesRead < 512)
-                    break;
-
-                // Check for end-of-archive (two zero blocks)
-                if (IsZeroBlock(header))
-                    break;
-
-                // Extract name (offset 0, 100 bytes)
-                var name = ReadNullTerminatedString(header, 0, 100);
-
-                // Extract size (offset 124, 12 bytes, octal)
-                var sizeStr = ReadNullTerminatedString(header, 124, 12).Trim();
-                long size = 0;
-                if (!string.IsNullOrEmpty(sizeStr))
-                {
-                    try { size = Convert.ToInt64(sizeStr, 8); }
-                    catch { size = 0; }
-                }
-
-                // Check for GNU/POSIX long name prefix (offset 345, 155 bytes)
-                var prefix = ReadNullTerminatedString(header, 345, 155);
-                if (!string.IsNullOrEmpty(prefix))
-                    name = prefix + "/" + name;
-
-                if (name.EndsWith(".ovf", StringComparison.OrdinalIgnoreCase) && size > 0)
-                {
-                    var data = new byte[size];
-                    var dataRead = ReadFull(stream, data, 0, (int)size);
-                    if (dataRead < size)
-                        throw new InvalidOperationException("Unexpected end of OVA archive while reading .ovf entry.");
-                    return Encoding.UTF8.GetString(data);
-                }
-
-                // Skip past the file data (padded to 512-byte boundary)
-                if (size > 0)
-                {
-                    var paddedSize = ((size + 511) / 512) * 512;
-                    SkipBytes(stream, paddedSize);
-                }
-            }
-
-            return null;
-        }
-
-        private static int ReadFull(Stream stream, byte[] buffer, int offset, int count)
-        {
-            int totalRead = 0;
-            while (totalRead < count)
-            {
-                int read = stream.Read(buffer, offset + totalRead, count - totalRead);
-                if (read == 0) break;
-                totalRead += read;
-            }
-            return totalRead;
-        }
-
-        private static void SkipBytes(Stream stream, long count)
-        {
-            if (stream.CanSeek)
-            {
-                stream.Seek(count, SeekOrigin.Current);
-            }
-            else
-            {
-                var buf = new byte[Math.Min(count, 8192)];
-                long remaining = count;
-                while (remaining > 0)
-                {
-                    int toRead = (int)Math.Min(remaining, buf.Length);
-                    int read = stream.Read(buf, 0, toRead);
-                    if (read == 0) break;
-                    remaining -= read;
-                }
-            }
-        }
-
-        private static bool IsZeroBlock(byte[] block)
-        {
-            for (int i = 0; i < block.Length; i++)
-            {
-                if (block[i] != 0) return false;
-            }
-            return true;
-        }
-
-        private static string ReadNullTerminatedString(byte[] buffer, int offset, int maxLength)
-        {
-            int end = offset;
-            int limit = offset + maxLength;
-            while (end < limit && buffer[end] != 0)
-                end++;
-            return Encoding.ASCII.GetString(buffer, offset, end - offset);
-        }
-#endif
 
         /// <summary>
         /// Parses OVF XML and extracts VM metadata.
