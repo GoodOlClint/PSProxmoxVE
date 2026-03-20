@@ -13,6 +13,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveStorage")]
+    [Alias("gpvs")]
     [OutputType(typeof(PveStorage))]
     public class GetPveStorageCmdlet : PveCmdletBase
     {

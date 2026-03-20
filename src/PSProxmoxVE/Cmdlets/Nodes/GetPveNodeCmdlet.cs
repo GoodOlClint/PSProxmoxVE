@@ -16,6 +16,7 @@ namespace PSProxmoxVE.Cmdlets.Nodes
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveNode")]
+    [Alias("gpn")]
     [OutputType(typeof(PveNode))]
     public sealed class GetPveNodeCmdlet : PveCmdletBase
     {

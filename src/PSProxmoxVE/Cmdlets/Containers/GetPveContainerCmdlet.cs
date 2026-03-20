@@ -14,6 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveContainer")]
+    [Alias("gpct")]
     [OutputType(typeof(PveContainer))]
     public sealed class GetPveContainerCmdlet : PveCmdletBase
     {

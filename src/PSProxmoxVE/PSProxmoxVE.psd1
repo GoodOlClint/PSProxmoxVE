@@ -27,6 +27,9 @@
     # Copyright statement for this module
     Copyright         = '(c) 2026 goodolclint. All rights reserved.'
 
+    # URI for online help
+    HelpInfoUri       = 'https://github.com/goodolclint/PSProxmoxVE/tree/main/docs/cmdlets'
+
     # Description of the functionality provided by this module
     Description       = 'PowerShell module for managing Proxmox VE environments. Supports PVE 8.x and 9.x with full VM, container, storage, network, and cluster management capabilities.'
 
@@ -88,6 +91,7 @@
         'Stop-PveContainer',
         'Restart-PveContainer',
         'Copy-PveContainer',
+        'Move-PveContainer',
         'Get-PveContainerConfig',
         'Set-PveContainerConfig',
         # Container Snapshots (4)
@@ -171,7 +175,15 @@
     VariablesToExport = @()
 
     # Aliases to export from this module
-    AliasesToExport   = @()
+    AliasesToExport   = @(
+        'cpve',
+        'dpve',
+        'gpvm',
+        'gpct',
+        'gpn',
+        'gpvs',
+        'gpt'
+    )
 
     # Private data to pass to the module specified in RootModule
     PrivateData       = @{

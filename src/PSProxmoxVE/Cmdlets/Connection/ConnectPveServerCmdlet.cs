@@ -14,6 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Connection
     /// </summary>
     [Cmdlet(VerbsCommunications.Connect, "PveServer",
         DefaultParameterSetName = ParameterSetCredential)]
+    [Alias("cpve")]
     [OutputType(typeof(PveSession))]
     public sealed class ConnectPveServerCmdlet : PSCmdlet
     {

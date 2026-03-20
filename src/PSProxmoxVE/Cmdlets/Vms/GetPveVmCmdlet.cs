@@ -14,6 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveVm")]
+    [Alias("gpvm")]
     [OutputType(typeof(PveVm))]
     public sealed class GetPveVmCmdlet : PveCmdletBase
     {

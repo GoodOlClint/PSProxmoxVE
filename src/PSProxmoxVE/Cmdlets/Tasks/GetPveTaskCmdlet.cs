@@ -13,6 +13,7 @@ namespace PSProxmoxVE.Cmdlets.Tasks
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveTask")]
+    [Alias("gpt")]
     [OutputType(typeof(PveTask))]
     public class GetPveTaskCmdlet : PveCmdletBase
     {
