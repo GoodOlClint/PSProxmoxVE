@@ -50,7 +50,7 @@ runcmd:
   - systemctl enable --now qemu-guest-agent
 YAML
 
-${SSH_CMD} "mkdir -p /var/lib/vz/snippets && pvesm set local --content iso,vztmpl,snippets"
+${SSH_CMD} "mkdir -p /var/lib/vz/snippets && pvesm set local --content iso,vztmpl,snippets,import"
 ${SCP_CMD} "${USERDATA}" "root@${NESTED_IP}:/var/lib/vz/snippets/test-vm-userdata.yml"
 rm -f "${USERDATA}"
 
@@ -61,7 +61,7 @@ pwsh -NoProfile -Command "
     Invoke-PveStorageDownload \
         -Node '${NODE}' -Storage 'local' \
         -Url '${CLOUD_IMAGE_URL}' -Filename '${CLOUD_IMAGE_FILENAME}' \
-        -ContentType 'iso' -Wait
+        -ContentType 'import' -Wait
 "
 
 # ── Step 3: Create VM (module cmdlet) ────────────────────────────────
@@ -73,14 +73,12 @@ pwsh -NoProfile -Command "
 "
 
 # ── Step 4: Import disk (module cmdlet) ────────────────────────────
-# The cloud image was downloaded as content=iso. The import-from syntax requires
-# content type 'images' or 'import', so we use the absolute node path instead.
 echo "Importing disk image via Import-PveVmDisk..."
 pwsh -NoProfile -Command "
     Import-Module PSProxmoxVE; ${CONNECT_CMD}
     Import-PveVmDisk -Node '${NODE}' -VmId ${VMID} -Disk 'scsi0' \
         -TargetStorage 'local-lvm' \
-        -Source '/var/lib/vz/template/iso/${CLOUD_IMAGE_FILENAME}' -Wait
+        -Source 'local:import/${CLOUD_IMAGE_FILENAME}' -Wait
 "
 
 # ── Step 5: Configure VM (module cmdlet — AdditionalConfig) ──────────
