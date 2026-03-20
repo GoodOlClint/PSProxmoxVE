@@ -148,7 +148,7 @@ Describe 'New-PveTemplate' {
     Context 'Without active session' {
         It 'Should throw when no session is active (without -WhatIf)' {
             Skip-IfMissing 'New-PveTemplate'
-            { New-PveTemplate -Node 'pve-node1' -VmId 9000 -ErrorAction Stop } |
+            { New-PveTemplate -Node 'pve-node1' -VmId 9000 -Confirm:$false -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }

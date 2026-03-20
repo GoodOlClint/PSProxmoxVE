@@ -244,7 +244,7 @@ Describe 'Stop-PveContainer' {
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'Stop-PveContainer'
-            { Stop-PveContainer -Node 'pve-node1' -VmId 200 -ErrorAction Stop } |
+            { Stop-PveContainer -Node 'pve-node1' -VmId 200 -Confirm:$false -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }

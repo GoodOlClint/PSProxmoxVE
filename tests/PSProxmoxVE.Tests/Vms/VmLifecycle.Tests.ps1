@@ -120,7 +120,7 @@ Describe 'Stop-PveVm' {
 
     Context 'Without active session' {
         It 'Should throw when no session is active (without -WhatIf)' {
-            { Stop-PveVm -Node 'pve-node1' -VmId 100 -ErrorAction Stop } |
+            { Stop-PveVm -Node 'pve-node1' -VmId 100 -Confirm:$false -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
 

@@ -212,7 +212,7 @@ Describe 'Remove-PveSdnSubnet' {
     Context 'Without active session' {
         It 'Should throw when no session is active (without -WhatIf)' {
             Skip-IfMissing 'Remove-PveSdnSubnet'
-            { Remove-PveSdnSubnet -Vnet 'myvnet' -Subnet '10.0.0.0/24' -ErrorAction Stop } |
+            { Remove-PveSdnSubnet -Vnet 'myvnet' -Subnet '10.0.0.0/24' -Confirm:$false -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }

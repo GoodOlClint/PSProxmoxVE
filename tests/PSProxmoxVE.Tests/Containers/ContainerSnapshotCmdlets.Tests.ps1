@@ -224,7 +224,7 @@ Describe 'Remove-PveContainerSnapshot' {
     Context 'Without active session' {
         It 'Should throw when no session is active (without -WhatIf)' {
             Skip-IfMissing 'Remove-PveContainerSnapshot'
-            { Remove-PveContainerSnapshot -Node 'pve-node1' -VmId 100 -Name 'snap1' -ErrorAction Stop } |
+            { Remove-PveContainerSnapshot -Node 'pve-node1' -VmId 100 -Name 'snap1' -Confirm:$false -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
@@ -292,7 +292,7 @@ Describe 'Restore-PveContainerSnapshot' {
     Context 'Without active session' {
         It 'Should throw when no session is active (without -WhatIf)' {
             Skip-IfMissing 'Restore-PveContainerSnapshot'
-            { Restore-PveContainerSnapshot -Node 'pve-node1' -VmId 100 -Name 'snap1' -ErrorAction Stop } |
+            { Restore-PveContainerSnapshot -Node 'pve-node1' -VmId 100 -Name 'snap1' -Confirm:$false -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
