@@ -114,6 +114,90 @@ namespace PSProxmoxVE.Core.Services
         }
 
         // -------------------------------------------------------------------------
+        // Snapshots
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Returns all snapshots for a container.
+        /// </summary>
+        public PveSnapshot[] GetContainerSnapshots(PveSession session, string node, int vmid)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+
+            using var client = new PveHttpClient(session);
+            var response = client.GetAsync($"nodes/{node}/lxc/{vmid}/snapshot")
+                .GetAwaiter().GetResult();
+            var data = JObject.Parse(response)["data"];
+            return data?.ToObject<PveSnapshot[]>() ?? Array.Empty<PveSnapshot>();
+        }
+
+        /// <summary>
+        /// Creates a snapshot of a container. Returns the task UPID.
+        /// </summary>
+        public PveTask CreateContainerSnapshot(
+            PveSession session,
+            string node,
+            int vmid,
+            string snapname,
+            string? description = null)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (string.IsNullOrWhiteSpace(snapname)) throw new ArgumentNullException(nameof(snapname));
+
+            var formData = new Dictionary<string, string>
+            {
+                ["snapname"] = snapname
+            };
+            if (!string.IsNullOrEmpty(description))
+                formData["description"] = description!;
+
+            using var client = new PveHttpClient(session);
+            var response = client.PostAsync($"nodes/{node}/lxc/{vmid}/snapshot", formData)
+                .GetAwaiter().GetResult();
+            return ParseTask(response, node);
+        }
+
+        /// <summary>
+        /// Removes a snapshot from a container. Returns the task UPID.
+        /// </summary>
+        public PveTask RemoveContainerSnapshot(
+            PveSession session,
+            string node,
+            int vmid,
+            string snapname)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (string.IsNullOrWhiteSpace(snapname)) throw new ArgumentNullException(nameof(snapname));
+
+            using var client = new PveHttpClient(session);
+            var response = client.DeleteAsync($"nodes/{node}/lxc/{vmid}/snapshot/{snapname}")
+                .GetAwaiter().GetResult();
+            return ParseTask(response, node);
+        }
+
+        /// <summary>
+        /// Rolls a container back to a snapshot. Returns the task UPID.
+        /// </summary>
+        public PveTask RollbackContainerSnapshot(
+            PveSession session,
+            string node,
+            int vmid,
+            string snapname)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (string.IsNullOrWhiteSpace(snapname)) throw new ArgumentNullException(nameof(snapname));
+
+            using var client = new PveHttpClient(session);
+            var response = client.PostAsync($"nodes/{node}/lxc/{vmid}/snapshot/{snapname}/rollback")
+                .GetAwaiter().GetResult();
+            return ParseTask(response, node);
+        }
+
+        // -------------------------------------------------------------------------
         // Lifecycle
         // -------------------------------------------------------------------------
 

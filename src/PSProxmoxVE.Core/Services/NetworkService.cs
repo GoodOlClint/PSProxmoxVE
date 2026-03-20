@@ -240,6 +240,71 @@ namespace PSProxmoxVE.Core.Services
         }
 
         // -------------------------------------------------------------------------
+        // SDN Subnets — requires PVE 8.0+
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Returns all subnets for an SDN VNet. Requires PVE 8.0+.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="vnet">The SDN VNet identifier.</param>
+        public PveSdnSubnet[] GetSdnSubnets(PveSession session, string vnet)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            RequireSdn(session);
+            if (string.IsNullOrWhiteSpace(vnet)) throw new ArgumentNullException(nameof(vnet));
+
+            using var client = new PveHttpClient(session);
+            var response = client.GetAsync($"cluster/sdn/vnets/{Uri.EscapeDataString(vnet)}/subnets")
+                .GetAwaiter().GetResult();
+            var data = JObject.Parse(response)["data"];
+            return data?.ToObject<PveSdnSubnet[]>() ?? Array.Empty<PveSdnSubnet>();
+        }
+
+        /// <summary>
+        /// Creates an SDN subnet on a VNet. Requires PVE 8.0+.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="vnet">The SDN VNet identifier.</param>
+        /// <param name="config">Subnet configuration parameters including "subnet" (CIDR).</param>
+        public void CreateSdnSubnet(
+            PveSession session,
+            string vnet,
+            Dictionary<string, object> config)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            RequireSdn(session);
+            if (string.IsNullOrWhiteSpace(vnet)) throw new ArgumentNullException(nameof(vnet));
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            using var client = new PveHttpClient(session);
+            var formData = config.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value?.ToString() ?? string.Empty);
+            client.PostAsync($"cluster/sdn/vnets/{Uri.EscapeDataString(vnet)}/subnets", formData)
+                .GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Removes an SDN subnet from a VNet. Requires PVE 8.0+.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="vnet">The SDN VNet identifier.</param>
+        /// <param name="subnet">The subnet CIDR to remove.</param>
+        public void RemoveSdnSubnet(PveSession session, string vnet, string subnet)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            RequireSdn(session);
+            if (string.IsNullOrWhiteSpace(vnet)) throw new ArgumentNullException(nameof(vnet));
+            if (string.IsNullOrWhiteSpace(subnet)) throw new ArgumentNullException(nameof(subnet));
+
+            using var client = new PveHttpClient(session);
+            client.DeleteAsync(
+                $"cluster/sdn/vnets/{Uri.EscapeDataString(vnet)}/subnets/{Uri.EscapeDataString(subnet)}")
+                .GetAwaiter().GetResult();
+        }
+
+        // -------------------------------------------------------------------------
         // Private helpers
         // -------------------------------------------------------------------------
 

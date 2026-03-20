@@ -1,6 +1,10 @@
 # PSProxmoxVE
 
-A production-grade C# binary PowerShell module for managing Proxmox VE environments. Built for internal worklab use.
+[![Build](https://github.com/goodolclint/PSProxmoxVE/actions/workflows/build.yml/badge.svg)](https://github.com/goodolclint/PSProxmoxVE/actions/workflows/build.yml)
+[![Unit Tests](https://github.com/goodolclint/PSProxmoxVE/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/goodolclint/PSProxmoxVE/actions/workflows/unit-tests.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/goodolclint/PSProxmoxVE/blob/main/LICENSE)
+
+A production-grade C# binary PowerShell module for managing Proxmox VE environments.
 
 ## Supported Proxmox VE Versions
 
@@ -27,11 +31,12 @@ All public API surface compiles and functions correctly on both targets.
 
 ## Installation
 
-This module is distributed via private GitHub releases (not PSGallery).
-
 ```powershell
-# Download the latest release from GitHub
-# Extract to a directory in your PSModulePath
+# Install from the PowerShell Gallery
+Install-Module -Name PSProxmoxVE -Scope CurrentUser
+
+# Or install a prerelease version
+Install-Module -Name PSProxmoxVE -Scope CurrentUser -AllowPrerelease
 
 # Verify installation
 Get-Module -ListAvailable PSProxmoxVE
@@ -235,6 +240,10 @@ SDN management requires Proxmox VE 8.0 or later. Connected server is version 7.4
 | `Copy-PveContainer` | Clone a container |
 | `Get-PveContainerConfig` | Get container configuration |
 | `Set-PveContainerConfig` | Modify container configuration |
+| `Get-PveContainerSnapshot` | List container snapshots |
+| `New-PveContainerSnapshot` | Create a container snapshot |
+| `Remove-PveContainerSnapshot` | Delete a container snapshot |
+| `Restore-PveContainerSnapshot` | Rollback to a container snapshot |
 
 ### Storage
 | Cmdlet | Description |
@@ -272,6 +281,9 @@ SDN management requires Proxmox VE 8.0 or later. Connected server is version 7.4
 | `Get-PveSdnVnet` | List SDN VNets |
 | `New-PveSdnVnet` | Create an SDN VNet |
 | `Remove-PveSdnVnet` | Delete an SDN VNet |
+| `Get-PveSdnSubnet` | List SDN subnets for a VNet |
+| `New-PveSdnSubnet` | Create an SDN subnet |
+| `Remove-PveSdnSubnet` | Delete an SDN subnet |
 
 ### Users & Permissions
 | Cmdlet | Description |

@@ -90,6 +90,11 @@
         'Copy-PveContainer',
         'Get-PveContainerConfig',
         'Set-PveContainerConfig',
+        # Container Snapshots (4)
+        'Get-PveContainerSnapshot',
+        'New-PveContainerSnapshot',
+        'Remove-PveContainerSnapshot',
+        'Restore-PveContainerSnapshot',
 
         # Storage
         'Get-PveStorage',
@@ -121,6 +126,10 @@
         'Get-PveSdnVnet',
         'New-PveSdnVnet',
         'Remove-PveSdnVnet',
+        # SDN Subnets (3)
+        'Get-PveSdnSubnet',
+        'New-PveSdnSubnet',
+        'Remove-PveSdnSubnet',
 
         # Users
         'Get-PveUser',
@@ -189,6 +198,9 @@
 
             # URI to the project for this module
             ProjectUri   = 'https://github.com/goodolclint/PSProxmoxVE'
+
+            # Release notes for this version
+            ReleaseNotes = 'Initial preview release. Supports PVE 8.x and 9.x with VM, container, storage, network, SDN, user/role/permission, template, cloud-init, snapshot, and task management.'
 
         }
 
