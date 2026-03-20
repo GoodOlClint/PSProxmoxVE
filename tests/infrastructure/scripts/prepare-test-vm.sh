@@ -73,12 +73,14 @@ pwsh -NoProfile -Command "
 "
 
 # ── Step 4: Import disk (module cmdlet) ────────────────────────────
+# The cloud image was downloaded as content=iso. The import-from syntax requires
+# content type 'images' or 'import', so we use the absolute node path instead.
 echo "Importing disk image via Import-PveVmDisk..."
 pwsh -NoProfile -Command "
     Import-Module PSProxmoxVE; ${CONNECT_CMD}
     Import-PveVmDisk -Node '${NODE}' -VmId ${VMID} -Disk 'scsi0' \
         -TargetStorage 'local-lvm' \
-        -Source 'local:iso/${CLOUD_IMAGE_FILENAME}' -Wait
+        -Source '/var/lib/vz/template/iso/${CLOUD_IMAGE_FILENAME}' -Wait
 "
 
 # ── Step 5: Configure VM (module cmdlet — AdditionalConfig) ──────────
