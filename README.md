@@ -228,6 +228,7 @@ SDN management requires Proxmox VE 8.0 or later. Connected server is version 7.4
 | `Set-PveVmConfig` | Modify VM configuration |
 | `Resize-PveVmDisk` | Resize a VM disk |
 | `Import-PveVmDisk` | Import a disk image (qcow2, raw, vmdk, OVA) into a VM |
+| `Import-PveOva` | Import an OVA appliance as a new VM (parses OVF, uploads, creates VM, imports disks) |
 
 ### Containers
 | Cmdlet | Description |

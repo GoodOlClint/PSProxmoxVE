@@ -78,6 +78,7 @@
         'Set-PveVmConfig',
         'Resize-PveVmDisk',
         'Import-PveVmDisk',
+        'Import-PveOva',
 
         # QEMU Guest Agent
         'Test-PveVmGuestAgent',

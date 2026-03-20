@@ -492,5 +492,50 @@ namespace PSProxmoxVE.Core.Services
                 .GetAwaiter().GetResult();
             return JObject.Parse(response)["data"] as JObject ?? new JObject();
         }
+
+        // -------------------------------------------------------------------------
+        // OVA Upload
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Uploads an OVA file to storage with content=import. Returns the task UPID.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="storage">The target storage identifier.</param>
+        /// <param name="ovaPath">The local path to the OVA file.</param>
+        /// <param name="progressCallback">
+        /// Optional callback invoked periodically with (bytesSent, totalBytes).
+        /// May be called from a background thread.
+        /// </param>
+        public PveTask UploadOva(
+            PveSession session,
+            string node,
+            string storage,
+            string ovaPath,
+            Action<long, long>? progressCallback = null)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (string.IsNullOrWhiteSpace(storage)) throw new ArgumentNullException(nameof(storage));
+            if (string.IsNullOrWhiteSpace(ovaPath)) throw new ArgumentNullException(nameof(ovaPath));
+
+            var formFields = new Dictionary<string, string>
+            {
+                ["content"] = "import"
+            };
+
+            using var client = new PveHttpClient(session);
+            var response = client.UploadFileAsync(
+                    $"nodes/{node}/storage/{storage}/upload",
+                    ovaPath,
+                    formFields,
+                    progressCallback: progressCallback)
+                .GetAwaiter().GetResult();
+
+            var root = JObject.Parse(response);
+            var upid = root["data"]?.ToString() ?? string.Empty;
+            return new PveTask { Upid = upid, Node = node, Status = "running" };
+        }
     }
 }
