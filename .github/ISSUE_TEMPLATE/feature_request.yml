@@ -1,0 +1,37 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement! Please describe what you'd like.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What feature or improvement would you like?
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: How would you use this feature? What problem does it solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: api-endpoints
+    attributes:
+      label: PVE API Endpoints
+      description: If this involves specific PVE API endpoints, list them here
+      placeholder: "GET /nodes/{node}/qemu/{vmid}/firewall/rules"
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any workarounds or alternative approaches?

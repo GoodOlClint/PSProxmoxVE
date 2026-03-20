@@ -1,0 +1,29 @@
+# Auto-detect text files and normalize line endings
+* text=auto
+
+# Source code
+*.cs text diff=csharp
+*.csproj text
+*.sln text eol=crlf
+*.ps1 text
+*.psm1 text
+*.psd1 text
+
+# Documentation
+*.md text diff=markdown
+*.yml text
+*.yaml text
+*.json text
+
+# Binary
+*.dll binary
+*.exe binary
+*.pdb binary
+*.iso binary
+*.img binary
+
+# Ensure shell scripts use LF
+*.sh text eol=lf
+
+# Ensure PowerShell format files use platform default
+*.ps1xml text

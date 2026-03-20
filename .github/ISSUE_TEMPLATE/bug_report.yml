@@ -1,0 +1,74 @@
+name: Bug Report
+description: Report a bug in PSProxmoxVE
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill out the sections below.
+
+  - type: input
+    id: module-version
+    attributes:
+      label: Module Version
+      description: Output of `(Get-Module PSProxmoxVE).Version`
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: pve-version
+    attributes:
+      label: Proxmox VE Version
+      description: PVE server version (e.g. 9.1-1, 8.4-1)
+      placeholder: "9.1-1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ps-version
+    attributes:
+      label: PowerShell Version
+      options:
+        - "5.1 (Windows PowerShell)"
+        - "7.2"
+        - "7.4"
+        - "7.5"
+        - "Other"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Windows
+        - Linux
+        - macOS
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened? What did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to Reproduce
+      description: Minimal PowerShell commands to reproduce the issue
+      render: powershell
+    validations:
+      required: true
+
+  - type: textarea
+    id: error
+    attributes:
+      label: Error Output
+      description: Paste any error messages or verbose output
+      render: text

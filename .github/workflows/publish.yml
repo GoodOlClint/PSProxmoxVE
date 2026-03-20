@@ -1,0 +1,72 @@
+name: Publish to PSGallery
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build module
+        run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework netstandard2.0 --output ./publish/netstandard2.0
+
+      - name: Clean publish output
+        run: rm -f ./publish/netstandard2.0/*.deps.json ./publish/netstandard2.0/*.runtimeconfig.json
+
+      - name: Update module version in manifest
+        shell: pwsh
+        run: |
+          $manifestPath = './publish/netstandard2.0/PSProxmoxVE.psd1'
+          $version = '${{ steps.version.outputs.version }}'
+          # Strip prerelease suffix for ModuleVersion (must be X.Y.Z)
+          $moduleVersion = ($version -split '-')[0]
+          $content = Get-Content $manifestPath -Raw
+          $content = $content -replace "ModuleVersion\s*=\s*'[^']*'", "ModuleVersion     = '$moduleVersion'"
+          Set-Content $manifestPath $content
+
+      - name: Install PowerShell and Pester
+        shell: pwsh
+        run: Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser
+
+      - name: Test module loads
+        shell: pwsh
+        run: |
+          $modulePath = "$HOME/.local/share/powershell/Modules/PSProxmoxVE"
+          New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
+          Copy-Item -Path ./publish/netstandard2.0/* -Destination $modulePath -Recurse -Force
+          Import-Module PSProxmoxVE -Force -ErrorAction Stop
+          $commands = Get-Command -Module PSProxmoxVE
+          Write-Host "Module loaded with $($commands.Count) commands"
+          if ($commands.Count -lt 60) {
+            throw "Expected at least 60 commands, got $($commands.Count)"
+          }
+
+      - name: Publish to PSGallery
+        shell: pwsh
+        env:
+          NUGET_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+        run: |
+          Publish-Module -Path ./publish/netstandard2.0 -NuGetApiKey $env:NUGET_API_KEY -Verbose
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
