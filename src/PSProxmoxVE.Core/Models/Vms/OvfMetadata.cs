@@ -28,6 +28,9 @@ namespace PSProxmoxVE.Core.Models.Vms
 
         /// <summary>The connection name (e.g. "VM Network", "bridged").</summary>
         public string ConnectionName { get; set; } = string.Empty;
+
+        /// <summary>The OVF ResourceSubType (e.g. "E1000", "vmxnet3", "VirtualE1000e").</summary>
+        public string ResourceSubType { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -227,10 +230,12 @@ namespace PSProxmoxVE.Core.Models.Vms
                                 ?? item.SelectSingleNode("rasd:Caption", nsm)?.InnerText
                                 ?? "Network adapter";
                             var connection = item.SelectSingleNode("rasd:Connection", nsm)?.InnerText ?? string.Empty;
+                            var nicSubType = item.SelectSingleNode("rasd:ResourceSubType", nsm)?.InnerText ?? string.Empty;
                             metadata.NetworkAdapters.Add(new OvfNetworkAdapter
                             {
                                 AdapterName = adapterName,
-                                ConnectionName = connection
+                                ConnectionName = connection,
+                                ResourceSubType = nicSubType
                             });
                             break;
                     }
@@ -321,6 +326,33 @@ namespace PSProxmoxVE.Core.Models.Vms
 
             // Default: assume MiB
             return (int)value;
+        }
+
+        /// <summary>
+        /// Maps an OVF ResourceSubType for a NIC to a PVE network model string.
+        /// </summary>
+        public static string MapNicModel(string resourceSubType)
+        {
+            if (string.IsNullOrEmpty(resourceSubType))
+                return "virtio";
+
+            var lower = resourceSubType.ToLowerInvariant();
+
+            if (lower.Contains("vmxnet3"))
+                return "vmxnet3";
+            if (lower.Contains("e1000e") || lower.Contains("virtuale1000e"))
+                return "e1000e";
+            if (lower.Contains("e1000") || lower.Contains("virtuale1000"))
+                return "e1000";
+            if (lower.Contains("vmxnet2") || lower.Contains("vmxnet"))
+                return "vmxnet3"; // PVE doesn't support vmxnet2, use vmxnet3
+            if (lower.Contains("pcnet"))
+                return "e1000"; // pcnet not supported on PVE, fallback to e1000
+            if (lower.Contains("virtio"))
+                return "virtio";
+
+            // Unknown model — default to e1000 (widely compatible, no driver install needed)
+            return "e1000";
         }
 
         private static string MapOsType(string osDescription)

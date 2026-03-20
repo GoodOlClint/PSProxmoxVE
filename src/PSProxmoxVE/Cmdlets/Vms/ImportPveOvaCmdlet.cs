@@ -223,20 +223,30 @@ namespace PSProxmoxVE.Cmdlets.Vms
             if (!string.IsNullOrEmpty(metadata.OsTypeHint) && metadata.OsTypeHint != "other")
                 vmConfig["ostype"] = metadata.OsTypeHint;
 
-            // Add disk import-from parameters
+            // Add disk import-from parameters (use scsi bus like PVE UI)
+            string? firstDisk = null;
             for (int i = 0; i < metadata.Disks.Count; i++)
             {
                 var disk = metadata.Disks[i];
-                var diskSlot = $"{disk.BusType}{i}";
+                var diskSlot = $"scsi{i}";
                 var importFrom = $"{Storage}:import/{fileName}/{disk.FileName}";
                 vmConfig[diskSlot] = $"{TargetStorage}:0,import-from={importFrom}";
+                firstDisk ??= diskSlot;
                 WriteVerbose($"  Disk {diskSlot}: import-from={importFrom} -> {TargetStorage}");
             }
 
-            // Add network adapters
+            // Set boot order to the first disk
+            if (firstDisk != null)
+                vmConfig["boot"] = $"order={firstDisk}";
+
+            // Set sockets (PVE default)
+            vmConfig["sockets"] = 1;
+
+            // Add network adapters with model from OVF
             for (int i = 0; i < metadata.NetworkAdapters.Count; i++)
             {
-                vmConfig[$"net{i}"] = "virtio,bridge=vmbr0";
+                var nicModel = OvfMetadata.MapNicModel(metadata.NetworkAdapters[i].ResourceSubType);
+                vmConfig[$"net{i}"] = $"{nicModel},bridge=vmbr0";
             }
 
             var createTask = vmService.CreateVm(session, Node, vmConfig);

@@ -1214,7 +1214,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
             $metadata.Disks.Count | Should -BeGreaterThan 0
         }
 
-        It 'Should import OVA as a VM (Import-PveOva)' {
+        It 'Should import OVA as a VM with correct metadata (Import-PveOva)' {
             if (Skip-IfNoTarget) { return }
             if (-not $script:OvaPath -or -not (Test-Path $script:OvaPath)) {
                 Set-ItResult -Skipped -Because 'PVETEST_OVA_PATH not set or file not found'
@@ -1228,9 +1228,18 @@ Describe 'Integration Tests' -Tag 'Integration' {
             $vm | Should -Not -BeNullOrEmpty
             $script:CreatedVmIds.Add($vm.VmId)
 
-            # Verify the VM exists
+            # Verify VM exists with correct name
             $found = Get-PveVm -Node $script:Node -Name 'pester-ova-vm' | Select-Object -First 1
             $found | Should -Not -BeNullOrEmpty
+            $found.Name | Should -Be 'pester-ova-vm'
+
+            # Verify config matches OVF metadata
+            $config = Get-PveVmConfig -Node $script:Node -VmId $vm.VmId
+            $config.Memory | Should -BeGreaterThan 0
+            $config.Cores | Should -BeGreaterThan 0
+            $config.OsType | Should -Be 'l26'
+            $config.Scsi0 | Should -Not -BeNullOrEmpty -Because 'disk should be imported to scsi0'
+            $config.Net0 | Should -Not -BeNullOrEmpty -Because 'network adapter should be configured'
         }
 
         It 'Should start the OVA-imported VM' {
