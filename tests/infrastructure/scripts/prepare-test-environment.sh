@@ -17,7 +17,10 @@ ROOT_PASS="$2"
 OUTPUT_DIR="${3:?Output directory required}"
 
 CLOUD_IMAGE_URL="https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
-CLOUD_IMAGE_FILENAME="noble-server-cloudimg-amd64.img"
+# PVE upload API validates extensions per content type — content=import
+# does not accept .img. The Ubuntu cloud image is qcow2 format, so we
+# rename it to .qcow2 for compatibility with the upload endpoint.
+CLOUD_IMAGE_FILENAME="noble-server-cloudimg-amd64.qcow2"
 
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 SSH_CMD="sshpass -p ${ROOT_PASS} ssh ${SSH_OPTS} root@${NESTED_IP}"
