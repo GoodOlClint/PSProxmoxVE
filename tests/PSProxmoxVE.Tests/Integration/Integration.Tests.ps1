@@ -16,6 +16,7 @@
         PVETEST_PVE_VERSION     - (optional) Expected PVE major version (8 or 9)
         PVETEST_PASSWORD        - (optional) Root password for cloud-init Linux VM provisioning
         PVETEST_CLOUD_IMAGE_PATH - (optional) Local path to a cloud image (.img) for VM provisioning
+        PVETEST_OVA_PATH        - (optional) Local path to an OVA file for OVA import tests
 
     WARNING: These tests CREATE and DESTROY real resources (VMs, users, tokens,
     roles, snapshots, ISO uploads, etc.) on the target node.
@@ -68,13 +69,16 @@ BeforeAll {
     $script:ExpectedPveVersion = [System.Environment]::GetEnvironmentVariable('PVETEST_PVE_VERSION')
     $script:Password = [System.Environment]::GetEnvironmentVariable('PVETEST_PASSWORD')
     $script:CloudImagePath = [System.Environment]::GetEnvironmentVariable('PVETEST_CLOUD_IMAGE_PATH')
+    $script:OvaPath = [System.Environment]::GetEnvironmentVariable('PVETEST_OVA_PATH')
     $script:LinuxVmId = $null
 
     # Track resources created during the run so AfterAll can clean up.
-    $script:CreatedVmIds   = [System.Collections.Generic.List[int]]::new()
-    $script:CreatedUsers   = [System.Collections.Generic.List[string]]::new()
-    $script:CreatedRoles   = [System.Collections.Generic.List[string]]::new()
-    $script:TestVmId       = $null
+    $script:CreatedVmIds        = [System.Collections.Generic.List[int]]::new()
+    $script:CreatedContainerIds = [System.Collections.Generic.List[int]]::new()
+    $script:CreatedUsers        = [System.Collections.Generic.List[string]]::new()
+    $script:CreatedRoles        = [System.Collections.Generic.List[string]]::new()
+    $script:TestVmId            = $null
+    $script:TestContainerId     = $null
 
     # Helper functions for skip logic
     function script:Skip-IfNoTarget {
@@ -111,6 +115,15 @@ BeforeAll {
         }
         return $false
     }
+
+    function script:Skip-IfNoTestContainer {
+        if (Skip-IfNoTarget) { return $true }
+        if ($null -eq $script:TestContainerId) {
+            Set-ItResult -Skipped -Because 'No test container was created'
+            return $true
+        }
+        return $false
+    }
 }
 
 AfterAll {
@@ -126,6 +139,15 @@ AfterAll {
 
     foreach ($roleId in $script:CreatedRoles) {
         try { Remove-PveRole -RoleId $roleId -Confirm:$false -ErrorAction SilentlyContinue }
+        catch { <# non-fatal #> }
+    }
+
+    foreach ($ctId in $script:CreatedContainerIds) {
+        try {
+            Stop-PveContainer -Node $script:Node -VmId $ctId -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
+            Start-Sleep -Seconds 3
+            Remove-PveContainer -Node $script:Node -VmId $ctId -Force -Purge -Confirm:$false -ErrorAction SilentlyContinue
+        }
         catch { <# non-fatal #> }
     }
 
@@ -435,6 +457,51 @@ Describe 'Integration Tests' -Tag 'Integration' {
     }
 
     # -----------------------------------------------------------------------
+    Context 'VM — Suspend / Resume / Resize' {
+        It 'Should suspend and resume a VM' {
+            if (Skip-IfNoTestVm) { return }
+
+            # Start the VM
+            Start-PveVm -Node $script:Node -VmId $script:TestVmId -Wait | Out-Null
+
+            # Suspend
+            $suspendTask = Suspend-PveVm -Node $script:Node -VmId $script:TestVmId -Wait
+            $suspendTask | Should -Not -BeNullOrEmpty
+
+            $vm = Get-PveVm -Node $script:Node | Where-Object { $_.VmId -eq $script:TestVmId }
+            $vm.Status | Should -Be 'paused'
+
+            # Resume
+            $resumeTask = Resume-PveVm -Node $script:Node -VmId $script:TestVmId -Wait
+            $resumeTask | Should -Not -BeNullOrEmpty
+
+            $vm = Get-PveVm -Node $script:Node | Where-Object { $_.VmId -eq $script:TestVmId }
+            $vm.Status | Should -Be 'running'
+
+            # Clean up — stop
+            Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -Confirm:$false | Out-Null
+        }
+
+        It 'Should resize a VM disk (Resize-PveVmDisk)' {
+            if (Skip-IfNoTestVm) { return }
+
+            # First add a small disk via Set-PveVmConfig
+            { Set-PveVmConfig -Node $script:Node -VmId $script:TestVmId `
+                -AdditionalConfig @{ scsi0 = 'local-lvm:1' } `
+                -ErrorAction Stop } | Should -Not -Throw
+
+            # Resize the disk by +1G
+            $task = Resize-PveVmDisk -Node $script:Node -VmId $script:TestVmId `
+                -Disk 'scsi0' -Size '+1G'
+            $task | Should -Not -BeNullOrEmpty
+
+            # Verify config shows scsi0 exists (larger disk)
+            $config = Get-PveVmConfig -Node $script:Node -VmId $script:TestVmId
+            $config | Should -Not -BeNullOrEmpty
+        }
+    }
+
+    # -----------------------------------------------------------------------
     Context 'Snapshots' {
         It 'Should create, list, and remove a snapshot' {
             if (Skip-IfNoTestVm) { return }
@@ -515,6 +582,48 @@ Describe 'Integration Tests' -Tag 'Integration' {
                     -Path    $script:IsoPath `
                     -ErrorAction Stop
             } | Should -Not -Throw
+        }
+    }
+
+    # -----------------------------------------------------------------------
+    Context 'Storage — CRUD' {
+        It 'Should create a directory storage (New-PveStorage)' {
+            if (Skip-IfNoTarget) { return }
+
+            $result = New-PveStorage -Storage 'pester-store' -Type 'dir' `
+                -Path '/tmp/pester-storage' -Content 'iso,vztmpl,backup' `
+                -ErrorAction Stop
+
+            $result | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should list and find the new storage (Get-PveStorage)' {
+            if (Skip-IfNoTarget) { return }
+
+            $storages = Get-PveStorage -Node $script:Node
+            $storages | Where-Object { $_.Storage -eq 'pester-store' } |
+                Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should remove the storage (Remove-PveStorage)' {
+            if (Skip-IfNoTarget) { return }
+
+            { Remove-PveStorage -Storage 'pester-store' -Confirm:$false -ErrorAction Stop } |
+                Should -Not -Throw
+        }
+    }
+
+    # -----------------------------------------------------------------------
+    Context 'Storage — Download' {
+        It 'Should download a file from URL to storage (Invoke-PveStorageDownload)' {
+            if (Skip-IfNoTarget) { return }
+
+            $templateUrl = 'http://download.proxmox.com/images/system/alpine-3.20-default_20240908_amd64.tar.xz'
+            $task = Invoke-PveStorageDownload -Node $script:Node -Storage $script:Storage `
+                -Url $templateUrl -Filename 'alpine-3.20-default_20240908_amd64.tar.xz' `
+                -ContentType 'vztmpl' -Wait -ErrorAction Stop
+
+            $task | Should -Not -BeNullOrEmpty
         }
     }
 
@@ -614,6 +723,99 @@ Describe 'Integration Tests' -Tag 'Integration' {
     }
 
     # -----------------------------------------------------------------------
+    Context 'SDN' {
+        BeforeAll {
+            if ($null -eq $script:SkipReason) {
+                # SDN requires PVE 8+. Check server version and skip if older.
+                $detail = Test-PveConnection -Detailed
+                if ($detail.ServerVersion.Major -lt 8) {
+                    $script:SkipSdn = 'SDN requires Proxmox VE 8.0 or later'
+                } else {
+                    $script:SkipSdn = $null
+                }
+            } else {
+                $script:SkipSdn = $script:SkipReason
+            }
+        }
+
+        It 'Should create an SDN zone (New-PveSdnZone)' {
+            if (Skip-IfNoTarget) { return }
+            if ($script:SkipSdn) { Set-ItResult -Skipped -Because $script:SkipSdn; return }
+
+            { New-PveSdnZone -Zone 'pester-zone' -Type 'simple' -ErrorAction Stop } |
+                Should -Not -Throw
+        }
+
+        It 'Should list SDN zones (Get-PveSdnZone)' {
+            if (Skip-IfNoTarget) { return }
+            if ($script:SkipSdn) { Set-ItResult -Skipped -Because $script:SkipSdn; return }
+
+            $zones = Get-PveSdnZone
+            $zones | Should -Not -BeNullOrEmpty
+            $zones | Where-Object { $_.Zone -eq 'pester-zone' } |
+                Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should create an SDN VNet (New-PveSdnVnet)' {
+            if (Skip-IfNoTarget) { return }
+            if ($script:SkipSdn) { Set-ItResult -Skipped -Because $script:SkipSdn; return }
+
+            { New-PveSdnVnet -Vnet 'pestervn' -Zone 'pester-zone' -ErrorAction Stop } |
+                Should -Not -Throw
+        }
+
+        It 'Should list SDN VNets (Get-PveSdnVnet)' {
+            if (Skip-IfNoTarget) { return }
+            if ($script:SkipSdn) { Set-ItResult -Skipped -Because $script:SkipSdn; return }
+
+            $vnets = Get-PveSdnVnet
+            $vnets | Should -Not -BeNullOrEmpty
+            $vnets | Where-Object { $_.Vnet -eq 'pestervn' } |
+                Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should create an SDN subnet (New-PveSdnSubnet)' {
+            if (Skip-IfNoTarget) { return }
+            if ($script:SkipSdn) { Set-ItResult -Skipped -Because $script:SkipSdn; return }
+
+            { New-PveSdnSubnet -Vnet 'pestervn' -Subnet '10.99.0.0/24' -ErrorAction Stop } |
+                Should -Not -Throw
+        }
+
+        It 'Should list SDN subnets (Get-PveSdnSubnet)' {
+            if (Skip-IfNoTarget) { return }
+            if ($script:SkipSdn) { Set-ItResult -Skipped -Because $script:SkipSdn; return }
+
+            $subnets = Get-PveSdnSubnet -Vnet 'pestervn'
+            $subnets | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should remove SDN subnet (Remove-PveSdnSubnet)' {
+            if (Skip-IfNoTarget) { return }
+            if ($script:SkipSdn) { Set-ItResult -Skipped -Because $script:SkipSdn; return }
+
+            { Remove-PveSdnSubnet -Vnet 'pestervn' -Subnet 'pestervn-10.99.0.0-24' `
+                -Confirm:$false -ErrorAction Stop } | Should -Not -Throw
+        }
+
+        It 'Should remove SDN VNet (Remove-PveSdnVnet)' {
+            if (Skip-IfNoTarget) { return }
+            if ($script:SkipSdn) { Set-ItResult -Skipped -Because $script:SkipSdn; return }
+
+            { Remove-PveSdnVnet -Vnet 'pestervn' -Confirm:$false -ErrorAction Stop } |
+                Should -Not -Throw
+        }
+
+        It 'Should remove SDN zone (Remove-PveSdnZone)' {
+            if (Skip-IfNoTarget) { return }
+            if ($script:SkipSdn) { Set-ItResult -Skipped -Because $script:SkipSdn; return }
+
+            { Remove-PveSdnZone -Zone 'pester-zone' -Confirm:$false -ErrorAction Stop } |
+                Should -Not -Throw
+        }
+    }
+
+    # -----------------------------------------------------------------------
     Context 'Templates' {
         It 'Should list templates' {
             if (Skip-IfNoTarget) { return }
@@ -631,6 +833,197 @@ Describe 'Integration Tests' -Tag 'Integration' {
             # Get-PveCloudInitConfig should not throw even if the VM has no cloud-init drive.
             { Get-PveCloudInitConfig -Node $script:Node -VmId $script:TestVmId -ErrorAction Stop } |
                 Should -Not -Throw
+        }
+
+        It 'Should regenerate cloud-init image (Invoke-PveCloudInitRegenerate)' {
+            if (Skip-IfNoLinuxVm) { return }
+
+            # The Linux VM has a cloud-init drive from provisioning
+            { Invoke-PveCloudInitRegenerate -Node $script:Node -VmId $script:LinuxVmId -Wait -ErrorAction Stop } |
+                Should -Not -Throw
+        }
+    }
+
+    # -----------------------------------------------------------------------
+    Context 'Containers' {
+        BeforeAll {
+            if ($null -eq $script:SkipReason) {
+                # Download a small Alpine LXC template
+                $templateUrl = 'http://download.proxmox.com/images/system/alpine-3.20-default_20240908_amd64.tar.xz'
+                try {
+                    Invoke-PveStorageDownload -Node $script:Node -Storage $script:Storage `
+                        -Url $templateUrl -Filename 'alpine-3.20-default_20240908_amd64.tar.xz' `
+                        -ContentType 'vztmpl' -Wait -ErrorAction Stop
+                } catch {
+                    # Template may already exist from a previous run or the Storage — Download context
+                }
+            }
+            $script:TestContainerId = $null
+        }
+
+        It 'Should list containers (Get-PveContainer)' {
+            if (Skip-IfNoTarget) { return }
+
+            # Zero containers is acceptable; just verify the cmdlet does not throw.
+            { Get-PveContainer -Node $script:Node -ErrorAction Stop } | Should -Not -Throw
+        }
+
+        It 'Should create a container (New-PveContainer)' {
+            if (Skip-IfNoTarget) { return }
+
+            $securePassword = ConvertTo-SecureString 'Pester12345!' -AsPlainText -Force
+
+            $task = New-PveContainer `
+                -Node          $script:Node `
+                -Hostname      'pester-ct' `
+                -Memory        128 `
+                -Cores         1 `
+                -RootFsStorage 'local-lvm' `
+                -RootFsSize    '1' `
+                -OsTemplate    "$($script:Storage):vztmpl/alpine-3.20-default_20240908_amd64.tar.xz" `
+                -Password      $securePassword `
+                -Bridge        'vmbr0' `
+                -Wait
+
+            $task | Should -Not -BeNullOrEmpty
+
+            # Retrieve the new container ID from the cluster
+            $ct = Get-PveContainer -Node $script:Node -Name 'pester-ct' |
+                Select-Object -First 1
+            $ct | Should -Not -BeNullOrEmpty
+
+            $script:TestContainerId = $ct.VmId
+            $script:CreatedContainerIds.Add($ct.VmId)
+        }
+
+        It 'Should get container config (Get-PveContainerConfig)' {
+            if (Skip-IfNoTestContainer) { return }
+
+            $config = Get-PveContainerConfig -Node $script:Node -VmId $script:TestContainerId
+            $config | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should update container config (Set-PveContainerConfig)' {
+            if (Skip-IfNoTestContainer) { return }
+
+            { Set-PveContainerConfig -Node $script:Node -VmId $script:TestContainerId `
+                -Description 'Updated by Pester integration test' `
+                -ErrorAction Stop } | Should -Not -Throw
+
+            $config = Get-PveContainerConfig -Node $script:Node -VmId $script:TestContainerId
+            $config.Description | Should -Be 'Updated by Pester integration test'
+        }
+
+        It 'Should start a container (Start-PveContainer)' {
+            if (Skip-IfNoTestContainer) { return }
+
+            $task = Start-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait
+            $task | Should -Not -BeNullOrEmpty
+
+            $ct = Get-PveContainer -Node $script:Node -VmId $script:TestContainerId
+            $ct.Status | Should -Be 'running'
+        }
+
+        It 'Should stop a container (Stop-PveContainer)' {
+            if (Skip-IfNoTestContainer) { return }
+
+            $task = Stop-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait -Confirm:$false
+            $task | Should -Not -BeNullOrEmpty
+
+            $ct = Get-PveContainer -Node $script:Node -VmId $script:TestContainerId
+            $ct.Status | Should -Be 'stopped'
+        }
+
+        It 'Should restart a container (Restart-PveContainer)' {
+            if (Skip-IfNoTestContainer) { return }
+
+            # Start first so we can restart
+            Start-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait | Out-Null
+
+            $task = Restart-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait
+            $task | Should -Not -BeNullOrEmpty
+
+            $ct = Get-PveContainer -Node $script:Node -VmId $script:TestContainerId
+            $ct.Status | Should -Be 'running'
+
+            # Stop for subsequent tests
+            Stop-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait -Confirm:$false | Out-Null
+        }
+
+        It 'Should clone a container (Copy-PveContainer)' {
+            if (Skip-IfNoTestContainer) { return }
+
+            $cloneId = $script:TestContainerId + 1000
+
+            $task = Copy-PveContainer `
+                -SourceNode $script:Node `
+                -VmId       $script:TestContainerId `
+                -NewVmId    $cloneId `
+                -NewName    'pester-clone-ct' `
+                -Full `
+                -Wait
+
+            $task | Should -Not -BeNullOrEmpty
+
+            $cloned = Get-PveContainer -Node $script:Node -Name 'pester-clone-ct' |
+                Select-Object -First 1
+            $cloned | Should -Not -BeNullOrEmpty
+
+            $script:CreatedContainerIds.Add($cloned.VmId)
+        }
+    }
+
+    # -----------------------------------------------------------------------
+    Context 'Container Snapshots' {
+        It 'Should create a container snapshot (New-PveContainerSnapshot)' {
+            if (Skip-IfNoTestContainer) { return }
+
+            # Ensure container is stopped
+            $ct = Get-PveContainer -Node $script:Node -VmId $script:TestContainerId
+            if ($ct.Status -eq 'running') {
+                Stop-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait -Confirm:$false | Out-Null
+            }
+
+            $task = New-PveContainerSnapshot `
+                -Node        $script:Node `
+                -VmId        $script:TestContainerId `
+                -Name        'pester-ct-snap' `
+                -Description 'Created by Pester integration test' `
+                -Wait
+
+            $task | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should list container snapshots (Get-PveContainerSnapshot)' {
+            if (Skip-IfNoTestContainer) { return }
+
+            $snapshots = Get-PveContainerSnapshot -Node $script:Node -VmId $script:TestContainerId
+            $snap = $snapshots | Where-Object { $_.Name -eq 'pester-ct-snap' }
+            $snap | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should restore a container snapshot (Restore-PveContainerSnapshot)' {
+            if (Skip-IfNoTestContainer) { return }
+
+            { Restore-PveContainerSnapshot `
+                -Node    $script:Node `
+                -VmId    $script:TestContainerId `
+                -Name    'pester-ct-snap' `
+                -Confirm:$false `
+                -Wait } | Should -Not -Throw
+        }
+
+        It 'Should remove a container snapshot (Remove-PveContainerSnapshot)' {
+            if (Skip-IfNoTestContainer) { return }
+
+            $task = Remove-PveContainerSnapshot `
+                -Node    $script:Node `
+                -VmId    $script:TestContainerId `
+                -Name    'pester-ct-snap' `
+                -Confirm:$false `
+                -Wait
+
+            $task | Should -Not -BeNullOrEmpty
         }
     }
 
@@ -799,6 +1192,28 @@ Describe 'Integration Tests' -Tag 'Integration' {
     }
 
     # -----------------------------------------------------------------------
+    Context 'OVA Import' {
+        It 'Should import an OVA as a VM (Import-PveOva)' {
+            if (Skip-IfNoTarget) { return }
+            if (-not $script:OvaPath -or -not (Test-Path $script:OvaPath)) {
+                Set-ItResult -Skipped -Because 'PVETEST_OVA_PATH not set or file not found'
+                return
+            }
+
+            $vm = Import-PveOva -Node $script:Node -Storage $script:Storage `
+                -Path $script:OvaPath -TargetStorage 'local-lvm' `
+                -Name 'pester-ova-vm' -Wait
+
+            $vm | Should -Not -BeNullOrEmpty
+            $script:CreatedVmIds.Add($vm.VmId)
+
+            # Verify the VM exists and has the right name
+            $found = Get-PveVm -Node $script:Node -Name 'pester-ova-vm' | Select-Object -First 1
+            $found | Should -Not -BeNullOrEmpty
+        }
+    }
+
+    # -----------------------------------------------------------------------
     Context 'Templates — Convert and Clone' {
         It 'Should convert the Linux VM to a template' {
             if (Skip-IfNoLinuxVm) { return }
@@ -844,6 +1259,16 @@ Describe 'Integration Tests' -Tag 'Integration' {
             # Track for cleanup
             $script:CreatedVmIds.Add($cloned.VmId)
         }
+
+        It 'Should remove a template (Remove-PveTemplate)' {
+            if (Skip-IfNoLinuxVm) { return }
+
+            { Remove-PveTemplate -Node $script:Node -VmId $script:LinuxVmId `
+                -Confirm:$false -ErrorAction Stop } | Should -Not -Throw
+
+            $script:CreatedVmIds.Remove($script:LinuxVmId) | Out-Null
+            $script:LinuxVmId = $null
+        }
     }
 
     # -----------------------------------------------------------------------
@@ -867,6 +1292,21 @@ Describe 'Integration Tests' -Tag 'Integration' {
 
             $script:CreatedVmIds.Remove($script:TestVmId) | Out-Null
             $script:TestVmId = $null
+        }
+    }
+
+    # -----------------------------------------------------------------------
+    Context 'Disconnect' {
+        It 'Should disconnect from PVE server (Disconnect-PveServer)' {
+            if (Skip-IfNoTarget) { return }
+
+            { Disconnect-PveServer -ErrorAction Stop } | Should -Not -Throw
+        }
+
+        It 'Should fail commands after disconnect' {
+            if (Skip-IfNoTarget) { return }
+
+            { Get-PveNode -ErrorAction Stop } | Should -Throw '*No active Proxmox VE session*'
         }
     }
 }

@@ -285,7 +285,9 @@ jobs:
             "${PVE_PASSWORD}" \
             "${RUNNER_TEMP}")
           CLOUD_IMAGE_PATH=$(echo "$OUTPUT" | grep "^CLOUD_IMAGE_PATH=" | cut -d= -f2)
+          OVA_PATH=$(echo "$OUTPUT" | grep "^OVA_PATH=" | cut -d= -f2)
           echo "cloud_image_path=${CLOUD_IMAGE_PATH}" >> "$GITHUB_OUTPUT"
+          echo "ova_path=${OVA_PATH}" >> "$GITHUB_OUTPUT"
 
       # ── Run tests ─────────────────────────────────────────────────────
 
@@ -304,6 +306,7 @@ jobs:
           PVETEST_PVE_VERSION: ${{ matrix.pve_version }}
           PVETEST_PASSWORD: ${{ env.PVE_PASSWORD }}
           PVETEST_CLOUD_IMAGE_PATH: ${{ steps.test_env.outputs.cloud_image_path }}
+          PVETEST_OVA_PATH: ${{ steps.test_env.outputs.ova_path }}
         run: |
           $env:PVETEST_ISO_PATH = Join-Path $env:RUNNER_TEMP "pvetest.iso"
           Import-Module Pester -MinimumVersion 5.0
