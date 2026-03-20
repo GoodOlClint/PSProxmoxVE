@@ -25,6 +25,7 @@
   <ItemGroup>
     <None Include="PSProxmoxVE.psd1" CopyToOutputDirectory="PreserveNewest" />
     <None Include="PSProxmoxVE.format.ps1xml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="PSProxmoxVE.dll-Help.xml" CopyToOutputDirectory="PreserveNewest" Condition="Exists('PSProxmoxVE.dll-Help.xml')" />
   </ItemGroup>
 
 </Project>
