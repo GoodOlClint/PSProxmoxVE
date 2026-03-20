@@ -458,31 +458,8 @@ Describe 'Integration Tests' -Tag 'Integration' {
 
     # -----------------------------------------------------------------------
     Context 'VM — Suspend / Resume / Resize' {
-        It 'Should suspend and resume a VM' {
-            if (Skip-IfNoTestVm) { return }
-
-            # Start the VM
-            Start-PveVm -Node $script:Node -VmId $script:TestVmId -Wait | Out-Null
-
-            # Suspend — sends QMP stop to QEMU
-            { Suspend-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -ErrorAction Stop } |
-                Should -Not -Throw
-
-            Start-Sleep -Seconds 3
-            $vm = Get-PveVm -Node $script:Node | Where-Object { $_.VmId -eq $script:TestVmId }
-            $vm.Status | Should -Be 'paused'
-
-            # Resume — sends QMP cont to QEMU
-            { Resume-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -ErrorAction Stop } |
-                Should -Not -Throw
-
-            Start-Sleep -Seconds 2
-            $vm = Get-PveVm -Node $script:Node | Where-Object { $_.VmId -eq $script:TestVmId }
-            $vm.Status | Should -Be 'running'
-
-            # Clean up — stop
-            Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -Confirm:$false | Out-Null
-        }
+        # Suspend/Resume is tested on the Linux VM (Guest Agent VM — Lifecycle)
+        # because an empty VM with no OS may not reliably transition to 'paused'.
 
         It 'Should resize a VM disk (Resize-PveVmDisk)' {
             if (Skip-IfNoTestVm) { return }
@@ -796,7 +773,8 @@ Describe 'Integration Tests' -Tag 'Integration' {
             if (Skip-IfNoTarget) { return }
             if ($script:SkipSdn) { Set-ItResult -Skipped -Because $script:SkipSdn; return }
 
-            { Remove-PveSdnSubnet -Vnet 'pestervn' -Subnet '10.99.0.0/24' `
+            # PVE stores subnet IDs in the format: {vnet}-{ip}-{prefix}
+            { Remove-PveSdnSubnet -Vnet 'pestervn' -Subnet 'pestervn-10.99.0.0-24' `
                 -Confirm:$false -ErrorAction Stop } | Should -Not -Throw
         }
 
@@ -913,7 +891,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
                 -ErrorAction Stop } | Should -Not -Throw
 
             $config = Get-PveContainerConfig -Node $script:Node -VmId $script:TestContainerId
-            $config.Description | Should -Be 'Updated by Pester integration test'
+            $config.Description.Trim() | Should -Be 'Updated by Pester integration test'
         }
 
         It 'Should start a container (Start-PveContainer)' {
@@ -1165,6 +1143,28 @@ Describe 'Integration Tests' -Tag 'Integration' {
             $vm = Get-PveVm -Node $script:Node |
                 Where-Object { $_.VmId -eq $script:LinuxVmId }
             $vm | Should -Not -BeNullOrEmpty
+            $vm.Status | Should -Be 'running'
+        }
+
+        It 'Should suspend and resume a running VM (Suspend-PveVm / Resume-PveVm)' {
+            if (Skip-IfNoLinuxVm) { return }
+
+            # Suspend — sends QMP stop
+            { Suspend-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -ErrorAction Stop } |
+                Should -Not -Throw
+
+            Start-Sleep -Seconds 3
+            $vm = Get-PveVm -Node $script:Node |
+                Where-Object { $_.VmId -eq $script:LinuxVmId }
+            $vm.Status | Should -Be 'paused'
+
+            # Resume — sends QMP cont
+            { Resume-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -ErrorAction Stop } |
+                Should -Not -Throw
+
+            Start-Sleep -Seconds 5
+            $vm = Get-PveVm -Node $script:Node |
+                Where-Object { $_.VmId -eq $script:LinuxVmId }
             $vm.Status | Should -Be 'running'
         }
 

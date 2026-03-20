@@ -46,11 +46,11 @@ public class PveSdnSubnet
     public string? DnsZonePrefix { get; set; }
 
     /// <summary>
-    /// The DHCP range configuration for automatic IP assignment.
+    /// The DHCP range configurations for automatic IP assignment.
     /// </summary>
     [JsonPropertyName("dhcp-range")]
     [JsonProperty("dhcp-range")]
-    public string? DhcpRange { get; set; }
+    public string[]? DhcpRanges { get; set; }
 
     /// <summary>
     /// The subnet type identifier used internally by PVE.

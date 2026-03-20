@@ -63,8 +63,8 @@ if [ ! -f "${OVA_PATH}" ]; then
     echo "Creating minimal test OVA..."
     OVA_TMPDIR=$(mktemp -d)
 
-    # Create a 1MB raw disk image and convert to vmdk-stream (flat)
-    dd if=/dev/zero of="${OVA_TMPDIR}/test-disk.vmdk" bs=1M count=1 2>/dev/null
+    # Create a minimal valid sparse VMDK using qemu-img
+    qemu-img create -f vmdk -o subformat=streamOptimized "${OVA_TMPDIR}/test-disk.vmdk" 64M 2>/dev/null
 
     # Create OVF descriptor
     cat > "${OVA_TMPDIR}/test-appliance.ovf" <<'OVF'

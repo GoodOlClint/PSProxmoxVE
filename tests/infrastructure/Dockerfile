@@ -44,6 +44,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     powershell \
     terraform \
     proxmox-auto-install-assistant \
+    qemu-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Install Pester ────────────────────────────────────────────────────
@@ -58,6 +59,7 @@ RUN echo "=== Tool verification ===" && \
     proxmox-auto-install-assistant --version && \
     sshpass -V | head -1 && \
     xorriso --version 2>&1 | head -1 && \
+    qemu-img --version | head -1 && \
     curl --version | head -1 && \
     jq --version && \
     python3 --version && \
