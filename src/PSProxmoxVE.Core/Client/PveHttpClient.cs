@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
@@ -387,14 +388,20 @@ namespace PSProxmoxVE.Core.Client
             return body.Length > 512 ? body.Substring(0, 512) + "..." : body;
         }
 
-        /// <summary>Generates a random 32-character alphanumeric boundary string.</summary>
+        /// <summary>Generates a random 32-character alphanumeric boundary string using a cryptographic RNG.</summary>
         private static string GenerateBoundary()
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-            var rng = new Random();
+            var bytes = new byte[32];
+#if NET48 || NETSTANDARD2_0
+            using (var rng = RandomNumberGenerator.Create())
+                rng.GetBytes(bytes);
+#else
+            RandomNumberGenerator.Fill(bytes);
+#endif
             var sb = new StringBuilder(32);
             for (int i = 0; i < 32; i++)
-                sb.Append(chars[rng.Next(chars.Length)]);
+                sb.Append(chars[bytes[i] % chars.Length]);
             return sb.ToString();
         }
 
