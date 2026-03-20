@@ -238,6 +238,7 @@ SDN management requires Proxmox VE 8.0 or later. Connected server is version 7.4
 | `Stop-PveContainer` | Stop a container |
 | `Restart-PveContainer` | Restart a container |
 | `Copy-PveContainer` | Clone a container |
+| `Move-PveContainer` | Migrate a container to another node |
 | `Get-PveContainerConfig` | Get container configuration |
 | `Set-PveContainerConfig` | Modify container configuration |
 | `Get-PveContainerSnapshot` | List container snapshots |

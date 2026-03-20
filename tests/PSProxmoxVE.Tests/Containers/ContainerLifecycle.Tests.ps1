@@ -18,7 +18,7 @@ BeforeAll {
                          'Start-PveContainer', 'Stop-PveContainer',
                          'Restart-PveContainer',
                          'Get-PveContainerConfig', 'Set-PveContainerConfig',
-                         'Copy-PveContainer')) {
+                         'Copy-PveContainer', 'Move-PveContainer')) {
         $script:Availability[$name] = $null -ne (Get-Command $name -ErrorAction SilentlyContinue)
     }
 
@@ -289,6 +289,67 @@ Describe 'Restart-PveContainer' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'Restart-PveContainer'
             { Restart-PveContainer -Node 'pve-node1' -VmId 200 -ErrorAction Stop } |
+                Should -Throw '*No active Proxmox VE session*'
+        }
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Move-PveContainer
+# ---------------------------------------------------------------------------
+Describe 'Move-PveContainer' {
+
+    BeforeAll { $script:Cmd = Get-Command 'Move-PveContainer' -ErrorAction SilentlyContinue }
+
+    Context 'Command existence' {
+        It 'Should be available after module import' {
+            Skip-IfMissing 'Move-PveContainer'
+            $script:Cmd | Should -Not -BeNullOrEmpty
+        }
+    }
+
+    Context 'Parameter metadata' {
+        It 'Node should be Mandatory' {
+            Skip-IfMissing 'Move-PveContainer'
+            $isMandatory = $script:Cmd.Parameters['Node'].ParameterSets.Values |
+                Where-Object { $_.IsMandatory }
+            $isMandatory | Should -Not -BeNullOrEmpty
+        }
+
+        It 'VmId should be Mandatory' {
+            Skip-IfMissing 'Move-PveContainer'
+            $isMandatory = $script:Cmd.Parameters['VmId'].ParameterSets.Values |
+                Where-Object { $_.IsMandatory }
+            $isMandatory | Should -Not -BeNullOrEmpty
+        }
+
+        It 'TargetNode should be Mandatory' {
+            Skip-IfMissing 'Move-PveContainer'
+            $isMandatory = $script:Cmd.Parameters['TargetNode'].ParameterSets.Values |
+                Where-Object { $_.IsMandatory }
+            $isMandatory | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should have Online switch parameter' {
+            Skip-IfMissing 'Move-PveContainer'
+            $script:Cmd.Parameters.ContainsKey('Online') | Should -BeTrue
+        }
+
+        It 'Should have Wait switch parameter' {
+            Skip-IfMissing 'Move-PveContainer'
+            $script:Cmd.Parameters.ContainsKey('Wait') | Should -BeTrue
+        }
+
+        It 'Should support ShouldProcess' {
+            Skip-IfMissing 'Move-PveContainer'
+            $script:Cmd.Parameters.ContainsKey('WhatIf') | Should -BeTrue
+        }
+    }
+
+    Context 'Without active session' {
+        It 'Should throw when no session is active' {
+            Skip-IfMissing 'Move-PveContainer'
+            { Move-PveContainer -Node 'pve-node1' -VmId 200 -TargetNode 'pve-node2' -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
