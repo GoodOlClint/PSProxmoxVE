@@ -17,11 +17,11 @@ namespace PSProxmoxVE.Cmdlets.Network
     public class GetPveSdnVnetCmdlet : PveCmdletBase
     {
         /// <summary>Filter VNets to a specific zone.</summary>
-        [Parameter(Mandatory = false, Position = 0)]
+        [Parameter(Mandatory = false, Position = 0, HelpMessage = "The SDN zone name.")]
         public string? Zone { get; set; }
 
         /// <summary>Optional VNet identifier to retrieve a specific VNet.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "The SDN VNet name.")]
         public string? Vnet { get; set; }
 
         protected override void ProcessRecord()
@@ -29,6 +29,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
+            WriteVerbose("Getting SDN VNets...");
             var json = client.GetAsync("cluster/sdn/vnets").GetAwaiter().GetResult();
             var root = JObject.Parse(json);
             var data = root["data"] as JArray ?? new JArray();

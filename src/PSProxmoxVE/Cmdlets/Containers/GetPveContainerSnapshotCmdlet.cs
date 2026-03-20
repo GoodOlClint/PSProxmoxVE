@@ -3,27 +3,27 @@ using System.Management.Automation;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
 
-namespace PSProxmoxVE.Cmdlets.Snapshots
+namespace PSProxmoxVE.Cmdlets.Containers
 {
     /// <summary>
-    /// <para type="synopsis">Lists snapshots for a Proxmox VE virtual machine.</para>
+    /// <para type="synopsis">Lists snapshots for a Proxmox VE container.</para>
     /// <para type="description">
-    /// Returns all snapshots for the specified VM on the given node.
-    /// VmId can be piped from Get-PveVm.
+    /// Returns all snapshots for the specified LXC container on the given node.
+    /// VmId can be piped from Get-PveContainer.
     /// </para>
     /// </summary>
-    [Cmdlet(VerbsCommon.Get, "PveSnapshot")]
+    [Cmdlet(VerbsCommon.Get, "PveContainerSnapshot")]
     [OutputType(typeof(PveSnapshot))]
-    public class GetPveSnapshotCmdlet : PveCmdletBase
+    public class GetPveContainerSnapshotCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>
-        /// The VM identifier. Accepts pipeline input from Get-PveVm (PveVm.VmId).
+        /// The container identifier. Accepts pipeline input from Get-PveContainer (PveContainer.VmId).
         /// </summary>
-        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true, HelpMessage = "The VM identifier.")]
+        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true, HelpMessage = "The container identifier.")]
         [ValidateRange(100, 999999999)]
         public int VmId { get; set; }
 
@@ -35,10 +35,10 @@ namespace PSProxmoxVE.Cmdlets.Snapshots
         {
             var session = GetSession();
 
-            WriteVerbose($"Getting snapshots for VM {VmId} on node '{Node}'...");
-            var service = new SnapshotService();
+            WriteVerbose($"Getting snapshots for container {VmId} on node '{Node}'...");
+            var service = new ContainerService();
 
-            var snapshots = service.GetSnapshots(session, Node, VmId);
+            var snapshots = service.GetContainerSnapshots(session, Node, VmId);
 
             if (!string.IsNullOrEmpty(Name))
                 snapshots = snapshots.Where(s => s.Name == Name).ToArray();

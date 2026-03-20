@@ -16,14 +16,14 @@ namespace PSProxmoxVE.Cmdlets.Users
     public class NewPveRoleCmdlet : PveCmdletBase
     {
         /// <summary>The role identifier/name.</summary>
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The role identifier.")]
         public string RoleId { get; set; } = string.Empty;
 
         /// <summary>
         /// Comma-separated list of privileges to grant this role
         /// (e.g., "VM.Allocate,VM.Config.CPU,VM.Config.Memory").
         /// </summary>
-        [Parameter(Mandatory = false, Position = 1)]
+        [Parameter(Mandatory = false, Position = 1, HelpMessage = "Comma-separated list of privileges.")]
         public string? Privileges { get; set; }
 
         protected override void ProcessRecord()
@@ -34,6 +34,7 @@ namespace PSProxmoxVE.Cmdlets.Users
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
+            WriteVerbose($"Creating role '{RoleId}'...");
             var data = new Dictionary<string, string>
             {
                 ["roleid"] = RoleId

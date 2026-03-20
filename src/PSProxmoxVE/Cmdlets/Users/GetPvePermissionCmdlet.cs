@@ -17,16 +17,18 @@ namespace PSProxmoxVE.Cmdlets.Users
     public class GetPvePermissionCmdlet : PveCmdletBase
     {
         /// <summary>Filter results to a specific resource path (e.g., "/", "/vms/100").</summary>
-        [Parameter(Mandatory = false, Position = 0)]
+        [Parameter(Mandatory = false, Position = 0, HelpMessage = "Filter by resource path (e.g. /, /vms/100).")]
         public string? Path { get; set; }
 
         /// <summary>Filter results to a specific user or group ID.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "The user ID in user@realm format.")]
         public string? UserId { get; set; }
 
         protected override void ProcessRecord()
         {
             var session = GetSession();
+
+            WriteVerbose("Getting permissions...");
             var service = new UserService();
 
             var permissions = service.GetPermissions(session);

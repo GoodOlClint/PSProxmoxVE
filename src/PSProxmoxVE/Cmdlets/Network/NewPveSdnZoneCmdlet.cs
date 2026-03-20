@@ -14,40 +14,40 @@ namespace PSProxmoxVE.Cmdlets.Network
     public class NewPveSdnZoneCmdlet : PveCmdletBase
     {
         /// <summary>The zone identifier (alphanumeric, hyphens allowed).</summary>
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The SDN zone name.")]
         public string Zone { get; set; } = string.Empty;
 
         /// <summary>The zone type.</summary>
-        [Parameter(Mandatory = true, Position = 1)]
+        [Parameter(Mandatory = true, Position = 1, HelpMessage = "The zone type (e.g. vlan, vxlan, evpn, simple).")]
         [ValidateSet("vlan", "vxlan", "evpn", "simple", "qinq", IgnoreCase = true)]
         public string Type { get; set; } = string.Empty;
 
         /// <summary>VXLAN peer list or multicast address (for vxlan/evpn types).</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "VXLAN peer list or multicast address.")]
         public string? Peers { get; set; }
 
         /// <summary>Bridge interface this zone attaches to (for vlan/qinq types).</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Bridge interface for this zone.")]
         public string? Bridge { get; set; }
 
         /// <summary>MTU override for this zone.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "MTU override for this zone.")]
         public int? Mtu { get; set; }
 
         /// <summary>DNS server for automatic DNS registration.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "DNS server for automatic registration.")]
         public string? Dns { get; set; }
 
         /// <summary>Reverse DNS server.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Reverse DNS server.")]
         public string? ReverseDns { get; set; }
 
         /// <summary>DNS zone name for registration.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "DNS zone name for registration.")]
         public string? DnsZone { get; set; }
 
         /// <summary>IPAM plugin to use for this zone.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "IPAM plugin to use.")]
         public string? Ipam { get; set; }
 
         protected override void ProcessRecord()
@@ -58,6 +58,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
+            WriteVerbose($"Creating SDN zone '{Zone}'...");
             var data = new Dictionary<string, string>
             {
                 ["zone"] = Zone,

@@ -21,17 +21,17 @@ namespace PSProxmoxVE.Cmdlets.Connection
         private const string ParameterSetApiToken   = "ApiToken";
 
         /// <summary>Hostname or IP address of the Proxmox VE server.</summary>
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "Hostname or IP of the Proxmox VE server.")]
         [ValidateNotNullOrEmpty]
         public string Server { get; set; } = string.Empty;
 
         /// <summary>API port. Defaults to 8006.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "API port. Defaults to 8006.")]
         [ValidateRange(1, 65535)]
         public int Port { get; set; } = 8006;
 
         /// <summary>Username and password credential. Username must include a realm, e.g. root@pam.</summary>
-        [Parameter(Mandatory = true, ParameterSetName = ParameterSetCredential)]
+        [Parameter(Mandatory = true, ParameterSetName = ParameterSetCredential, HelpMessage = "Username and password. Username must include realm (e.g. root@pam).")]
         [ValidateNotNull]
         public PSCredential? Credential { get; set; }
 
@@ -39,16 +39,16 @@ namespace PSProxmoxVE.Cmdlets.Connection
         /// Proxmox VE API token in the format USER@REALM!TOKENID=UUID,
         /// e.g. root@pam!mytoken=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
         /// </summary>
-        [Parameter(Mandatory = true, ParameterSetName = ParameterSetApiToken)]
+        [Parameter(Mandatory = true, ParameterSetName = ParameterSetApiToken, HelpMessage = "API token in USER@REALM!TOKENID=UUID format.")]
         [ValidateNotNullOrEmpty]
         public string? ApiToken { get; set; }
 
         /// <summary>When specified, skips TLS certificate validation for the server.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Skip TLS certificate validation.")]
         public SwitchParameter SkipCertificateCheck { get; set; }
 
         /// <summary>When specified, writes the resulting PveSession object to the pipeline.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Output the session object to the pipeline.")]
         public SwitchParameter PassThru { get; set; }
 
         protected override void ProcessRecord()
@@ -115,6 +115,9 @@ namespace PSProxmoxVE.Cmdlets.Connection
             }
 
             ModuleState.ActiveSession = session;
+
+            if (SkipCertificateCheck.IsPresent)
+                WriteWarning("TLS certificate validation is disabled for this session. Connections are susceptible to man-in-the-middle attacks. Use only in trusted networks or test environments.");
 
             WriteVerbose($"Connected to {Server}:{Port} as {session.AuthMode} (PVE {session.ServerVersion}).");
 

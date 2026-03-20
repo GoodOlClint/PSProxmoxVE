@@ -21,27 +21,27 @@ namespace PSProxmoxVE.Cmdlets.Tasks
     public class WaitPveTaskCmdlet : PveCmdletBase
     {
         /// <summary>The node on which the task is running.</summary>
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>
         /// The UPID of the task to wait for. Accepts pipeline input from PveTask (PveTask.Upid).
         /// </summary>
-        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true, HelpMessage = "The task UPID.")]
         public string Upid { get; set; } = string.Empty;
 
         /// <summary>
         /// Maximum time to wait for the task. Defaults to no timeout.
         /// Example: -Timeout (New-TimeSpan -Minutes 10)
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Maximum time to wait for the task.")]
         public TimeSpan? Timeout { get; set; }
 
         /// <summary>
         /// How frequently to poll the task status. Defaults to 2 seconds.
         /// Example: -PollInterval (New-TimeSpan -Seconds 5)
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "How often to poll task status.")]
         public TimeSpan? PollInterval { get; set; }
 
         protected override void ProcessRecord()

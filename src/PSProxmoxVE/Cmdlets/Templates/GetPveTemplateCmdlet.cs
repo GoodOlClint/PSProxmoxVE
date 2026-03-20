@@ -17,11 +17,11 @@ namespace PSProxmoxVE.Cmdlets.Templates
     public class GetPveTemplateCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name. When omitted, queries all nodes in the cluster.</summary>
-        [Parameter(Mandatory = false, Position = 0)]
+        [Parameter(Mandatory = false, Position = 0, HelpMessage = "The PVE node name.")]
         public string? Node { get; set; }
 
         /// <summary>Filter results by template name. Supports wildcard (*) matching.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Filter by template name (supports wildcards).")]
         public string? Name { get; set; }
 
         protected override void ProcessRecord()
@@ -29,6 +29,7 @@ namespace PSProxmoxVE.Cmdlets.Templates
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
+            WriteVerbose("Getting templates...");
             var nodesToQuery = new System.Collections.Generic.List<string>();
 
             if (!string.IsNullOrEmpty(Node))

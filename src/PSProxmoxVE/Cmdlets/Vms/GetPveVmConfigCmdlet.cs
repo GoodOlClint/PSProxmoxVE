@@ -20,13 +20,14 @@ namespace PSProxmoxVE.Cmdlets.Vms
         /// The node on which the VM resides. Accepts pipeline input from a PveNode object's Name property.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>
         /// <para type="description">The ID of the VM whose configuration to retrieve. Accepts pipeline input.</para>
         /// </summary>
-        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true, HelpMessage = "The VM identifier.")]
+        [ValidateRange(100, 999999999)]
         public int VmId { get; set; }
 
         protected override void ProcessRecord()
@@ -34,6 +35,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
             var session = GetSession();
             var vmService = new VmService();
 
+            WriteVerbose($"Getting config for VM {VmId} on node '{Node}'...");
             var config = vmService.GetVmConfig(session, Node, VmId);
             WriteObject(config);
         }

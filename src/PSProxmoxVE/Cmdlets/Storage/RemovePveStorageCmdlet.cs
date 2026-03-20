@@ -16,7 +16,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
     public class RemovePveStorageCmdlet : PveCmdletBase
     {
         /// <summary>The storage identifier to remove.</summary>
-        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The storage pool name.")]
         public string Storage { get; set; } = string.Empty;
 
         protected override void ProcessRecord()
@@ -27,6 +27,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
+            WriteVerbose($"Removing storage '{Storage}'...");
             client.DeleteAsync($"storage/{Storage}").GetAwaiter().GetResult();
         }
     }

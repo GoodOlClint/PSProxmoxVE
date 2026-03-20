@@ -20,16 +20,16 @@ namespace PSProxmoxVE.Cmdlets.Network
         /// <summary>
         /// The Proxmox VE node name. Accepts pipeline input from Get-PveNode (PveNode.Name).
         /// </summary>
-        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The PVE node name.")]
         [Alias("NodeName")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>Filter results to this specific interface name (e.g., "vmbr0").</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "The network interface name.")]
         public string? Iface { get; set; }
 
         /// <summary>Filter by interface type (e.g., "bridge", "bond", "eth", "vlan").</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Filter by interface type (e.g. bridge, bond).")]
         [ValidateSet("bridge", "bond", "eth", "alias", "vlan", "OVSBridge", "OVSBond",
                      "OVSPort", "OVSIntPort", "any_bridge", "any_local_bridge", IgnoreCase = true)]
         public string? Type { get; set; }
@@ -39,6 +39,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
+            WriteVerbose($"Getting network interfaces on node '{Node}'...");
             var resource = $"nodes/{Node}/network";
             if (!string.IsNullOrEmpty(Type))
                 resource += $"?type={Uri.EscapeDataString(Type)}";

@@ -14,7 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Users
     public class RemovePveRoleCmdlet : PveCmdletBase
     {
         /// <summary>The role identifier to remove.</summary>
-        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The role identifier.")]
         public string RoleId { get; set; } = string.Empty;
 
         protected override void ProcessRecord()
@@ -24,6 +24,8 @@ namespace PSProxmoxVE.Cmdlets.Users
 
             var session = GetSession();
             var service = new UserService();
+
+            WriteVerbose($"Removing role '{RoleId}'...");
             service.RemoveRole(session, RoleId);
         }
     }

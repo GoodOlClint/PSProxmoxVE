@@ -18,61 +18,61 @@ namespace PSProxmoxVE.Cmdlets.Storage
     public class NewPveStorageCmdlet : PveCmdletBase
     {
         /// <summary>The unique storage identifier/name.</summary>
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The storage pool name.")]
         public string Storage { get; set; } = string.Empty;
 
         /// <summary>The storage type (e.g., "dir", "nfs", "lvm", "zfspool", "cephfs", "rbd").</summary>
-        [Parameter(Mandatory = true, Position = 1)]
+        [Parameter(Mandatory = true, Position = 1, HelpMessage = "The storage type (e.g. dir, nfs, lvm, zfspool).")]
         [ValidateSet("dir", "nfs", "lvm", "lvmthin", "zfspool", "zfs", "cephfs", "rbd",
                      "iscsi", "iscsidirect", "glusterfs", "cifs", "pbs", IgnoreCase = true)]
         public string Type { get; set; } = string.Empty;
 
         /// <summary>Comma-separated list of content types to support (e.g., "iso,vztmpl,backup").</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Comma-separated content types to support.")]
         public string? Content { get; set; }
 
         /// <summary>Base directory path (for "dir" type storages).</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Base directory path (for dir type).")]
         public string? Path { get; set; }
 
         /// <summary>NFS/CIFS server hostname or IP address.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "NFS/CIFS server hostname or IP.")]
         public string? Server { get; set; }
 
         /// <summary>NFS export path or CIFS share name.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "NFS export path or CIFS share name.")]
         public string? Export { get; set; }
 
         /// <summary>LVM volume group name (for "lvm"/"lvmthin" types).</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "LVM volume group name.")]
         public string? VgName { get; set; }
 
         /// <summary>LVM thin pool name (for "lvmthin" type).</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "LVM thin pool name.")]
         public string? ThinPool { get; set; }
 
         /// <summary>ZFS pool name (for "zfspool" type).</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "ZFS pool name.")]
         public string? Pool { get; set; }
 
         /// <summary>Ceph pool name (for "rbd"/"cephfs" types).</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Ceph pool name.")]
         public string? CephPool { get; set; }
 
         /// <summary>Monitor list for Ceph storages (comma-separated host:port pairs).</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Ceph monitor host list.")]
         public string? MonHost { get; set; }
 
         /// <summary>Whether this storage is shared across cluster nodes.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Storage is shared across cluster nodes.")]
         public SwitchParameter Shared { get; set; }
 
         /// <summary>Whether this storage is enabled. Defaults to enabled.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Create the storage in disabled state.")]
         public SwitchParameter Disable { get; set; }
 
         /// <summary>Limit nodes that can access this storage (comma-separated node names).</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Limit access to these nodes (comma-separated).")]
         public string? Nodes { get; set; }
 
         protected override void ProcessRecord()
@@ -83,6 +83,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
+            WriteVerbose($"Creating storage '{Storage}'...");
             var data = new Dictionary<string, string>
             {
                 ["storage"] = Storage,

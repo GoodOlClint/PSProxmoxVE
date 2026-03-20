@@ -11,31 +11,36 @@ namespace PSProxmoxVE.Cmdlets.Vms
     /// installed and running inside the VM.
     /// </para>
     /// </summary>
-    [Cmdlet(VerbsLifecycle.Invoke, "PveVmGuestExec")]
+    [Cmdlet(VerbsLifecycle.Invoke, "PveVmGuestExec", SupportsShouldProcess = true)]
     [OutputType(typeof(PSObject))]
     public sealed class InvokePveVmGuestExecCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>The VM identifier.</summary>
-        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true, HelpMessage = "The VM identifier.")]
+        [ValidateRange(100, 999999999)]
         public int VmId { get; set; }
 
         /// <summary>The command to execute inside the guest.</summary>
-        [Parameter(Mandatory = true, Position = 2)]
+        [Parameter(Mandatory = true, Position = 2, HelpMessage = "The command to execute inside the guest.")]
         public string Command { get; set; } = string.Empty;
 
         /// <summary>Optional arguments to pass to the command.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Arguments to pass to the command.")]
         public string[]? Args { get; set; }
 
         protected override void ProcessRecord()
         {
+            if (!ShouldProcess($"VM {VmId} on node '{Node}'", $"Execute guest command: {Command}"))
+                return;
+
             var session = GetSession();
             var service = new VmService();
 
+            WriteVerbose($"Executing command on VM {VmId} via guest agent...");
             var pid = service.ExecuteGuestCommand(session, Node, VmId, Command, Args);
 
             // Poll for completion

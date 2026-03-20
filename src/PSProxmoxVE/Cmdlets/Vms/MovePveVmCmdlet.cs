@@ -21,19 +21,20 @@ namespace PSProxmoxVE.Cmdlets.Vms
         /// The node on which the VM currently resides. Accepts pipeline input from a PveNode object's Name property.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>
         /// <para type="description">The ID of the VM to migrate. Accepts pipeline input.</para>
         /// </summary>
-        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true, HelpMessage = "The VM identifier.")]
+        [ValidateRange(100, 999999999)]
         public int VmId { get; set; }
 
         /// <summary>
         /// <para type="description">The destination node to migrate the VM to.</para>
         /// </summary>
-        [Parameter(Mandatory = true)]
+        [Parameter(Mandatory = true, HelpMessage = "The destination node for migration.")]
         public string TargetNode { get; set; } = string.Empty;
 
         /// <summary>
@@ -42,13 +43,13 @@ namespace PSProxmoxVE.Cmdlets.Vms
         /// Requires shared storage between the source and target nodes.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Perform live migration (VM stays running).")]
         public SwitchParameter Online { get; set; }
 
         /// <summary>
         /// <para type="description">When specified, waits for the migration task to complete before returning.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
         protected override void ProcessRecord()
@@ -59,6 +60,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
             var session = GetSession();
             var vmService = new VmService();
 
+            WriteVerbose($"Migrating VM {VmId} from '{Node}' to '{TargetNode}'...");
             var task = vmService.MigrateVm(session, Node, VmId, TargetNode, Online.IsPresent);
 
             if (Wait.IsPresent)

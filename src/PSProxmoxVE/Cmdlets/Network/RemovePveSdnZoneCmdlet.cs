@@ -14,7 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Network
     public class RemovePveSdnZoneCmdlet : PveCmdletBase
     {
         /// <summary>The zone identifier to remove.</summary>
-        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The SDN zone name.")]
         public string Zone { get; set; } = string.Empty;
 
         protected override void ProcessRecord()
@@ -25,6 +25,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
+            WriteVerbose($"Removing SDN zone '{Zone}'...");
             client.DeleteAsync($"cluster/sdn/zones/{Zone}").GetAwaiter().GetResult();
         }
     }

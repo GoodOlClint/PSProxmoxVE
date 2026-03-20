@@ -20,11 +20,11 @@ namespace PSProxmoxVE.Cmdlets.Users
         /// Filter results to a specific user ID or pattern (e.g., "admin@pam", "*@pve").
         /// Supports wildcard (*) matching.
         /// </summary>
-        [Parameter(Mandatory = false, Position = 0)]
+        [Parameter(Mandatory = false, Position = 0, HelpMessage = "The user ID in user@realm format.")]
         public string? UserId { get; set; }
 
         /// <summary>When specified, returns only enabled users.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Return only enabled users.")]
         [Alias("EnabledOnly")]
         public SwitchParameter Enabled { get; set; }
 
@@ -33,6 +33,7 @@ namespace PSProxmoxVE.Cmdlets.Users
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
+            WriteVerbose("Getting users...");
             var json = client.GetAsync("access/users").GetAwaiter().GetResult();
             var root = JObject.Parse(json);
             var data = root["data"] as JArray ?? new JArray();

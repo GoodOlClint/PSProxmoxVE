@@ -16,7 +16,7 @@ namespace PSProxmoxVE.Cmdlets.Network
     public class GetPveSdnZoneCmdlet : PveCmdletBase
     {
         /// <summary>Optional zone identifier to retrieve a specific zone.</summary>
-        [Parameter(Mandatory = false, Position = 0)]
+        [Parameter(Mandatory = false, Position = 0, HelpMessage = "The SDN zone name.")]
         public string? Zone { get; set; }
 
         protected override void ProcessRecord()
@@ -24,6 +24,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
+            WriteVerbose("Getting SDN zones...");
             var resource = "cluster/sdn/zones";
             var json = client.GetAsync(resource).GetAwaiter().GetResult();
             var root = JObject.Parse(json);

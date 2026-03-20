@@ -17,15 +17,16 @@ namespace PSProxmoxVE.Cmdlets.Templates
     public class NewPveTemplateCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>The VM identifier to convert. Accepts pipeline input from Get-PveVm (PveVm.VmId).</summary>
-        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true, HelpMessage = "The VM identifier.")]
+        [ValidateRange(100, 999999999)]
         public int VmId { get; set; }
 
         /// <summary>When specified, waits for the conversion task to complete before returning.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
         protected override void ProcessRecord()
@@ -34,6 +35,8 @@ namespace PSProxmoxVE.Cmdlets.Templates
 
             if (!ShouldProcess($"VM {VmId} on {Node}", "Convert to PVE Template (irreversible)"))
                 return;
+
+            WriteVerbose($"Converting VM {VmId} to template...");
             var service  = new TemplateService();
             var task     = service.CreateTemplate(session, Node, VmId);
 

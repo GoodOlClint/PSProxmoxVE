@@ -18,19 +18,20 @@ namespace PSProxmoxVE.Cmdlets.Templates
     public class RemovePveTemplateCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>The VM/template identifier to remove. Accepts pipeline input from Get-PveVm (PveVm.VmId).</summary>
-        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true, HelpMessage = "The VM identifier.")]
+        [ValidateRange(100, 999999999)]
         public int VmId { get; set; }
 
         /// <summary>When specified, also removes all associated backup files and jobs.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Remove all associated resources.")]
         public SwitchParameter Purge { get; set; }
 
         /// <summary>When specified, waits for the deletion task to complete before returning.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
         protected override void ProcessRecord()
@@ -40,6 +41,8 @@ namespace PSProxmoxVE.Cmdlets.Templates
 
             var session  = GetSession();
             var service  = new TemplateService();
+
+            WriteVerbose($"Removing template {VmId}...");
             var task     = service.RemoveTemplate(session, Node, VmId, Purge.IsPresent);
 
             if (Wait.IsPresent && !string.IsNullOrEmpty(task.Upid))

@@ -21,16 +21,18 @@ namespace PSProxmoxVE.Cmdlets.Users
         /// The user ID whose tokens to list, in "username@realm" format (e.g., "admin@pam").
         /// Accepts pipeline input from Get-PveUser (PveUser.UserId).
         /// </summary>
-        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The user ID in user@realm format.")]
         public string UserId { get; set; } = string.Empty;
 
         /// <summary>Filter to a specific token identifier (e.g., "automation").</summary>
-        [Parameter(Mandatory = false, Position = 1)]
+        [Parameter(Mandatory = false, Position = 1, HelpMessage = "The API token identifier.")]
         public string? TokenId { get; set; }
 
         protected override void ProcessRecord()
         {
             var session = GetSession();
+
+            WriteVerbose($"Getting API tokens for user '{UserId}'...");
             var service = new UserService();
             var tokens  = service.GetApiTokens(session, UserId);
 

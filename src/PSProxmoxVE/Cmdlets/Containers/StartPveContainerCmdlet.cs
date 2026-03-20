@@ -20,19 +20,20 @@ namespace PSProxmoxVE.Cmdlets.Containers
         /// The node on which the container resides. Accepts pipeline input from a PveNode object's Name property.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>
         /// <para type="description">The ID of the container to start. Accepts pipeline input.</para>
         /// </summary>
-        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true, HelpMessage = "The container identifier.")]
+        [ValidateRange(100, 999999999)]
         public int VmId { get; set; }
 
         /// <summary>
         /// <para type="description">When specified, waits for the start task to complete before returning.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
         protected override void ProcessRecord()
@@ -43,6 +44,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
             var session = GetSession();
             var containerService = new ContainerService();
 
+            WriteVerbose($"Starting container {VmId} on node '{Node}'...");
             var task = containerService.StartContainer(session, Node, VmId);
 
             if (Wait.IsPresent)

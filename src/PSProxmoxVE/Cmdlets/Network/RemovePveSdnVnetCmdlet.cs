@@ -13,7 +13,7 @@ namespace PSProxmoxVE.Cmdlets.Network
     public class RemovePveSdnVnetCmdlet : PveCmdletBase
     {
         /// <summary>The VNet identifier to remove.</summary>
-        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The SDN VNet name.")]
         public string Vnet { get; set; } = string.Empty;
 
         protected override void ProcessRecord()
@@ -24,6 +24,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
+            WriteVerbose($"Removing SDN VNet '{Vnet}'...");
             client.DeleteAsync($"cluster/sdn/vnets/{Vnet}").GetAwaiter().GetResult();
         }
     }

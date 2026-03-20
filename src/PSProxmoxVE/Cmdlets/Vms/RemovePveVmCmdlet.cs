@@ -22,13 +22,14 @@ namespace PSProxmoxVE.Cmdlets.Vms
         /// The node on which the VM resides. Accepts pipeline input from a PveNode object's Name property.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>
         /// <para type="description">The ID of the VM to remove. Accepts pipeline input.</para>
         /// </summary>
-        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true, HelpMessage = "The VM identifier.")]
+        [ValidateRange(100, 999999999)]
         public int VmId { get; set; }
 
         /// <summary>
@@ -36,7 +37,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
         /// When specified, also removes the VM from HA resource configuration and replication jobs.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Remove all associated resources.")]
         public SwitchParameter Purge { get; set; }
 
         /// <summary>
@@ -44,13 +45,13 @@ namespace PSProxmoxVE.Cmdlets.Vms
         /// When specified, bypasses locks and forces removal even if a lock is set on the VM.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Force the operation without additional checks.")]
         public SwitchParameter Force { get; set; }
 
         /// <summary>
         /// <para type="description">When specified, waits for the removal task to complete before returning.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
         protected override void ProcessRecord()
@@ -61,6 +62,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
             var session = GetSession();
             var vmService = new VmService();
 
+            WriteVerbose($"Removing VM {VmId} from node '{Node}'...");
             var task = vmService.RemoveVm(session, Node, VmId, Purge.IsPresent);
 
             if (Wait.IsPresent)

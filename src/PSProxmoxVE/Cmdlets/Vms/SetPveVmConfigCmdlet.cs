@@ -21,67 +21,68 @@ namespace PSProxmoxVE.Cmdlets.Vms
         /// The node on which the VM resides. Accepts pipeline input from a PveNode object's Name property.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>
         /// <para type="description">The ID of the VM to configure. Accepts pipeline input.</para>
         /// </summary>
-        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true, HelpMessage = "The VM identifier.")]
+        [ValidateRange(100, 999999999)]
         public int VmId { get; set; }
 
         /// <summary>
         /// <para type="description">Number of CPU cores per socket.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Number of CPU cores per socket.")]
         public int? Cores { get; set; }
 
         /// <summary>
         /// <para type="description">Number of CPU sockets.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Number of CPU sockets.")]
         public int? Sockets { get; set; }
 
         /// <summary>
         /// <para type="description">Memory size in MiB.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Memory size in MiB.")]
         public int? Memory { get; set; }
 
         /// <summary>
         /// <para type="description">Emulated CPU type (e.g., "host", "x86-64-v2-AES").</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Emulated CPU type (e.g. host, x86-64-v2-AES).")]
         public string? CpuType { get; set; }
 
         /// <summary>
         /// <para type="description">Human-readable description / notes for the VM.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Description or notes for the VM.")]
         public string? Description { get; set; }
 
         /// <summary>
         /// <para type="description">Semicolon-separated list of tags to assign to the VM.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Semicolon-separated list of tags.")]
         public string? Tags { get; set; }
 
         /// <summary>
         /// <para type="description">BIOS type: "seabios" or "ovmf".</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "BIOS type: seabios or ovmf.")]
         public string? Bios { get; set; }
 
         /// <summary>
         /// <para type="description">Emulated machine type (e.g., "q35", "i440fx").</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Emulated machine type (e.g. q35, i440fx).")]
         public string? Machine { get; set; }
 
         /// <summary>
         /// <para type="description">Guest OS type hint (e.g., "l26", "win10").</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Guest OS type hint (e.g. l26, win10).")]
         public string? OsType { get; set; }
 
         /// <summary>
@@ -91,7 +92,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
         /// Values are merged after named parameters and can override them.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Extra config keys as a hashtable.")]
         public Hashtable? AdditionalConfig { get; set; }
 
         /// <summary>
@@ -100,7 +101,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
         /// Maps to the PVE API "delete" parameter.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Comma-separated config keys to delete.")]
         public string? Delete { get; set; }
 
         protected override void ProcessRecord()
@@ -111,6 +112,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
             var session = GetSession();
             var vmService = new VmService();
 
+            WriteVerbose($"Updating config for VM {VmId} on node '{Node}'...");
             var config = new Dictionary<string, object>();
 
             if (Cores.HasValue)

@@ -15,55 +15,55 @@ namespace PSProxmoxVE.Cmdlets.Network
     public class SetPveNetworkCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>The interface name to modify.</summary>
-        [Parameter(Mandatory = true, Position = 1)]
+        [Parameter(Mandatory = true, Position = 1, HelpMessage = "The network interface name.")]
         public string Iface { get; set; } = string.Empty;
 
         /// <summary>IPv4 address for the interface.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "IPv4 address for the interface.")]
         public string? Address { get; set; }
 
         /// <summary>IPv4 subnet mask.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "IPv4 subnet mask.")]
         public string? Netmask { get; set; }
 
         /// <summary>IPv4 gateway address.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "IPv4 gateway address.")]
         public string? Gateway { get; set; }
 
         /// <summary>IPv6 address for the interface.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "IPv6 address for the interface.")]
         public string? Address6 { get; set; }
 
         /// <summary>IPv6 prefix length.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "IPv6 prefix length.")]
         public int? Netmask6 { get; set; }
 
         /// <summary>IPv6 gateway address.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "IPv6 gateway address.")]
         public string? Gateway6 { get; set; }
 
         /// <summary>Bridge ports (space-separated interface names).</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Bridge ports (space-separated interface names).")]
         public string? BridgePorts { get; set; }
 
         /// <summary>Bond slave interfaces (space-separated names).</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Bond slave interfaces (space-separated names).")]
         public string? BondSlaves { get; set; }
 
         /// <summary>MTU override.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "MTU override.")]
         public int? Mtu { get; set; }
 
         /// <summary>Configure this interface to start automatically at boot.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Start interface automatically at boot.")]
         public SwitchParameter Autostart { get; set; }
 
         /// <summary>Optional comments/notes for this interface.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Comments or notes for this interface.")]
         public string? Comments { get; set; }
 
         protected override void ProcessRecord()
@@ -74,6 +74,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
+            WriteVerbose($"Updating network interface '{Iface}' on node '{Node}'...");
             var data = new Dictionary<string, string>();
 
             if (!string.IsNullOrEmpty(Address))     data["address"]      = Address!;

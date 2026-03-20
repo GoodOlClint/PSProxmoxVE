@@ -18,15 +18,16 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
     public class InvokePveCloudInitRegenerateCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>The VM identifier. Accepts pipeline input from Get-PveVm (PveVm.VmId).</summary>
-        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true, HelpMessage = "The VM identifier.")]
+        [ValidateRange(100, 999999999)]
         public int VmId { get; set; }
 
         /// <summary>When specified, waits for the regeneration task to complete before returning.</summary>
-        [Parameter]
+        [Parameter(HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
         protected override void ProcessRecord()
@@ -35,6 +36,8 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
                 return;
 
             var session = GetSession();
+
+            WriteVerbose($"Regenerating cloud-init drive for VM {VmId}...");
             var service = new CloudInitService();
             var upid = service.RegenerateCloudInitImage(session, Node, VmId);
 

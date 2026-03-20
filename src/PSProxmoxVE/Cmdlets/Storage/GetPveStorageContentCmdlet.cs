@@ -16,22 +16,24 @@ namespace PSProxmoxVE.Cmdlets.Storage
     public class GetPveStorageContentCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name that hosts the storage.</summary>
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>
         /// The storage identifier. Accepts pipeline input from Get-PveStorage (PveStorage.Storage).
         /// </summary>
-        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true, HelpMessage = "The storage pool name.")]
         public string Storage { get; set; } = string.Empty;
 
         /// <summary>Filter results to a specific content type (e.g., "iso", "vztmpl", "backup", "images").</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Filter by content type (e.g. iso, vztmpl, backup).")]
         public string? ContentType { get; set; }
 
         protected override void ProcessRecord()
         {
             var session = GetSession();
+
+            WriteVerbose($"Getting content for storage '{Storage}' on node '{Node}'...");
             var service = new StorageService();
 
             var items = service.GetStorageContent(session, Node, Storage, ContentType);

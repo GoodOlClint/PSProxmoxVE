@@ -21,13 +21,14 @@ namespace PSProxmoxVE.Cmdlets.Containers
         /// The node on which the container resides. Accepts pipeline input from a PveNode object's Name property.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>
         /// <para type="description">The ID of the container to restart. Accepts pipeline input.</para>
         /// </summary>
-        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true, HelpMessage = "The container identifier.")]
+        [ValidateRange(100, 999999999)]
         public int VmId { get; set; }
 
         /// <summary>
@@ -35,13 +36,13 @@ namespace PSProxmoxVE.Cmdlets.Containers
         /// Timeout in seconds for the graceful shutdown phase. Defaults to 60 seconds.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Maximum time to wait for the task.")]
         public int Timeout { get; set; } = 60;
 
         /// <summary>
         /// <para type="description">When specified, waits for both shutdown and start tasks to complete before returning.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
         protected override void ProcessRecord()
@@ -52,6 +53,8 @@ namespace PSProxmoxVE.Cmdlets.Containers
             var session = GetSession();
             var containerService = new ContainerService();
             var taskService = new TaskService();
+
+            WriteVerbose($"Restarting container {VmId} on node '{Node}'...");
 
             // Graceful shutdown
             var shutdownTask = containerService.ShutdownContainer(session, Node, VmId, Timeout);

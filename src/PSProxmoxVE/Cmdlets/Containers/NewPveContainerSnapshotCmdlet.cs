@@ -1,55 +1,60 @@
 using System;
+using System.Collections.Generic;
 using System.Management.Automation;
 using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Vms;
 
-namespace PSProxmoxVE.Cmdlets.Snapshots
+namespace PSProxmoxVE.Cmdlets.Containers
 {
     /// <summary>
-    /// <para type="synopsis">Rolls back a Proxmox VE virtual machine to a snapshot.</para>
+    /// <para type="synopsis">Creates a snapshot of a Proxmox VE container.</para>
     /// <para type="description">
-    /// Restores the VM state to the specified snapshot, discarding all changes made since
-    /// the snapshot was taken. This is a destructive operation — the VM's current state
-    /// will be lost. Returns a PveTask. Use -Wait to block until rollback completes.
+    /// Takes a snapshot of the specified LXC container.
+    /// Returns a PveTask. Use -Wait to block until the snapshot completes.
     /// </para>
     /// </summary>
-    [Cmdlet(VerbsData.Restore, "PveSnapshot",
-        SupportsShouldProcess = true,
-        ConfirmImpact = ConfirmImpact.High)]
+    [Cmdlet(VerbsCommon.New, "PveContainerSnapshot", SupportsShouldProcess = true)]
     [OutputType(typeof(PveTask))]
-    public class RestorePveSnapshotCmdlet : PveCmdletBase
+    public class NewPveContainerSnapshotCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
-        /// <summary>The VM identifier.</summary>
-        [Parameter(Mandatory = true, Position = 1, HelpMessage = "The VM identifier.")]
+        /// <summary>The container identifier. Accepts pipeline input from Get-PveContainer (PveContainer.VmId).</summary>
+        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true, HelpMessage = "The container identifier.")]
         [ValidateRange(100, 999999999)]
         public int VmId { get; set; }
 
-        /// <summary>
-        /// The snapshot name to roll back to. Accepts pipeline input from Get-PveSnapshot (PveSnapshot.Name).
-        /// </summary>
-        [Parameter(Mandatory = true, Position = 2, ValueFromPipelineByPropertyName = true, HelpMessage = "The snapshot name to roll back to.")]
+        /// <summary>The snapshot name (alphanumeric, hyphens and underscores).</summary>
+        [Parameter(Mandatory = true, Position = 2, HelpMessage = "The snapshot name.")]
         public string Name { get; set; } = string.Empty;
 
-        /// <summary>When specified, waits for the rollback task to complete before returning.</summary>
+        /// <summary>Optional human-readable description for the snapshot.</summary>
+        [Parameter(Mandatory = false, HelpMessage = "Description for the snapshot.")]
+        public string? Description { get; set; }
+
+        /// <summary>When specified, waits for the snapshot task to complete before returning.</summary>
         [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
         protected override void ProcessRecord()
         {
-            var session = GetSession();
-
-            if (!ShouldProcess($"VM {VmId} on {Node}", $"Restore snapshot '{Name}' (current state will be lost)"))
+            if (!ShouldProcess($"Container {VmId} on {Node}", $"Create snapshot '{Name}'"))
                 return;
 
-            WriteVerbose($"Restoring snapshot '{Name}' on VM {VmId}...");
+            var session = GetSession();
             using var client = new PveHttpClient(session);
 
-            var json = client.PostAsync($"nodes/{Node}/qemu/{VmId}/snapshot/{Name}/rollback").GetAwaiter().GetResult();
+            WriteVerbose($"Creating snapshot '{Name}' for container {VmId}...");
+            var data = new Dictionary<string, string>
+            {
+                ["snapname"] = Name
+            };
+            if (!string.IsNullOrEmpty(Description)) data["description"] = Description!;
+
+            var json = client.PostAsync($"nodes/{Node}/lxc/{VmId}/snapshot", data).GetAwaiter().GetResult();
             var root = JObject.Parse(json);
             var upid = root["data"]?.ToString() ?? string.Empty;
 

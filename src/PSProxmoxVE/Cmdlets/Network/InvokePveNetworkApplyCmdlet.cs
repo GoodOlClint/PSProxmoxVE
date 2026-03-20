@@ -19,11 +19,11 @@ namespace PSProxmoxVE.Cmdlets.Network
     public class InvokePveNetworkApplyCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node on which to apply network changes.</summary>
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>When specified, waits for the apply task to complete before returning.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
         protected override void ProcessRecord()
@@ -34,6 +34,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
+            WriteVerbose($"Applying network configuration on node '{Node}'...");
             var json = client.PutAsync($"nodes/{Node}/network").GetAwaiter().GetResult();
             var root = JObject.Parse(json);
             var upid = root["data"]?.ToString() ?? string.Empty;

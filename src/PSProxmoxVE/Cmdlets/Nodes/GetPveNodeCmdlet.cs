@@ -20,7 +20,7 @@ namespace PSProxmoxVE.Cmdlets.Nodes
     public sealed class GetPveNodeCmdlet : PveCmdletBase
     {
         /// <summary>Optional node name filter. When specified, only the matching node is returned.</summary>
-        [Parameter(Mandatory = false, Position = 0)]
+        [Parameter(Mandatory = false, Position = 0, HelpMessage = "Filter by node name.")]
         [ValidateNotNullOrEmpty]
         public string? Name { get; set; }
 
@@ -28,6 +28,7 @@ namespace PSProxmoxVE.Cmdlets.Nodes
         {
             var session = GetSession();
 
+            WriteVerbose("Getting cluster nodes...");
             string responseBody;
             try
             {

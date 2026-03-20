@@ -19,27 +19,28 @@ namespace PSProxmoxVE.Cmdlets.Snapshots
     public class NewPveSnapshotCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>The VM identifier. Accepts pipeline input from Get-PveVm (PveVm.VmId).</summary>
-        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true, HelpMessage = "The VM identifier.")]
+        [ValidateRange(100, 999999999)]
         public int VmId { get; set; }
 
         /// <summary>The snapshot name (alphanumeric, hyphens and underscores).</summary>
-        [Parameter(Mandatory = true, Position = 2)]
+        [Parameter(Mandatory = true, Position = 2, HelpMessage = "The snapshot name.")]
         public string Name { get; set; } = string.Empty;
 
         /// <summary>Optional human-readable description for the snapshot.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Description for the snapshot.")]
         public string? Description { get; set; }
 
         /// <summary>When specified, includes the VM memory state in the snapshot.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Include VM memory state in the snapshot.")]
         public SwitchParameter IncludeVmState { get; set; }
 
         /// <summary>When specified, waits for the snapshot task to complete before returning.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
         protected override void ProcessRecord()
@@ -50,6 +51,7 @@ namespace PSProxmoxVE.Cmdlets.Snapshots
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
+            WriteVerbose($"Creating snapshot '{Name}' for VM {VmId}...");
             var data = new Dictionary<string, string>
             {
                 ["snapname"] = Name

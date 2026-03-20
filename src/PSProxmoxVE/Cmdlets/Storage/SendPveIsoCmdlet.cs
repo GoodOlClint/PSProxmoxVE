@@ -20,33 +20,33 @@ namespace PSProxmoxVE.Cmdlets.Storage
     public class SendPveIsoCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node to upload to.</summary>
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>The target storage identifier (must support "iso" content).</summary>
-        [Parameter(Mandatory = true, Position = 1)]
+        [Parameter(Mandatory = true, Position = 1, HelpMessage = "The storage pool name.")]
         public string Storage { get; set; } = string.Empty;
 
         /// <summary>
         /// The full local path to the ISO file to upload. The file must exist.
         /// </summary>
-        [Parameter(Mandatory = true, Position = 2)]
+        [Parameter(Mandatory = true, Position = 2, HelpMessage = "Local path to the ISO file to upload.")]
         [FileExistsValidation]
         public string Path { get; set; } = string.Empty;
 
         /// <summary>Optional checksum value to verify the uploaded file.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Checksum value to verify the upload.")]
         public string? Checksum { get; set; }
 
         /// <summary>Checksum algorithm used for verification.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Checksum algorithm (md5, sha1, sha256, sha512).")]
         [ValidateSet("md5", "sha1", "sha256", "sha512", IgnoreCase = true)]
         public string? ChecksumAlgorithm { get; set; }
 
         /// <summary>
         /// When specified, waits for the upload task to complete before returning.
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
         protected override void ProcessRecord()
@@ -58,6 +58,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
+            WriteVerbose($"Uploading ISO to {Node}/{Storage}...");
             var resource = $"nodes/{Node}/storage/{Storage}/upload";
             var totalBytes = new System.IO.FileInfo(Path).Length;
 

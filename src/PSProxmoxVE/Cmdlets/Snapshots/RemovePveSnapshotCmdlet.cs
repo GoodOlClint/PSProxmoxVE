@@ -18,21 +18,22 @@ namespace PSProxmoxVE.Cmdlets.Snapshots
     public class RemovePveSnapshotCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>The VM identifier.</summary>
-        [Parameter(Mandatory = true, Position = 1)]
+        [Parameter(Mandatory = true, Position = 1, HelpMessage = "The VM identifier.")]
+        [ValidateRange(100, 999999999)]
         public int VmId { get; set; }
 
         /// <summary>
         /// The snapshot name to remove. Accepts pipeline input from Get-PveSnapshot (PveSnapshot.Name).
         /// </summary>
-        [Parameter(Mandatory = true, Position = 2, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 2, ValueFromPipelineByPropertyName = true, HelpMessage = "The snapshot name to remove.")]
         public string Name { get; set; } = string.Empty;
 
         /// <summary>When specified, waits for the removal task to complete before returning.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
         protected override void ProcessRecord()
@@ -41,6 +42,8 @@ namespace PSProxmoxVE.Cmdlets.Snapshots
 
             if (!ShouldProcess($"VM {VmId} snapshot '{Name}' on {Node}", "Remove PVE Snapshot"))
                 return;
+
+            WriteVerbose($"Removing snapshot '{Name}' from VM {VmId}...");
             using var client = new PveHttpClient(session);
 
             var json = client.DeleteAsync($"nodes/{Node}/qemu/{VmId}/snapshot/{Name}").GetAwaiter().GetResult();

@@ -18,11 +18,12 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
     public class GetPveCloudInitConfigCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>The VM identifier. Accepts pipeline input from Get-PveVm (PveVm.VmId).</summary>
-        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true, HelpMessage = "The VM identifier.")]
+        [ValidateRange(100, 999999999)]
         public int VmId { get; set; }
 
         protected override void ProcessRecord()
@@ -30,6 +31,7 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
+            WriteVerbose($"Getting cloud-init config for VM {VmId}...");
             var json = client.GetAsync($"nodes/{Node}/qemu/{VmId}/config").GetAwaiter().GetResult();
             var root = JObject.Parse(json);
             var data = root["data"];

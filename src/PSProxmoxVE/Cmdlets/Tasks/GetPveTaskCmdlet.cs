@@ -17,16 +17,18 @@ namespace PSProxmoxVE.Cmdlets.Tasks
     public class GetPveTaskCmdlet : PveCmdletBase
     {
         /// <summary>The node on which the task ran.</summary>
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>The UPID of the task to query.</summary>
-        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true, HelpMessage = "The task UPID.")]
         public string Upid { get; set; } = string.Empty;
 
         protected override void ProcessRecord()
         {
             var session = GetSession();
+
+            WriteVerbose($"Getting task status for UPID on node '{Node}'...");
             var service = new TaskService();
             var task    = service.GetTask(session, Node, Upid);
             WriteObject(task);

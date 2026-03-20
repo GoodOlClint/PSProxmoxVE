@@ -21,61 +21,62 @@ namespace PSProxmoxVE.Cmdlets.Containers
         /// The node on which the container resides. Accepts pipeline input from a PveNode object's Name property.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>
         /// <para type="description">The ID of the container to configure. Accepts pipeline input.</para>
         /// </summary>
-        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true, HelpMessage = "The container identifier.")]
+        [ValidateRange(100, 999999999)]
         public int VmId { get; set; }
 
         /// <summary>
         /// <para type="description">The hostname to assign to the container.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "The hostname for the container.")]
         public string? Hostname { get; set; }
 
         /// <summary>
         /// <para type="description">Number of CPU cores to allocate to the container.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Number of CPU cores to allocate.")]
         public int? Cores { get; set; }
 
         /// <summary>
         /// <para type="description">Memory limit in MiB.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Memory limit in MiB.")]
         public int? Memory { get; set; }
 
         /// <summary>
         /// <para type="description">Swap size in MiB.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Swap size in MiB.")]
         public int? Swap { get; set; }
 
         /// <summary>
         /// <para type="description">Human-readable description / notes for the container.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Description or notes for the container.")]
         public string? Description { get; set; }
 
         /// <summary>
         /// <para type="description">Semicolon-separated list of tags to assign to the container.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Semicolon-separated list of tags.")]
         public string? Tags { get; set; }
 
         /// <summary>
         /// <para type="description">DNS nameservers (space-separated).</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "DNS nameservers (space-separated).")]
         public string? Nameserver { get; set; }
 
         /// <summary>
         /// <para type="description">DNS search domain.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "DNS search domain.")]
         public string? SearchDomain { get; set; }
 
         /// <summary>
@@ -85,7 +86,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
         /// Values are merged after named parameters and can override them.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Extra config keys as a hashtable.")]
         public Hashtable? AdditionalConfig { get; set; }
 
         /// <summary>
@@ -94,7 +95,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
         /// Maps to the PVE API "delete" parameter.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Comma-separated config keys to delete.")]
         public string? Delete { get; set; }
 
         protected override void ProcessRecord()
@@ -105,6 +106,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
             var session = GetSession();
             var containerService = new ContainerService();
 
+            WriteVerbose($"Updating config for container {VmId} on node '{Node}'...");
             var config = new Dictionary<string, object>();
 
             if (!string.IsNullOrEmpty(Hostname))

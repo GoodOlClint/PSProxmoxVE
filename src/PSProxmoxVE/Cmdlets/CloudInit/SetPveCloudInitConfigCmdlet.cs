@@ -21,47 +21,48 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
     public class SetPveCloudInitConfigCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>The VM identifier. Accepts pipeline input from Get-PveVm (PveVm.VmId).</summary>
-        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true, HelpMessage = "The VM identifier.")]
+        [ValidateRange(100, 999999999)]
         public int VmId { get; set; }
 
         /// <summary>Cloud-init hostname override.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Cloud-init hostname override.")]
         public string? Hostname { get; set; }
 
         /// <summary>Cloud-init default username. Alias: User.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Cloud-init default username.")]
         [Alias("User")]
         public string? CiUser { get; set; }
 
         /// <summary>Cloud-init default user password. Accepts a SecureString.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Cloud-init default user password.")]
         public System.Security.SecureString? Password { get; set; }
 
         /// <summary>SSH public keys to inject (one key per element).</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "SSH public keys to inject.")]
         public string[]? SshKeys { get; set; }
 
         /// <summary>
         /// IP configuration string (e.g., "ip=192.168.1.50/24,gw=192.168.1.1").
         /// Maps to ipconfig0 on the VM.
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "IP config string (e.g. ip=192.168.1.50/24,gw=...).")]
         public string? IpConfig0 { get; set; }
 
         /// <summary>DNS nameserver(s) to inject (space or comma separated).</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "DNS nameserver(s) to inject.")]
         public string? Nameserver { get; set; }
 
         /// <summary>DNS search domain to inject.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "DNS search domain to inject.")]
         public string? Searchdomain { get; set; }
 
         /// <summary>When specified, waits for the config update task to complete before returning.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
         protected override void ProcessRecord()
@@ -71,6 +72,7 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
             if (!ShouldProcess($"VM {VmId} on {Node}", "Set PVE Cloud-Init Config"))
                 return;
 
+            WriteVerbose($"Setting cloud-init config for VM {VmId}...");
             var config = new Dictionary<string, object>();
 
             if (!string.IsNullOrEmpty(CiUser))        config["ciuser"]       = CiUser!;

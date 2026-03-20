@@ -13,7 +13,7 @@ namespace PSProxmoxVE.Cmdlets.Users
     public class RemovePveUserCmdlet : PveCmdletBase
     {
         /// <summary>The user identifier to remove (e.g., "jdoe@pve").</summary>
-        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The user ID in user@realm format.")]
         public string UserId { get; set; } = string.Empty;
 
         protected override void ProcessRecord()
@@ -23,6 +23,8 @@ namespace PSProxmoxVE.Cmdlets.Users
 
             var session = GetSession();
             var service = new UserService();
+
+            WriteVerbose($"Removing user '{UserId}'...");
             service.RemoveUser(session, UserId);
         }
     }

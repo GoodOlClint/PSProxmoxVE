@@ -19,7 +19,7 @@ namespace PSProxmoxVE.Cmdlets.Connection
         /// When specified, writes the PveSession object instead of a boolean.
         /// Nothing is written if no session is active.
         /// </summary>
-        [Parameter(Mandatory = false, ParameterSetName = "Detailed")]
+        [Parameter(Mandatory = false, ParameterSetName = "Detailed", HelpMessage = "Return the session object instead of a boolean.")]
         public SwitchParameter Detailed { get; set; }
 
         protected override void ProcessRecord()

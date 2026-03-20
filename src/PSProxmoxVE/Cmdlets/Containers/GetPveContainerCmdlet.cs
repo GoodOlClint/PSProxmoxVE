@@ -23,36 +23,39 @@ namespace PSProxmoxVE.Cmdlets.Containers
         /// When omitted, containers from all nodes are returned.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = false, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = false, ValueFromPipelineByPropertyName = true, HelpMessage = "The PVE node name.")]
         public string? Node { get; set; }
 
         /// <summary>
         /// <para type="description">Filter results to the container with this ID.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "The container identifier.")]
+        [ValidateRange(100, 999999999)]
         public int? VmId { get; set; }
 
         /// <summary>
         /// <para type="description">Filter results to containers whose name matches this value (case-insensitive, contains match).</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Filter by name.")]
         public string? Name { get; set; }
 
         /// <summary>
         /// <para type="description">Filter results to containers in the specified status (e.g., "running", "stopped").</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Filter by status (e.g. running, stopped).")]
         public string? Status { get; set; }
 
         /// <summary>
         /// <para type="description">Filter results to containers that have the specified tag (substring match against the semicolon-separated tags field).</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Filter by tag.")]
         public string? Tag { get; set; }
 
         protected override void ProcessRecord()
         {
             var session = GetSession();
+
+            WriteVerbose("Getting containers...");
             var service = new ContainerService();
 
             IEnumerable<PveContainer> containers = service.GetContainers(session, Node);

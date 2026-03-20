@@ -14,23 +14,23 @@ namespace PSProxmoxVE.Cmdlets.Network
     public class NewPveSdnVnetCmdlet : PveCmdletBase
     {
         /// <summary>The VNet identifier (alphanumeric, up to 8 characters).</summary>
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The SDN VNet name.")]
         public string Vnet { get; set; } = string.Empty;
 
         /// <summary>The SDN zone this VNet belongs to.</summary>
-        [Parameter(Mandatory = true, Position = 1)]
+        [Parameter(Mandatory = true, Position = 1, HelpMessage = "The SDN zone name.")]
         public string Zone { get; set; } = string.Empty;
 
         /// <summary>VLAN tag for VLAN-type zones.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "VLAN tag for VLAN-type zones.")]
         public int? Tag { get; set; }
 
         /// <summary>Optional alias/description for the VNet.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Alias or description for the VNet.")]
         public string? Alias { get; set; }
 
         /// <summary>Enable VLAN awareness on this VNet.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Enable VLAN awareness on this VNet.")]
         public SwitchParameter VlanAware { get; set; }
 
         protected override void ProcessRecord()
@@ -41,6 +41,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
+            WriteVerbose($"Creating SDN VNet '{Vnet}'...");
             var data = new Dictionary<string, string>
             {
                 ["vnet"] = Vnet,

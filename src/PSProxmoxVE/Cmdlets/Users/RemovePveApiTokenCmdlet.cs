@@ -18,14 +18,14 @@ namespace PSProxmoxVE.Cmdlets.Users
         /// The user ID that owns the token, in "username@realm" format (e.g., "admin@pam").
         /// Accepts pipeline input from Get-PveApiToken (PveApiToken.UserId).
         /// </summary>
-        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The user ID in user@realm format.")]
         public string UserId { get; set; } = string.Empty;
 
         /// <summary>
         /// The token identifier to remove (e.g., "automation").
         /// Accepts pipeline input from Get-PveApiToken (PveApiToken.TokenId).
         /// </summary>
-        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true, HelpMessage = "The API token identifier.")]
         public string TokenId { get; set; } = string.Empty;
 
         protected override void ProcessRecord()
@@ -35,6 +35,7 @@ namespace PSProxmoxVE.Cmdlets.Users
             if (!ShouldProcess($"{UserId}!{TokenId}", "Remove PVE API Token"))
                 return;
 
+            WriteVerbose($"Removing API token '{TokenId}' from user '{UserId}'...");
             var service = new UserService();
             service.RemoveApiToken(session, UserId, TokenId);
         }

@@ -20,31 +20,33 @@ namespace PSProxmoxVE.Cmdlets.Vms
         /// <summary>
         /// <para type="description">The node on which the source VM resides.</para>
         /// </summary>
-        [Parameter(Mandatory = true)]
+        [Parameter(Mandatory = true, HelpMessage = "The node where the source VM resides.")]
         public string SourceNode { get; set; } = string.Empty;
 
         /// <summary>
         /// <para type="description">The ID of the source VM to clone. Accepts pipeline input.</para>
         /// </summary>
-        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, ValueFromPipelineByPropertyName = true, HelpMessage = "The VM identifier.")]
+        [ValidateRange(100, 999999999)]
         public int VmId { get; set; }
 
         /// <summary>
         /// <para type="description">The VM ID to assign to the new clone. When omitted, the next available ID is used.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "VM ID for the new clone.")]
+        [ValidateRange(100, 999999999)]
         public int? NewVmId { get; set; }
 
         /// <summary>
         /// <para type="description">The display name for the new clone.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Display name for the new clone.")]
         public string? NewName { get; set; }
 
         /// <summary>
         /// <para type="description">The target node for the clone. Defaults to the source node.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Target node for the clone.")]
         public string? TargetNode { get; set; }
 
         /// <summary>
@@ -53,19 +55,19 @@ namespace PSProxmoxVE.Cmdlets.Vms
         /// A full clone is required when the source VM is not a template.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Perform a full (non-linked) clone.")]
         public SwitchParameter Full { get; set; }
 
         /// <summary>
         /// <para type="description">Target storage pool for the full clone disks.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "The storage pool name.")]
         public string? Storage { get; set; }
 
         /// <summary>
         /// <para type="description">When specified, waits for the clone task to complete before returning.</para>
         /// </summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
         protected override void ProcessRecord()
@@ -77,6 +79,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
             var session = GetSession();
             var vmService = new VmService();
 
+            WriteVerbose($"Cloning VM {VmId}...");
             var newid = NewVmId ?? 0;
             var task = vmService.CloneVm(session, SourceNode, VmId, newid, NewName, TargetNode, Full.IsPresent);
 

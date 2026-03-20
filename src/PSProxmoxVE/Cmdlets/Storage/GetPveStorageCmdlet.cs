@@ -20,25 +20,27 @@ namespace PSProxmoxVE.Cmdlets.Storage
         /// The Proxmox VE node name. Accepts pipeline input from Get-PveNode (PveNode.Name).
         /// When omitted the cluster-wide storage list is used.
         /// </summary>
-        [Parameter(Mandatory = false, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = false, ValueFromPipelineByPropertyName = true, HelpMessage = "The PVE node name.")]
         [Alias("NodeName")]
         public string? Node { get; set; }
 
         /// <summary>Filter results to a specific storage name (e.g., "local", "local-lvm").</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "The storage pool name.")]
         public string? Storage { get; set; }
 
         /// <summary>Filter results to a specific storage type (e.g., "dir", "nfs", "zfspool").</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Filter by storage type (e.g. dir, nfs, zfspool).")]
         public string? Type { get; set; }
 
         /// <summary>Filter results to storages that support the given content type (e.g., "iso", "backup").</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Filter by content type (e.g. iso, backup).")]
         public string? ContentType { get; set; }
 
         protected override void ProcessRecord()
         {
             var session = GetSession();
+
+            WriteVerbose("Getting storage pools...");
             var service = new StorageService();
 
             var storages = service.GetStorages(session, Node);

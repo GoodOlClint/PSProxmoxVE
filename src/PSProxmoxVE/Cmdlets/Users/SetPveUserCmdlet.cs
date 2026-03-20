@@ -16,39 +16,39 @@ namespace PSProxmoxVE.Cmdlets.Users
     public class SetPveUserCmdlet : PveCmdletBase
     {
         /// <summary>The user identifier to update (e.g., "jdoe@pve").</summary>
-        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The user ID in user@realm format.")]
         public string UserId { get; set; } = string.Empty;
 
         /// <summary>New password for the user. Accepts a SecureString.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "New password for the user.")]
         public System.Security.SecureString? Password { get; set; }
 
         /// <summary>Updated first name.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Updated first name.")]
         public string? FirstName { get; set; }
 
         /// <summary>Updated last name.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Updated last name.")]
         public string? LastName { get; set; }
 
         /// <summary>Updated email address.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Updated email address.")]
         public string? Email { get; set; }
 
         /// <summary>Updated group membership (comma-separated group names).</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Updated group membership (comma-separated).")]
         public string? Groups { get; set; }
 
         /// <summary>Updated comment/notes.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Updated comment or notes.")]
         public string? Comment { get; set; }
 
         /// <summary>Account expiry as a Unix timestamp. Use 0 to remove expiry.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Account expiry as a Unix timestamp.")]
         public long? Expire { get; set; }
 
         /// <summary>Enable or disable the user account.</summary>
-        [Parameter(Mandatory = false)]
+        [Parameter(Mandatory = false, HelpMessage = "Enable or disable the user account.")]
         public bool? Enable { get; set; }
 
         protected override void ProcessRecord()
@@ -75,6 +75,8 @@ namespace PSProxmoxVE.Cmdlets.Users
 
             var session = GetSession();
             var service = new UserService();
+
+            WriteVerbose($"Updating user '{UserId}'...");
             service.SetUser(session, UserId, config);
         }
     }

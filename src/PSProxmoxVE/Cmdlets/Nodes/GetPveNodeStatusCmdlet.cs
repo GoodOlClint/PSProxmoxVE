@@ -23,7 +23,7 @@ namespace PSProxmoxVE.Cmdlets.Nodes
         /// <summary>
         /// Name of the node to query. Accepts pipeline input via the PveNode.Name property.
         /// </summary>
-        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true)]
+        [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The PVE node name.")]
         [ValidateNotNullOrEmpty]
         public string Node { get; set; } = string.Empty;
 
@@ -31,6 +31,7 @@ namespace PSProxmoxVE.Cmdlets.Nodes
         {
             var session = GetSession();
 
+            WriteVerbose($"Getting status for node '{Node}'...");
             var resource = $"nodes/{Uri.EscapeDataString(Node)}/status";
 
             string responseBody;

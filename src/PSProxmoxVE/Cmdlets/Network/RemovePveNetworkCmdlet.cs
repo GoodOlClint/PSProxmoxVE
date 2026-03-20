@@ -14,11 +14,11 @@ namespace PSProxmoxVE.Cmdlets.Network
     public class RemovePveNetworkCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
-        [Parameter(Mandatory = true, Position = 0)]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
 
         /// <summary>The interface name to remove.</summary>
-        [Parameter(Mandatory = true, Position = 1)]
+        [Parameter(Mandatory = true, Position = 1, HelpMessage = "The network interface name.")]
         public string Iface { get; set; } = string.Empty;
 
         protected override void ProcessRecord()
@@ -29,6 +29,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             var session = GetSession();
             using var client = new PveHttpClient(session);
 
+            WriteVerbose($"Removing network interface '{Iface}' on node '{Node}'...");
             client.DeleteAsync($"nodes/{Node}/network/{Iface}").GetAwaiter().GetResult();
         }
     }
