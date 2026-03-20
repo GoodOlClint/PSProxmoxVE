@@ -207,8 +207,10 @@ namespace PSProxmoxVE.Cmdlets.Vms
                 }
             }
 
-            // Step 5: Create the VM
-            WriteVerbose($"Creating VM {vmId} on node '{Node}'...");
+            // Step 5: Create VM with disks and network in a single API call.
+            // PVE handles OVA disk extraction + import as part of qmcreate when
+            // import-from is specified in the create parameters.
+            WriteVerbose($"Creating VM {vmId} with disk import on node '{Node}'...");
             var vmConfig = new Dictionary<string, object>
             {
                 ["vmid"] = vmId
@@ -221,68 +223,37 @@ namespace PSProxmoxVE.Cmdlets.Vms
             if (!string.IsNullOrEmpty(metadata.OsTypeHint) && metadata.OsTypeHint != "other")
                 vmConfig["ostype"] = metadata.OsTypeHint;
 
-            var createTask = vmService.CreateVm(session, Node, vmConfig);
-
-            if (!string.IsNullOrEmpty(createTask.Upid))
-            {
-                WriteVerbose("Waiting for VM creation task to complete...");
-                var completedCreate = taskService.WaitForTask(session, Node, createTask.Upid, null, null, null);
-                if (completedCreate.ExitStatus != null && completedCreate.ExitStatus != "OK")
-                {
-                    ThrowTerminatingError(new ErrorRecord(
-                        new InvalidOperationException($"VM creation task failed with status: {completedCreate.ExitStatus}"),
-                        "VmCreationFailed",
-                        ErrorCategory.InvalidResult,
-                        createTask.Upid));
-                    return;
-                }
-            }
-
-            // Step 6: Import each disk from the OVA
-            var importProgressRecord = new ProgressRecord(2,
-                $"Importing OVA disks to VM {vmId}",
-                "Importing disks...");
-
+            // Add disk import-from parameters
             for (int i = 0; i < metadata.Disks.Count; i++)
             {
                 var disk = metadata.Disks[i];
                 var diskSlot = $"{disk.BusType}{i}";
                 var importFrom = $"{Storage}:import/{fileName}/{disk.FileName}";
-
-                importProgressRecord.PercentComplete = (int)((i * 100L) / metadata.Disks.Count);
-                importProgressRecord.StatusDescription = $"Importing disk {i + 1}/{metadata.Disks.Count}: {disk.FileName} -> {diskSlot}";
-                WriteProgress(importProgressRecord);
-
-                WriteVerbose($"Importing disk: {disk.FileName} -> VM {vmId} slot {diskSlot} (from {importFrom})");
-
-                var diskTask = vmService.ImportDisk(session, Node, vmId, diskSlot, TargetStorage, importFrom);
-
-                if (Wait.IsPresent && !string.IsNullOrEmpty(diskTask.Upid))
-                {
-                    WriteVerbose($"Waiting for disk import task to complete: {diskSlot}...");
-                    var completedDisk = taskService.WaitForTask(session, Node, diskTask.Upid, null, null, null);
-                    if (completedDisk.ExitStatus != null && completedDisk.ExitStatus != "OK")
-                    {
-                        WriteWarning($"Disk import for {diskSlot} completed with status: {completedDisk.ExitStatus}");
-                    }
-                }
+                vmConfig[diskSlot] = $"{TargetStorage}:0,import-from={importFrom}";
+                WriteVerbose($"  Disk {diskSlot}: import-from={importFrom} -> {TargetStorage}");
             }
 
-            importProgressRecord.RecordType = ProgressRecordType.Completed;
-            WriteProgress(importProgressRecord);
-
-            // Step 7: Configure network adapters
-            if (metadata.NetworkAdapters.Count > 0)
+            // Add network adapters
+            for (int i = 0; i < metadata.NetworkAdapters.Count; i++)
             {
-                var netConfig = new Dictionary<string, object>();
-                for (int i = 0; i < metadata.NetworkAdapters.Count; i++)
-                {
-                    // Use virtio model with default bridge vmbr0
-                    netConfig[$"net{i}"] = "virtio,bridge=vmbr0";
-                }
+                vmConfig[$"net{i}"] = "virtio,bridge=vmbr0";
+            }
 
-                WriteVerbose($"Configuring {metadata.NetworkAdapters.Count} network adapter(s)...");
-                vmService.SetVmConfig(session, Node, vmId, netConfig);
+            var createTask = vmService.CreateVm(session, Node, vmConfig);
+
+            if (Wait.IsPresent && !string.IsNullOrEmpty(createTask.Upid))
+            {
+                WriteVerbose("Waiting for VM creation + disk import to complete...");
+                var completedCreate = taskService.WaitForTask(session, Node, createTask.Upid, null, null, null);
+                if (completedCreate.ExitStatus != null && completedCreate.ExitStatus != "OK")
+                {
+                    ThrowTerminatingError(new ErrorRecord(
+                        new InvalidOperationException($"OVA import task failed with status: {completedCreate.ExitStatus}"),
+                        "OvaImportFailed",
+                        ErrorCategory.InvalidResult,
+                        createTask.Upid));
+                    return;
+                }
             }
 
             // Step 8: Output the created VM
