@@ -1,6 +1,8 @@
 using System;
 using System.Management.Automation;
+using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Authentication;
+using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Exceptions;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
@@ -69,25 +71,29 @@ namespace PSProxmoxVE.Cmdlets
                 task = taskService.WaitForTask(session, node, task.Upid, null, null, null);
             }
 
-            // Then poll until VM/container reaches the expected status
+            // Then poll status/current until VM/container reaches the expected status.
+            // We query the status/current endpoint directly instead of the list endpoint
+            // because it returns qmpstatus (needed for paused state detection — PVE reports
+            // status=running but qmpstatus=paused for suspended VMs).
+            var statusResource = isContainer
+                ? $"nodes/{node}/lxc/{vmid}/status/current"
+                : $"nodes/{node}/qemu/{vmid}/status/current";
+
             var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
+            using var pollClient = new PveHttpClient(session);
             while (DateTime.UtcNow < deadline)
             {
                 try
                 {
-                    string? currentStatus;
-                    if (isContainer)
-                    {
-                        var ct = new ContainerService().GetContainer(session, node, vmid);
-                        currentStatus = ct.Status;
-                    }
-                    else
-                    {
-                        var vm = new VmService().GetVm(session, node, vmid);
-                        currentStatus = vm.Status;
-                    }
+                    var json = pollClient.GetAsync(statusResource).GetAwaiter().GetResult();
+                    var data = JObject.Parse(json)["data"];
+                    var status = data?["status"]?.ToString();
+                    var qmpStatus = data?["qmpstatus"]?.ToString();
 
-                    if (string.Equals(currentStatus, expectedStatus, StringComparison.OrdinalIgnoreCase))
+                    // Use qmpstatus when available (more accurate for VM pause state)
+                    var effectiveStatus = qmpStatus ?? status;
+
+                    if (string.Equals(effectiveStatus, expectedStatus, StringComparison.OrdinalIgnoreCase))
                         return task;
                 }
                 catch

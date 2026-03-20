@@ -773,8 +773,8 @@ Describe 'Integration Tests' -Tag 'Integration' {
             if (Skip-IfNoTarget) { return }
             if ($script:SkipSdn) { Set-ItResult -Skipped -Because $script:SkipSdn; return }
 
-            # PVE stores subnet IDs in the format: {vnet}-{ip}-{prefix}
-            { Remove-PveSdnSubnet -Vnet 'pestervn' -Subnet 'pestervn-10.99.0.0-24' `
+            # PVE stores subnet IDs in the format: {zone}-{ip}-{prefix}
+            { Remove-PveSdnSubnet -Vnet 'pestervn' -Subnet 'pesterz-10.99.0.0-24' `
                 -Confirm:$false -ErrorAction Stop } | Should -Not -Throw
         }
 
