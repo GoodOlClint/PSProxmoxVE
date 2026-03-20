@@ -1152,30 +1152,23 @@ Describe 'Integration Tests' -Tag 'Integration' {
         It 'Should suspend and resume a running VM (Suspend-PveVm / Resume-PveVm)' {
             if (Skip-IfNoLinuxVm) { return }
 
-            # Suspend — -Wait -Timeout polls until status is 'paused'
+            # Suspend — -Wait -Timeout polls qmpstatus until 'paused'
+            # Note: PVE list endpoint reports Status=running for paused VMs;
+            # the -Wait polling uses the status/current endpoint which has qmpstatus.
             $suspendTask = Suspend-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -Timeout 30
             $suspendTask | Should -Not -BeNullOrEmpty
 
-            $vm = Get-PveVm -Node $script:Node | Where-Object { $_.VmId -eq $script:LinuxVmId }
-            $vm.Status | Should -Be 'paused'
-
-            # Resume — -Wait -Timeout polls until status is 'running'
+            # Resume — -Wait -Timeout polls qmpstatus until 'running'
             $resumeTask = Resume-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -Timeout 30
             $resumeTask | Should -Not -BeNullOrEmpty
-
-            $vm = Get-PveVm -Node $script:Node | Where-Object { $_.VmId -eq $script:LinuxVmId }
-            $vm.Status | Should -Be 'running'
         }
 
         It 'Should gracefully restart a VM via ACPI (Restart-PveVm)' {
             if (Skip-IfNoLinuxVm) { return }
 
-            # Ensure VM is running (not paused from a failed suspend test)
-            $vm = Get-PveVm -Node $script:Node |
-                Where-Object { $_.VmId -eq $script:LinuxVmId }
-            if ($vm.Status -eq 'paused') {
-                Resume-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -Timeout 15 -ErrorAction SilentlyContinue | Out-Null
-            }
+            # Ensure VM is running (resume if paused from a failed suspend test)
+            try { Resume-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -Timeout 10 -ErrorAction SilentlyContinue | Out-Null }
+            catch { <# already running #> }
 
             $task = Restart-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -Timeout 60 -Confirm:$false
             $task | Should -Not -BeNullOrEmpty
