@@ -23,6 +23,7 @@ public class PveGuestNetworkInterface
     [JsonProperty("ip-addresses")]
     public PveGuestIpAddress[] IpAddresses { get; set; } = System.Array.Empty<PveGuestIpAddress>();
 
+    /// <inheritdoc />
     public override string ToString()
     {
         var ips = IpAddresses.Length > 0

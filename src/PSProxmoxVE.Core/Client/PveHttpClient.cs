@@ -30,6 +30,10 @@ namespace PSProxmoxVE.Core.Client
         private readonly HttpClient _httpClient;
         private bool _disposed;
 
+        /// <summary>
+        /// Creates an HTTP client authenticated with the specified PVE session.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session providing credentials and base URL.</param>
         public PveHttpClient(PveSession session)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
@@ -394,6 +398,7 @@ namespace PSProxmoxVE.Core.Client
             return sb.ToString();
         }
 
+        /// <inheritdoc />
         public void Dispose()
         {
             if (!_disposed)

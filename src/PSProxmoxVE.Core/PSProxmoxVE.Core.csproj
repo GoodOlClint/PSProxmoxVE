@@ -7,7 +7,7 @@
     <RootNamespace>PSProxmoxVE.Core</RootNamespace>
     <AssemblyName>PSProxmoxVE.Core</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <NoWarn>$(NoWarn)</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

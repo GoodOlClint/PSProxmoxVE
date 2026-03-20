@@ -16,6 +16,7 @@ namespace PSProxmoxVE.Core.Models.Vms
         [JsonProperty("t")]
         public string Text { get; set; } = string.Empty;
 
+        /// <inheritdoc />
         public override string ToString() => $"{LineNumber,4}: {Text}";
     }
 }

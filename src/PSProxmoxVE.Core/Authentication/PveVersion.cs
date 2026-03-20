@@ -2,12 +2,18 @@ using System;
 
 namespace PSProxmoxVE.Core.Authentication
 {
-    /// <summary>Represents a Proxmox VE server version (major.minor only)</summary>
+    /// <summary>Represents a Proxmox VE server version (major.minor only).</summary>
     public class PveVersion
     {
+        /// <summary>The major version number (e.g., 8 in PVE 8.1).</summary>
         public int Major { get; }
+
+        /// <summary>The minor version number (e.g., 1 in PVE 8.1).</summary>
         public int Minor { get; }
 
+        /// <summary>Creates a new PVE version with the specified major and minor components.</summary>
+        /// <param name="major">The major version number.</param>
+        /// <param name="minor">The minor version number.</param>
         public PveVersion(int major, int minor)
         {
             Major = major;
@@ -34,11 +40,15 @@ namespace PSProxmoxVE.Core.Authentication
             return new PveVersion(major, minor);
         }
 
+        /// <summary>Returns true if this version is greater than or equal to the specified version.</summary>
+        /// <param name="major">The minimum major version.</param>
+        /// <param name="minor">The minimum minor version.</param>
         public bool IsAtLeast(int major, int minor)
         {
             return Major > major || (Major == major && Minor >= minor);
         }
 
+        /// <inheritdoc />
         public override string ToString() => $"{Major}.{Minor}";
     }
 }

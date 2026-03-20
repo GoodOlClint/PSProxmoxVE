@@ -23,5 +23,6 @@ public class PveGuestIpAddress
     [JsonProperty("prefix")]
     public int Prefix { get; set; }
 
+    /// <inheritdoc />
     public override string ToString() => $"{Address}/{Prefix} ({Type})";
 }

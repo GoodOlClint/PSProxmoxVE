@@ -48,6 +48,7 @@ namespace PSProxmoxVE.Core.Models.Vms
         [JsonProperty("cicustom")]
         public string? CiCustom { get; set; }
 
+        /// <inheritdoc />
         public override string ToString() =>
             $"CloudInit: User={CiUser ?? "N/A"} | IP0={IpConfig0 ?? "N/A"} | NS={Nameserver ?? "N/A"}";
     }
