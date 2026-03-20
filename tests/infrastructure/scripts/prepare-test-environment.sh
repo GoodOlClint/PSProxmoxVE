@@ -56,90 +56,16 @@ else
     echo "Cloud image already cached at ${CLOUD_IMAGE_PATH}"
 fi
 
-# Create a minimal test OVA for Import-PveOva testing
-# OVA = TAR containing an OVF descriptor + a small VMDK/raw disk
-OVA_PATH="${OUTPUT_DIR}/test-appliance.ova"
+# Download Ubuntu cloud OVA for Import-PveOva testing
+OVA_URL="https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.ova"
+OVA_FILENAME="ubuntu-24.04-server-cloudimg-amd64.ova"
+OVA_PATH="${OUTPUT_DIR}/${OVA_FILENAME}"
 if [ ! -f "${OVA_PATH}" ]; then
-    echo "Creating minimal test OVA..."
-    OVA_TMPDIR=$(mktemp -d)
-
-    # Create a minimal valid sparse VMDK using qemu-img
-    qemu-img create -f vmdk -o subformat=streamOptimized "${OVA_TMPDIR}/test-disk.vmdk" 64M 2>/dev/null
-
-    # Create OVF descriptor
-    cat > "${OVA_TMPDIR}/test-appliance.ovf" <<'OVF'
-<?xml version="1.0" encoding="UTF-8"?>
-<Envelope xmlns="http://schemas.dmtf.org/ovf/envelope/1"
-          xmlns:rasd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_ResourceAllocationSettingData"
-          xmlns:vssd="http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_VirtualSystemSettingData"
-          xmlns:ovf="http://schemas.dmtf.org/ovf/envelope/1">
-  <References>
-    <File ovf:id="file1" ovf:href="test-disk.vmdk" ovf:size="1048576"/>
-  </References>
-  <DiskSection>
-    <Info>Virtual disk information</Info>
-    <Disk ovf:diskId="vmdisk1" ovf:fileRef="file1" ovf:capacity="1073741824" ovf:format="http://www.vmware.com/interfaces/specifications/vmdk.html#streamOptimized"/>
-  </DiskSection>
-  <VirtualSystem ovf:id="test-appliance">
-    <Info>A minimal test appliance</Info>
-    <OperatingSystemSection ovf:id="101">
-      <Info>Linux 64-bit</Info>
-      <Description>Linux</Description>
-    </OperatingSystemSection>
-    <VirtualHardwareSection>
-      <Info>Virtual hardware requirements</Info>
-      <System>
-        <vssd:ElementName>Virtual Hardware Family</vssd:ElementName>
-        <vssd:InstanceID>0</vssd:InstanceID>
-        <vssd:VirtualSystemIdentifier>test-appliance</vssd:VirtualSystemIdentifier>
-        <vssd:VirtualSystemType>vmx-13</vssd:VirtualSystemType>
-      </System>
-      <Item>
-        <rasd:Description>Number of Virtual CPUs</rasd:Description>
-        <rasd:ElementName>1 virtual CPU(s)</rasd:ElementName>
-        <rasd:InstanceID>1</rasd:InstanceID>
-        <rasd:ResourceType>3</rasd:ResourceType>
-        <rasd:VirtualQuantity>1</rasd:VirtualQuantity>
-      </Item>
-      <Item>
-        <rasd:AllocationUnits>byte * 2^20</rasd:AllocationUnits>
-        <rasd:Description>Memory Size</rasd:Description>
-        <rasd:ElementName>256MB of memory</rasd:ElementName>
-        <rasd:InstanceID>2</rasd:InstanceID>
-        <rasd:ResourceType>4</rasd:ResourceType>
-        <rasd:VirtualQuantity>256</rasd:VirtualQuantity>
-      </Item>
-      <Item>
-        <rasd:ElementName>SCSI Controller</rasd:ElementName>
-        <rasd:InstanceID>3</rasd:InstanceID>
-        <rasd:ResourceSubType>lsilogic</rasd:ResourceSubType>
-        <rasd:ResourceType>6</rasd:ResourceType>
-      </Item>
-      <Item>
-        <rasd:ElementName>Hard Disk 1</rasd:ElementName>
-        <rasd:HostResource>ovf:/disk/vmdisk1</rasd:HostResource>
-        <rasd:InstanceID>4</rasd:InstanceID>
-        <rasd:Parent>3</rasd:Parent>
-        <rasd:ResourceType>17</rasd:ResourceType>
-      </Item>
-      <Item>
-        <rasd:Connection>VM Network</rasd:Connection>
-        <rasd:ElementName>Ethernet adapter 1</rasd:ElementName>
-        <rasd:InstanceID>5</rasd:InstanceID>
-        <rasd:ResourceSubType>E1000</rasd:ResourceSubType>
-        <rasd:ResourceType>10</rasd:ResourceType>
-      </Item>
-    </VirtualHardwareSection>
-  </VirtualSystem>
-</Envelope>
-OVF
-
-    # Pack as OVA (TAR, OVF first per spec)
-    (cd "${OVA_TMPDIR}" && tar cf "${OVA_PATH}" test-appliance.ovf test-disk.vmdk)
-    rm -rf "${OVA_TMPDIR}"
-    echo "Created test OVA at ${OVA_PATH} ($(du -h "${OVA_PATH}" | cut -f1))"
+    echo "Downloading Ubuntu cloud OVA (this may take a few minutes)..."
+    curl -fSL -o "${OVA_PATH}" "${OVA_URL}"
+    echo "Downloaded OVA ($(du -h "${OVA_PATH}" | cut -f1))"
 else
-    echo "Test OVA already cached at ${OVA_PATH}"
+    echo "OVA already cached at ${OVA_PATH}"
 fi
 
 echo "CLOUD_IMAGE_PATH=${CLOUD_IMAGE_PATH}"

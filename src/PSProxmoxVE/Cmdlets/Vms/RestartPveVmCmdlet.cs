@@ -33,10 +33,11 @@ namespace PSProxmoxVE.Cmdlets.Vms
 
         /// <summary>
         /// <para type="description">
-        /// Timeout in seconds for the graceful shutdown phase. Defaults to 60 seconds.
+        /// Timeout in seconds for the graceful shutdown phase and -Wait status polling. Defaults to 60 seconds.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = false, HelpMessage = "Maximum time to wait for the task.")]
+        [Parameter(Mandatory = false, HelpMessage = "Timeout in seconds for -Wait (default 60).")]
+        [ValidateRange(1, 3600)]
         public int Timeout { get; set; } = 60;
 
         /// <summary>
@@ -52,7 +53,6 @@ namespace PSProxmoxVE.Cmdlets.Vms
 
             var session = GetSession();
             var vmService = new VmService();
-            var taskService = new TaskService();
 
             WriteVerbose($"Restarting VM {VmId} on node '{Node}'...");
 
@@ -60,13 +60,13 @@ namespace PSProxmoxVE.Cmdlets.Vms
             var shutdownTask = vmService.ShutdownVm(session, Node, VmId, Timeout);
 
             if (Wait.IsPresent)
-                taskService.WaitForTask(session, Node, shutdownTask.Upid, null, null, null);
+                WaitForStatusTransition(session, Node, shutdownTask, VmId, "stopped", Timeout);
 
             // Start
             var startTask = vmService.StartVm(session, Node, VmId);
 
             if (Wait.IsPresent)
-                startTask = taskService.WaitForTask(session, Node, startTask.Upid, null, null, null);
+                startTask = WaitForStatusTransition(session, Node, startTask, VmId, "running", Timeout);
 
             WriteObject(startTask);
         }

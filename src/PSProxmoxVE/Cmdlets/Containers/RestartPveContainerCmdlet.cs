@@ -33,10 +33,11 @@ namespace PSProxmoxVE.Cmdlets.Containers
 
         /// <summary>
         /// <para type="description">
-        /// Timeout in seconds for the graceful shutdown phase. Defaults to 60 seconds.
+        /// Timeout in seconds for the graceful shutdown phase and -Wait status polling. Defaults to 60 seconds.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = false, HelpMessage = "Maximum time to wait for the task.")]
+        [Parameter(Mandatory = false, HelpMessage = "Timeout in seconds for -Wait (default 60).")]
+        [ValidateRange(1, 3600)]
         public int Timeout { get; set; } = 60;
 
         /// <summary>
@@ -52,7 +53,6 @@ namespace PSProxmoxVE.Cmdlets.Containers
 
             var session = GetSession();
             var containerService = new ContainerService();
-            var taskService = new TaskService();
 
             WriteVerbose($"Restarting container {VmId} on node '{Node}'...");
 
@@ -60,13 +60,13 @@ namespace PSProxmoxVE.Cmdlets.Containers
             var shutdownTask = containerService.ShutdownContainer(session, Node, VmId, Timeout);
 
             if (Wait.IsPresent)
-                taskService.WaitForTask(session, shutdownTask.Node ?? Node, shutdownTask.Upid!, null, null, null);
+                WaitForStatusTransition(session, Node, shutdownTask, VmId, "stopped", Timeout, isContainer: true);
 
             // Start
             var startTask = containerService.StartContainer(session, Node, VmId);
 
             if (Wait.IsPresent)
-                startTask = taskService.WaitForTask(session, startTask.Node ?? Node, startTask.Upid!, null, null, null);
+                startTask = WaitForStatusTransition(session, Node, startTask, VmId, "running", Timeout, isContainer: true);
 
             WriteObject(startTask);
         }

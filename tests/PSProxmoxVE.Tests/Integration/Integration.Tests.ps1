@@ -412,10 +412,10 @@ Describe 'Integration Tests' -Tag 'Integration' {
         It 'Should start and stop a VM' {
             if (Skip-IfNoTestVm) { return }
 
-            $startTask = Start-PveVm -Node $script:Node -VmId $script:TestVmId -Wait
+            $startTask = Start-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -Timeout 30
             $startTask | Should -Not -BeNullOrEmpty
 
-            $stopTask = Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -Confirm:$false
+            $stopTask = Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -Timeout 30 -Confirm:$false
             $stopTask | Should -Not -BeNullOrEmpty
         }
 
@@ -423,13 +423,13 @@ Describe 'Integration Tests' -Tag 'Integration' {
             if (Skip-IfNoTestVm) { return }
 
             # Start the VM first
-            Start-PveVm -Node $script:Node -VmId $script:TestVmId -Wait | Out-Null
+            Start-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -Timeout 30 | Out-Null
 
             # Hard reset (no ACPI — works even without guest OS)
-            $task = Reset-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -Confirm:$false
+            $task = Reset-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -Timeout 30 -Confirm:$false
             $task | Should -Not -BeNullOrEmpty
 
-            Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -Confirm:$false | Out-Null
+            Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -Timeout 30 -Confirm:$false | Out-Null
         }
 
         It 'Should clone a VM' {
@@ -488,7 +488,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
             # Ensure the VM is stopped for snapshot
             $vm = Get-PveVm -Node $script:Node | Where-Object { $_.VmId -eq $script:TestVmId }
             if ($vm.Status -eq 'running') {
-                Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -Confirm:$false | Out-Null
+                Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -Timeout 30 -Confirm:$false | Out-Null
             }
 
             $snapName = 'pester-snap'
@@ -625,7 +625,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
             $task.IsSuccessful | Should -BeTrue
 
             # Clean up
-            Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -Confirm:$false | Out-Null
+            Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -Timeout 30 -Confirm:$false | Out-Null
         }
     }
 
@@ -900,7 +900,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
         It 'Should start a container (Start-PveContainer)' {
             if (Skip-IfNoTestContainer) { return }
 
-            $task = Start-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait
+            $task = Start-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait -Timeout 30
             $task | Should -Not -BeNullOrEmpty
 
             $ct = Get-PveContainer -Node $script:Node -VmId $script:TestContainerId
@@ -910,7 +910,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
         It 'Should stop a container (Stop-PveContainer)' {
             if (Skip-IfNoTestContainer) { return }
 
-            $task = Stop-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait -Confirm:$false
+            $task = Stop-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait -Timeout 30 -Confirm:$false
             $task | Should -Not -BeNullOrEmpty
 
             $ct = Get-PveContainer -Node $script:Node -VmId $script:TestContainerId
@@ -921,16 +921,16 @@ Describe 'Integration Tests' -Tag 'Integration' {
             if (Skip-IfNoTestContainer) { return }
 
             # Start first so we can restart
-            Start-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait | Out-Null
+            Start-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait -Timeout 30 | Out-Null
 
-            $task = Restart-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait
+            $task = Restart-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait -Timeout 30
             $task | Should -Not -BeNullOrEmpty
 
             $ct = Get-PveContainer -Node $script:Node -VmId $script:TestContainerId
             $ct.Status | Should -Be 'running'
 
             # Stop for subsequent tests
-            Stop-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait -Confirm:$false | Out-Null
+            Stop-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait -Timeout 30 -Confirm:$false | Out-Null
         }
 
         It 'Should clone a container (Copy-PveContainer)' {
@@ -964,7 +964,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
             # Ensure container is stopped
             $ct = Get-PveContainer -Node $script:Node -VmId $script:TestContainerId
             if ($ct.Status -eq 'running') {
-                Stop-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait -Confirm:$false | Out-Null
+                Stop-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait -Timeout 30 -Confirm:$false | Out-Null
             }
 
             $task = New-PveContainerSnapshot `
@@ -1084,7 +1084,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
         It 'Should start the Linux VM (Start-PveVm)' {
             if (Skip-IfNoLinuxVm) { return }
 
-            $task = Start-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait
+            $task = Start-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -Timeout 30
             $task | Should -Not -BeNullOrEmpty
         }
 
@@ -1152,33 +1152,19 @@ Describe 'Integration Tests' -Tag 'Integration' {
         It 'Should suspend and resume a running VM (Suspend-PveVm / Resume-PveVm)' {
             if (Skip-IfNoLinuxVm) { return }
 
-            # Suspend — sends QMP stop
-            { Suspend-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -ErrorAction Stop } |
-                Should -Not -Throw
+            # Suspend — -Wait -Timeout polls until status is 'paused'
+            $suspendTask = Suspend-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -Timeout 30
+            $suspendTask | Should -Not -BeNullOrEmpty
 
-            # Poll for paused status (may take several seconds)
-            $paused = $false
-            for ($i = 0; $i -lt 10; $i++) {
-                Start-Sleep -Seconds 2
-                $vm = Get-PveVm -Node $script:Node |
-                    Where-Object { $_.VmId -eq $script:LinuxVmId }
-                if ($vm.Status -eq 'paused') { $paused = $true; break }
-            }
-            $paused | Should -BeTrue -Because 'VM should transition to paused within 20s'
+            $vm = Get-PveVm -Node $script:Node | Where-Object { $_.VmId -eq $script:LinuxVmId }
+            $vm.Status | Should -Be 'paused'
 
-            # Resume — sends QMP cont
-            { Resume-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -ErrorAction Stop } |
-                Should -Not -Throw
+            # Resume — -Wait -Timeout polls until status is 'running'
+            $resumeTask = Resume-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -Timeout 30
+            $resumeTask | Should -Not -BeNullOrEmpty
 
-            # Poll for running status
-            $running = $false
-            for ($i = 0; $i -lt 10; $i++) {
-                Start-Sleep -Seconds 2
-                $vm = Get-PveVm -Node $script:Node |
-                    Where-Object { $_.VmId -eq $script:LinuxVmId }
-                if ($vm.Status -eq 'running') { $running = $true; break }
-            }
-            $running | Should -BeTrue -Because 'VM should return to running within 20s'
+            $vm = Get-PveVm -Node $script:Node | Where-Object { $_.VmId -eq $script:LinuxVmId }
+            $vm.Status | Should -Be 'running'
         }
 
         It 'Should gracefully restart a VM via ACPI (Restart-PveVm)' {
@@ -1188,16 +1174,12 @@ Describe 'Integration Tests' -Tag 'Integration' {
             $vm = Get-PveVm -Node $script:Node |
                 Where-Object { $_.VmId -eq $script:LinuxVmId }
             if ($vm.Status -eq 'paused') {
-                Resume-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -ErrorAction SilentlyContinue | Out-Null
-                Start-Sleep -Seconds 3
+                Resume-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -Timeout 15 -ErrorAction SilentlyContinue | Out-Null
             }
-            if (Skip-IfNoLinuxVm) { return }
 
-            $task = Restart-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -Confirm:$false
+            $task = Restart-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -Timeout 60 -Confirm:$false
             $task | Should -Not -BeNullOrEmpty
 
-            # Wait a moment for the VM to come back up
-            Start-Sleep -Seconds 10
             $vm = Get-PveVm -Node $script:Node |
                 Where-Object { $_.VmId -eq $script:LinuxVmId }
             $vm.Status | Should -Be 'running'
@@ -1206,7 +1188,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
         It 'Should gracefully stop a VM via ACPI (Stop-PveVm)' {
             if (Skip-IfNoLinuxVm) { return }
 
-            $task = Stop-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -Confirm:$false
+            $task = Stop-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -Timeout 30 -Confirm:$false
             $task | Should -Not -BeNullOrEmpty
 
             $vm = Get-PveVm -Node $script:Node |
@@ -1232,32 +1214,43 @@ Describe 'Integration Tests' -Tag 'Integration' {
             $metadata.Disks.Count | Should -BeGreaterThan 0
         }
 
-        It 'Should upload OVA and create VM (Import-PveOva)' {
+        It 'Should import OVA as a VM (Import-PveOva)' {
             if (Skip-IfNoTarget) { return }
             if (-not $script:OvaPath -or -not (Test-Path $script:OvaPath)) {
                 Set-ItResult -Skipped -Because 'PVETEST_OVA_PATH not set or file not found'
                 return
             }
 
-            try {
-                $vm = Import-PveOva -Node $script:Node -Storage $script:Storage `
-                    -Path $script:OvaPath -TargetStorage 'local-lvm' `
-                    -Name 'pester-ova-vm' -Wait
+            $vm = Import-PveOva -Node $script:Node -Storage $script:Storage `
+                -Path $script:OvaPath -TargetStorage 'local-lvm' `
+                -Name 'pester-ova-vm' -Wait
 
-                $vm | Should -Not -BeNullOrEmpty
-                $script:CreatedVmIds.Add($vm.VmId)
+            $vm | Should -Not -BeNullOrEmpty
+            $script:CreatedVmIds.Add($vm.VmId)
+
+            # Verify the VM exists
+            $found = Get-PveVm -Node $script:Node -Name 'pester-ova-vm' | Select-Object -First 1
+            $found | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should start the OVA-imported VM' {
+            if (Skip-IfNoTarget) { return }
+
+            $ovaVm = Get-PveVm -Node $script:Node -Name 'pester-ova-vm' -ErrorAction SilentlyContinue |
+                Select-Object -First 1
+            if (-not $ovaVm) {
+                Set-ItResult -Skipped -Because 'OVA VM was not imported'
+                return
             }
-            catch {
-                # Disk import may fail with synthetic test VMDK — verify VM was at least created
-                $found = Get-PveVm -Node $script:Node -Name 'pester-ova-vm' -ErrorAction SilentlyContinue |
-                    Select-Object -First 1
-                if ($found) {
-                    $script:CreatedVmIds.Add($found.VmId)
-                    Set-ItResult -Skipped -Because "OVA upload and VM creation succeeded but disk import failed (synthetic VMDK): $_"
-                } else {
-                    throw
-                }
-            }
+
+            $task = Start-PveVm -Node $script:Node -VmId $ovaVm.VmId -Wait -Timeout 60
+            $task | Should -Not -BeNullOrEmpty
+
+            $vm = Get-PveVm -Node $script:Node | Where-Object { $_.VmId -eq $ovaVm.VmId }
+            $vm.Status | Should -Be 'running'
+
+            # Clean up
+            Stop-PveVm -Node $script:Node -VmId $ovaVm.VmId -Wait -Timeout 30 -Confirm:$false | Out-Null
         }
     }
 
@@ -1270,7 +1263,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
             $vm = Get-PveVm -Node $script:Node |
                 Where-Object { $_.VmId -eq $script:LinuxVmId }
             if ($vm.Status -eq 'running') {
-                Stop-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -Confirm:$false | Out-Null
+                Stop-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -Timeout 30 -Confirm:$false | Out-Null
             }
 
             { New-PveTemplate -Node $script:Node -VmId $script:LinuxVmId -Confirm:$false -ErrorAction Stop } |
@@ -1327,7 +1320,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
             # Ensure stopped
             $vm = Get-PveVm -Node $script:Node | Where-Object { $_.VmId -eq $script:TestVmId }
             if ($vm.Status -eq 'running') {
-                Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -Confirm:$false | Out-Null
+                Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -Timeout 30 -Confirm:$false | Out-Null
             }
 
             { Remove-PveVm `

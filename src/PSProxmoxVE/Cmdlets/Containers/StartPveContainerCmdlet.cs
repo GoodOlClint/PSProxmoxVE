@@ -36,6 +36,11 @@ namespace PSProxmoxVE.Cmdlets.Containers
         [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
+        /// <summary>Maximum seconds to wait for the status transition when -Wait is specified. Default 60.</summary>
+        [Parameter(Mandatory = false, HelpMessage = "Timeout in seconds for -Wait (default 60).")]
+        [ValidateRange(1, 3600)]
+        public int Timeout { get; set; } = 60;
+
         protected override void ProcessRecord()
         {
             if (!ShouldProcess($"Container {VmId} on node '{Node}'", "Start-PveContainer"))
@@ -49,8 +54,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
 
             if (Wait.IsPresent)
             {
-                var taskService = new TaskService();
-                task = taskService.WaitForTask(session, task.Node ?? Node, task.Upid!, null, null, null);
+                task = WaitForStatusTransition(session, Node, task, VmId, "running", Timeout, isContainer: true);
             }
 
             WriteObject(task);
