@@ -124,6 +124,61 @@ namespace PSProxmoxVE.Core.Services
         }
 
         // -------------------------------------------------------------------------
+        // Disk import
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Imports a disk image into a VM by setting a disk config key with the import-from syntax.
+        /// Uses POST (not PUT) because the import is an async background operation.
+        /// Returns the task UPID.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
+        /// <param name="disk">The disk key (e.g. "scsi0", "sata0", "virtio0").</param>
+        /// <param name="targetStorage">The target storage for the imported disk (e.g. "local-lvm").</param>
+        /// <param name="importFrom">
+        /// The import source in PVE format. Examples:
+        /// <list type="bullet">
+        /// <item>"local:iso/image.img" — import from a file already on storage</item>
+        /// <item>"local:import/myvm.ova/disk.vmdk" — import a disk from within an OVA</item>
+        /// <item>"/var/lib/vz/images/disk.qcow2" — import from an absolute path on the node</item>
+        /// </list>
+        /// </param>
+        /// <param name="format">Optional target format (e.g. "qcow2", "raw"). Defaults to storage default.</param>
+        public PveTask ImportDisk(
+            PveSession session,
+            string node,
+            int vmid,
+            string disk,
+            string targetStorage,
+            string importFrom,
+            string? format = null)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (string.IsNullOrWhiteSpace(disk)) throw new ArgumentNullException(nameof(disk));
+            if (string.IsNullOrWhiteSpace(targetStorage)) throw new ArgumentNullException(nameof(targetStorage));
+            if (string.IsNullOrWhiteSpace(importFrom)) throw new ArgumentNullException(nameof(importFrom));
+
+            // Build the disk value: "storage:0,import-from=source[,format=fmt]"
+            var diskValue = $"{targetStorage}:0,import-from={importFrom}";
+            if (!string.IsNullOrEmpty(format))
+                diskValue += $",format={format}";
+
+            var formData = new Dictionary<string, string>
+            {
+                [disk] = diskValue
+            };
+
+            using var client = new PveHttpClient(session);
+            // POST (not PUT) because import-from triggers a background task
+            var response = client.PostAsync($"nodes/{node}/qemu/{vmid}/config", formData)
+                .GetAwaiter().GetResult();
+            return ParseTask(response, node);
+        }
+
+        // -------------------------------------------------------------------------
         // Lifecycle
         // -------------------------------------------------------------------------
 

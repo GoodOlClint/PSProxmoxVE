@@ -4,15 +4,15 @@
 # Uses PSProxmoxVE cmdlets for all supported operations:
 #   - Invoke-PveStorageDownload (cloud image download)
 #   - New-PveVm (VM creation)
-#   - Set-PveVmConfig -AdditionalConfig (disk/boot/agent/cloud-init config)
+#   - Import-PveVmDisk (disk import from storage)
+#   - Set-PveVmConfig -AdditionalConfig (boot/agent/cloud-init config)
 #   - Set-PveCloudInitConfig (user/password/IP)
 #   - Start-PveVm (boot)
 #   - Test-PveVmGuestAgent (agent ping)
 #
 # SSH/SCP only for operations without API support:
 #   - pvesm set (enable snippets content type)
-#   - SCP snippet upload (no snippet API)
-#   - qm importdisk (no disk import API)
+#   - SCP snippet upload (no snippet upload API — PVE limitation, not even the web UI supports this)
 #
 # Usage: prepare-test-vm.sh <nested-pve-ip> <root-password> <vm-id> <node> <api-token>
 #
@@ -72,9 +72,14 @@ pwsh -NoProfile -Command "
         -Memory 512 -Cores 1 -OsType 'l26' -Wait
 "
 
-# ── Step 4: Import disk (SSH — no importdisk API) ────────────────────
-echo "Importing disk image..."
-${SSH_CMD} "qm importdisk ${VMID} /var/lib/vz/template/iso/${CLOUD_IMAGE_FILENAME} local-lvm 2>&1 | tail -1"
+# ── Step 4: Import disk (module cmdlet) ────────────────────────────
+echo "Importing disk image via Import-PveVmDisk..."
+pwsh -NoProfile -Command "
+    Import-Module PSProxmoxVE; ${CONNECT_CMD}
+    Import-PveVmDisk -Node '${NODE}' -VmId ${VMID} -Disk 'scsi0' \
+        -TargetStorage 'local-lvm' \
+        -Source 'local:iso/${CLOUD_IMAGE_FILENAME}' -Wait
+"
 
 # ── Step 5: Configure VM (module cmdlet — AdditionalConfig) ──────────
 echo "Configuring VM via Set-PveVmConfig -AdditionalConfig..."
@@ -82,7 +87,6 @@ pwsh -NoProfile -Command "
     Import-Module PSProxmoxVE; ${CONNECT_CMD}
     Set-PveVmConfig -Node '${NODE}' -VmId ${VMID} -AdditionalConfig @{
         scsihw   = 'virtio-scsi-single'
-        scsi0    = 'local-lvm:vm-${VMID}-disk-0'
         boot     = 'order=scsi0'
         serial0  = 'socket'
         agent    = '1'

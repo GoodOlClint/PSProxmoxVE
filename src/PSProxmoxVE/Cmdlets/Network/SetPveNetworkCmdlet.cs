@@ -22,6 +22,10 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = true, Position = 1, HelpMessage = "The network interface name.")]
         public string Iface { get; set; } = string.Empty;
 
+        /// <summary>Network interface type (e.g. bridge, bond, eth, vlan, OVSBridge).</summary>
+        [Parameter(Mandatory = true, Position = 2, HelpMessage = "Interface type (bridge, bond, eth, vlan, OVSBridge).")]
+        public string Type { get; set; } = string.Empty;
+
         /// <summary>IPv4 address for the interface.</summary>
         [Parameter(Mandatory = false, HelpMessage = "IPv4 address for the interface.")]
         public string? Address { get; set; }
@@ -75,7 +79,10 @@ namespace PSProxmoxVE.Cmdlets.Network
             using var client = new PveHttpClient(session);
 
             WriteVerbose($"Updating network interface '{Iface}' on node '{Node}'...");
-            var data = new Dictionary<string, string>();
+            var data = new Dictionary<string, string>
+            {
+                ["type"] = Type
+            };
 
             if (!string.IsNullOrEmpty(Address))     data["address"]      = Address!;
             if (!string.IsNullOrEmpty(Netmask))     data["netmask"]      = Netmask!;

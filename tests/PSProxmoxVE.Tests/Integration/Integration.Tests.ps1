@@ -575,6 +575,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
             { Set-PveNetwork `
                 -Node    $script:Node `
                 -Iface   'vmbr99' `
+                -Type    'bridge' `
                 -Comments 'Created by Pester integration test' `
                 -ErrorAction Stop } | Should -Not -Throw
         }

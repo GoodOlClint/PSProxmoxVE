@@ -4,7 +4,7 @@ This document tracks which PVE API areas are implemented in PSProxmoxVE and whic
 
 **Last updated:** 2026-03-20
 **Module version:** 0.1.0-preview
-**Total cmdlets:** 74
+**Total cmdlets:** 75
 
 ## Implemented
 
@@ -12,7 +12,7 @@ This document tracks which PVE API areas are implemented in PSProxmoxVE and whic
 |------|---------|---------------|
 | **Connection** | 3 | `POST /access/ticket`, `DELETE /access/ticket` |
 | **Nodes** | 2 | `GET /nodes`, `GET /nodes/{node}/status` |
-| **VMs (QEMU)** | 18 | `/nodes/{node}/qemu/*` (CRUD, lifecycle, clone, migrate, resize, config, guest agent) |
+| **VMs (QEMU)** | 19 | `/nodes/{node}/qemu/*` (CRUD, lifecycle, clone, migrate, resize, disk import, config, guest agent) |
 | **Containers (LXC)** | 14 | `/nodes/{node}/lxc/*` (CRUD, lifecycle, clone, migrate, config, snapshots) |
 | **Storage** | 6 | `/storage`, `/nodes/{node}/storage/{storage}/*` (CRUD, content, upload, download) |
 | **Snapshots** | 4 | `/nodes/{node}/qemu/{vmid}/snapshot/*` (CRUD, rollback) |
