@@ -81,6 +81,34 @@ namespace PSProxmoxVE.Core.Services
         }
 
         /// <summary>
+        /// Enriches a VM object with detailed status from the status/current endpoint,
+        /// populating QmpStatus and other fields not available from the list endpoint.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vm">The VM to enrich.</param>
+        public void EnrichVmStatus(PveSession session, string node, PveVm vm)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (vm == null) throw new ArgumentNullException(nameof(vm));
+
+            using var client = new PveHttpClient(session);
+            var response = client.GetAsync($"nodes/{node}/qemu/{vm.VmId}/status/current")
+                .GetAwaiter().GetResult();
+            var data = JObject.Parse(response)["data"];
+            if (data == null) return;
+
+            vm.QmpStatus = data["qmpstatus"]?.ToString();
+            vm.Status = data["status"]?.ToString() ?? vm.Status;
+            vm.Pid = data["pid"]?.ToObject<int?>();
+            vm.Uptime = data["uptime"]?.ToObject<long?>();
+            vm.CpuCount = data["cpus"]?.ToObject<int?>() ?? vm.CpuCount;
+            vm.MaxMem = data["maxmem"]?.ToObject<long?>() ?? vm.MaxMem;
+            vm.MaxDisk = data["maxdisk"]?.ToObject<long?>() ?? vm.MaxDisk;
+        }
+
+        /// <summary>
         /// Returns the full configuration of a VM.
         /// </summary>
         /// <param name="session">The authenticated PVE session.</param>

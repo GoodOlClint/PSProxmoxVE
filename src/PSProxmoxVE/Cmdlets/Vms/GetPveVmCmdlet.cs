@@ -58,6 +58,16 @@ namespace PSProxmoxVE.Cmdlets.Vms
         [Parameter(Mandatory = false, HelpMessage = "Return only VMs marked as templates.")]
         public SwitchParameter TemplatesOnly { get; set; }
 
+        /// <summary>
+        /// <para type="description">
+        /// When specified, queries the status/current endpoint for each VM to populate
+        /// QmpStatus and EffectiveStatus. This provides accurate pause detection but
+        /// requires one additional API call per VM.
+        /// </para>
+        /// </summary>
+        [Parameter(Mandatory = false, HelpMessage = "Include detailed status (QmpStatus) via per-VM API call.")]
+        public SwitchParameter Detailed { get; set; }
+
         protected override void ProcessRecord()
         {
             var session = GetSession();
@@ -84,7 +94,26 @@ namespace PSProxmoxVE.Cmdlets.Vms
             if (TemplatesOnly.IsPresent)
                 vms = vms.Where(v => v.Template == 1);
 
-            foreach (var vm in vms)
+            // Materialize before enrichment to avoid multiple enumeration
+            var vmList = vms.ToList();
+
+            if (Detailed.IsPresent)
+            {
+                WriteVerbose($"Enriching {vmList.Count} VM(s) with detailed status...");
+                foreach (var vm in vmList)
+                {
+                    try
+                    {
+                        service.EnrichVmStatus(session, vm.Node ?? Node ?? string.Empty, vm);
+                    }
+                    catch
+                    {
+                        // Skip enrichment for inaccessible VMs (e.g. locked, migrating)
+                    }
+                }
+            }
+
+            foreach (var vm in vmList)
                 WriteObject(vm);
         }
     }

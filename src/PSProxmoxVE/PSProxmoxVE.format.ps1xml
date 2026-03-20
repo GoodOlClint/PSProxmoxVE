@@ -125,7 +125,7 @@
                 <PropertyName>Name</PropertyName>
               </TableColumnItem>
               <TableColumnItem>
-                <PropertyName>Status</PropertyName>
+                <PropertyName>EffectiveStatus</PropertyName>
               </TableColumnItem>
               <TableColumnItem>
                 <PropertyName>Node</PropertyName>

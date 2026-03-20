@@ -24,7 +24,10 @@ public class PveVm
     public string? Name { get; set; }
 
     /// <summary>
-    /// The current runtime status of the VM (e.g., "running", "stopped").
+    /// The runtime status from the VM list endpoint (e.g., "running", "stopped").
+    /// Note: reports "running" for both running AND paused VMs. For accurate pause
+    /// detection, use <see cref="EffectiveStatus"/> or <see cref="QmpStatus"/>,
+    /// which are populated when using Get-PveVm -Detailed.
     /// </summary>
     [JsonPropertyName("status")]
     [JsonProperty("status")]
@@ -94,11 +97,20 @@ public class PveVm
     public int? Pid { get; set; }
 
     /// <summary>
-    /// The QMP (QEMU Machine Protocol) status string.
+    /// The QMP (QEMU Machine Protocol) status string (e.g., "running", "paused", "stopped").
+    /// Only populated from the status/current endpoint (Get-PveVm -Detailed), not the list endpoint.
     /// </summary>
     [JsonPropertyName("qmpstatus")]
     [JsonProperty("qmpstatus")]
     public string? QmpStatus { get; set; }
+
+    /// <summary>
+    /// The effective runtime status, preferring QmpStatus over Status for accurate
+    /// pause detection. Returns QmpStatus when available (from -Detailed), otherwise Status.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    [Newtonsoft.Json.JsonIgnore]
+    public string? EffectiveStatus => QmpStatus ?? Status;
 
     /// <summary>
     /// Indicates whether the QEMU guest agent is running (non-zero) inside the VM.
@@ -115,7 +127,7 @@ public class PveVm
         var uptimeStr = Uptime.HasValue ? TimeSpan.FromSeconds(Uptime.Value).ToString(@"d\.hh\:mm\:ss") : "N/A";
         var templateStr = Template is 1 ? " [template]" : string.Empty;
         return $"VM {VmId}{templateStr}: {Name ?? "(unnamed)"} | Node: {Node ?? "N/A"} | "
-             + $"Status: {Status ?? "N/A"} | CPUs: {CpuCount?.ToString() ?? "N/A"} | "
+             + $"Status: {EffectiveStatus ?? "N/A"} | CPUs: {CpuCount?.ToString() ?? "N/A"} | "
              + $"Mem: {maxMemMb} | Disk: {maxDiskGb} | Uptime: {uptimeStr}";
     }
 }

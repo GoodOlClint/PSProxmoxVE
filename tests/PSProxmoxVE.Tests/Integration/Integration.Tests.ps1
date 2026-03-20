@@ -1153,14 +1153,19 @@ Describe 'Integration Tests' -Tag 'Integration' {
             if (Skip-IfNoLinuxVm) { return }
 
             # Suspend — -Wait -Timeout polls qmpstatus until 'paused'
-            # Note: PVE list endpoint reports Status=running for paused VMs;
-            # the -Wait polling uses the status/current endpoint which has qmpstatus.
             $suspendTask = Suspend-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -Timeout 30
             $suspendTask | Should -Not -BeNullOrEmpty
+
+            # Verify with -Detailed (fetches qmpstatus from status/current endpoint)
+            $vm = Get-PveVm -Node $script:Node -VmId $script:LinuxVmId -Detailed
+            $vm.EffectiveStatus | Should -Be 'paused'
 
             # Resume — -Wait -Timeout polls qmpstatus until 'running'
             $resumeTask = Resume-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -Timeout 30
             $resumeTask | Should -Not -BeNullOrEmpty
+
+            $vm = Get-PveVm -Node $script:Node -VmId $script:LinuxVmId -Detailed
+            $vm.EffectiveStatus | Should -Be 'running'
         }
 
         It 'Should gracefully restart a VM via ACPI (Restart-PveVm)' {
