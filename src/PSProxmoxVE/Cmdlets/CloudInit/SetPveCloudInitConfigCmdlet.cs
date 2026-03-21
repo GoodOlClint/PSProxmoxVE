@@ -68,6 +68,7 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
         protected override void ProcessRecord()
         {
             var session = GetSession();
+            RequireVersion(session, "Cloud-Init management", 7, 2);
 
             if (!ShouldProcess($"VM {VmId} on {Node}", "Set PVE Cloud-Init Config"))
                 return;

@@ -13,7 +13,17 @@ A production-grade C# binary PowerShell module for managing Proxmox VE environme
 |---|---|
 | 9.x (current, 9.1.6+) | **Primary target — fully supported** |
 | 8.x | Supported |
-| 7.x | EOL 2024 — **not supported** |
+| 7.x (7.0+) | **Best-effort** — core cmdlets work, newer features emit clear version errors |
+| 6.x and older | **Not supported** — hard blocked by version checks |
+
+### Version Gating Policy
+
+The module uses a two-tier version check for cmdlets that require newer PVE APIs:
+
+- **Hard block** (introduced version): The API endpoint doesn't exist — the cmdlet emits a terminating error with a clear message like *"This operation requires Proxmox VE 8.1 or later."*
+- **Warning** (default version): The feature exists but may not be enabled by default — a warning is emitted but the command proceeds, allowing users who manually enabled the feature to succeed.
+
+Most cmdlets target endpoints available since PVE 4.2 and require no version check. Cmdlets that need newer APIs include SDN (introduced 6.2, default 8.0+), cloud-init management (7.2+), container interfaces (8.1+), VM disk import (8.1+), and pool management (8.1+ for update/delete).
 
 ## Prerequisites
 

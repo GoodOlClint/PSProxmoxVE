@@ -17,6 +17,7 @@ namespace PSProxmoxVE.Cmdlets.Backup
         protected override void ProcessRecord()
         {
             var session = GetSession();
+            RequireVersion(session, "Backup compliance info", 7, 0);
             var service = new BackupService();
 
             WriteVerbose("Getting guests not covered by backup jobs...");

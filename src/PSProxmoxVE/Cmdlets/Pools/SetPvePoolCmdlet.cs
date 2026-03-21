@@ -44,6 +44,7 @@ namespace PSProxmoxVE.Cmdlets.Pools
                 return;
 
             var session = GetSession();
+            RequireVersion(session, "Pool update", 8, 1);
             var service = new PoolService();
 
             var config = new Dictionary<string, string>();

@@ -27,6 +27,7 @@ namespace PSProxmoxVE.Cmdlets.Pools
                 return;
 
             var session = GetSession();
+            RequireVersion(session, "Pool deletion", 8, 1);
             var service = new PoolService();
 
             WriteVerbose($"Removing pool '{PoolId}'...");

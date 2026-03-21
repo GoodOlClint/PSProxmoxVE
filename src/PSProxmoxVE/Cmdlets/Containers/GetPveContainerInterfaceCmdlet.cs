@@ -27,6 +27,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
         protected override void ProcessRecord()
         {
             var session = GetSession();
+            RequireVersion(session, "Container interface listing", 8, 1);
 
             WriteVerbose($"Getting network interfaces for container {VmId}...");
             var service = new ContainerService();

@@ -49,6 +49,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
                 return;
 
             var session = GetSession();
+            RequireVersion(session, "Storage URL download", 7, 0);
             using var client = new PveHttpClient(session);
 
             WriteVerbose($"Downloading '{Url}' to {Node}/{Storage}...");

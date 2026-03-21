@@ -36,6 +36,7 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
                 return;
 
             var session = GetSession();
+            RequireVersion(session, "Cloud-Init management", 7, 2);
 
             WriteVerbose($"Regenerating cloud-init drive for VM {VmId}...");
             var service = new CloudInitService();
