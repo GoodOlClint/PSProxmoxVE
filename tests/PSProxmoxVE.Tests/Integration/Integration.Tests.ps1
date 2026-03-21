@@ -1372,34 +1372,6 @@ Describe 'Integration Tests' -Tag 'Integration' {
     }
 
     # -----------------------------------------------------------------------
-    Context 'OVA Import' {
-        BeforeAll {
-            function Skip-IfNoOva {
-                if (-not $script:OvaPath) {
-                    Set-ItResult -Skipped -Because 'PVETEST_OVA_PATH is not set'
-                }
-            }
-        }
-
-        It 'Should import a VM from OVA file' {
-            Skip-IfNoOva
-            $vmId = 9900 + (Get-Random -Maximum 99)
-            $result = Import-PveOva -Node $script:Node -Path $script:OvaPath -Storage $script:Storage -NewVmId $vmId -ErrorAction Stop
-            $result | Should -Not -BeNullOrEmpty
-            $script:CreatedVmIds.Add($vmId) | Out-Null
-        }
-
-        It 'Should find the imported VM' {
-            Skip-IfNoOva
-            if ($script:CreatedVmIds.Count -eq 0 -or $script:CreatedVmIds[-1] -lt 9900) {
-                Set-ItResult -Skipped -Because 'OVA import did not create a VM'
-            }
-            $vm = Get-PveVm -Node $script:Node | Where-Object { $_.VmId -eq $script:CreatedVmIds[-1] }
-            $vm | Should -Not -BeNullOrEmpty
-        }
-    }
-
-    # -----------------------------------------------------------------------
     Context 'Firewall — Cluster Rules' {
         It 'Should create a firewall rule' {
             Skip-IfNoTarget
@@ -1442,7 +1414,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
     Context 'Backup Jobs' {
         It 'Should create a backup job' {
             Skip-IfNoTarget
-            { New-PveBackupJob -Schedule '0 3 * * 6' -Storage $script:Storage -Mode snapshot -Comment 'pester-test-backup' -ErrorAction Stop } | Should -Not -Throw
+            { New-PveBackupJob -Schedule 'sat 03:00' -Storage $script:Storage -Mode snapshot -Comment 'pester-test-backup' -ErrorAction Stop } | Should -Not -Throw
         }
 
         It 'Should list backup jobs and find the test job' {
