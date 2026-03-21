@@ -170,7 +170,52 @@
 
         # Tasks
         'Get-PveTask',
-        'Wait-PveTask'
+        'Wait-PveTask',
+
+        # Firewall
+        'Get-PveFirewallRule',
+        'New-PveFirewallRule',
+        'Set-PveFirewallRule',
+        'Remove-PveFirewallRule',
+        'Get-PveFirewallGroup',
+        'New-PveFirewallGroup',
+        'Remove-PveFirewallGroup',
+        'Get-PveFirewallAlias',
+        'New-PveFirewallAlias',
+        'Set-PveFirewallAlias',
+        'Remove-PveFirewallAlias',
+        'Get-PveFirewallIpSet',
+        'New-PveFirewallIpSet',
+        'Remove-PveFirewallIpSet',
+        'Get-PveFirewallIpSetEntry',
+        'New-PveFirewallIpSetEntry',
+        'Set-PveFirewallIpSetEntry',
+        'Remove-PveFirewallIpSetEntry',
+        'Get-PveFirewallOptions',
+        'Set-PveFirewallOptions',
+        'Get-PveFirewallRef',
+
+        # Backup
+        'New-PveBackup',
+        'Get-PveBackupJob',
+        'New-PveBackupJob',
+        'Set-PveBackupJob',
+        'Remove-PveBackupJob',
+
+        # SDN — IPAM
+        'Get-PveSdnIpam',
+        'New-PveSdnIpam',
+        'Remove-PveSdnIpam',
+
+        # SDN — DNS
+        'Get-PveSdnDns',
+        'New-PveSdnDns',
+        'Remove-PveSdnDns',
+
+        # SDN — Controller
+        'Get-PveSdnController',
+        'New-PveSdnController',
+        'Remove-PveSdnController'
     )
 
     # Variables to export from this module

@@ -1,0 +1,1 @@
+{"data":[{"ipam":"pve","type":"pve"},{"ipam":"netbox1","type":"netbox","url":"https://netbox.example.com","token":"abc123","section":1}]}

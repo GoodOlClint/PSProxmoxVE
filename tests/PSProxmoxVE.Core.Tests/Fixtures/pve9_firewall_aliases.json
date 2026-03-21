@@ -1,0 +1,1 @@
+{"data":[{"name":"local_network","cidr":"10.0.0.0/8","comment":"RFC1918 private"},{"name":"dns_server","cidr":"8.8.8.8","comment":"Google DNS"}]}

@@ -1,0 +1,1 @@
+{"data":[{"controller":"evpn1","type":"evpn","asn":65000,"peers":"10.0.0.1,10.0.0.2","node":"pve1"}]}

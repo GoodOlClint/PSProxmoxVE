@@ -1,0 +1,1 @@
+{"data":[{"pos":0,"type":"in","action":"ACCEPT","proto":"tcp","dport":"80","enable":1,"comment":"Allow HTTP","log":"nolog"},{"pos":1,"type":"in","action":"ACCEPT","proto":"tcp","dport":"443","enable":1,"comment":"Allow HTTPS"},{"pos":2,"type":"out","action":"DROP","enable":0,"comment":"Block outbound (disabled)"}]}

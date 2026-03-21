@@ -3,6 +3,7 @@
 [![Build](https://github.com/goodolclint/PSProxmoxVE/actions/workflows/build.yml/badge.svg)](https://github.com/goodolclint/PSProxmoxVE/actions/workflows/build.yml)
 [![Unit Tests](https://github.com/goodolclint/PSProxmoxVE/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/goodolclint/PSProxmoxVE/actions/workflows/unit-tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/goodolclint/PSProxmoxVE/blob/main/LICENSE)
+[![PowerShell Gallery](https://img.shields.io/powershellgallery/v/PSProxmoxVE)](https://www.powershellgallery.com/packages/PSProxmoxVE)
 
 A production-grade C# binary PowerShell module for managing Proxmox VE environments.
 
@@ -324,6 +325,53 @@ SDN management requires Proxmox VE 8.0 or later. Connected server is version 7.4
 |---|---|
 | `Get-PveTask` | Get task status |
 | `Wait-PveTask` | Wait for a task to complete |
+
+### Firewall
+| Cmdlet | Description |
+|---|---|
+| `Get-PveFirewallRule` | List firewall rules (cluster/node/VM/container) |
+| `New-PveFirewallRule` | Create a firewall rule |
+| `Set-PveFirewallRule` | Update a firewall rule |
+| `Remove-PveFirewallRule` | Delete a firewall rule |
+| `Get-PveFirewallGroup` | List security groups or group rules |
+| `New-PveFirewallGroup` | Create a security group |
+| `Remove-PveFirewallGroup` | Delete a security group |
+| `Get-PveFirewallAlias` | List firewall IP aliases |
+| `New-PveFirewallAlias` | Create a firewall IP alias |
+| `Set-PveFirewallAlias` | Update a firewall IP alias |
+| `Remove-PveFirewallAlias` | Delete a firewall IP alias |
+| `Get-PveFirewallIpSet` | List firewall IP sets |
+| `New-PveFirewallIpSet` | Create a firewall IP set |
+| `Remove-PveFirewallIpSet` | Delete a firewall IP set |
+| `Get-PveFirewallIpSetEntry` | List entries in an IP set |
+| `New-PveFirewallIpSetEntry` | Add an entry to an IP set |
+| `Set-PveFirewallIpSetEntry` | Update an IP set entry |
+| `Remove-PveFirewallIpSetEntry` | Remove an entry from an IP set |
+| `Get-PveFirewallOptions` | Get firewall options |
+| `Set-PveFirewallOptions` | Set firewall options |
+| `Get-PveFirewallRef` | List firewall references (aliases, IP sets) |
+
+### Backup
+| Cmdlet | Description |
+|---|---|
+| `New-PveBackup` | Create an ad-hoc backup (vzdump) |
+| `Get-PveBackupJob` | List scheduled backup jobs |
+| `New-PveBackupJob` | Create a scheduled backup job |
+| `Set-PveBackupJob` | Update a scheduled backup job |
+| `Remove-PveBackupJob` | Delete a scheduled backup job |
+
+### SDN — IPAM / DNS / Controllers (PVE 8.0+)
+| Cmdlet | Description |
+|---|---|
+| `Get-PveSdnIpam` | List SDN IPAM plugins |
+| `New-PveSdnIpam` | Create an SDN IPAM plugin |
+| `Remove-PveSdnIpam` | Remove an SDN IPAM plugin |
+| `Get-PveSdnDns` | List SDN DNS plugins |
+| `New-PveSdnDns` | Create an SDN DNS plugin |
+| `Remove-PveSdnDns` | Remove an SDN DNS plugin |
+| `Get-PveSdnController` | List SDN controllers |
+| `New-PveSdnController` | Create an SDN controller |
+| `Remove-PveSdnController` | Remove an SDN controller |
 
 ## Known Limitations (v1)
 

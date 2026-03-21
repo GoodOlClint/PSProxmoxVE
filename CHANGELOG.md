@@ -7,6 +7,22 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+### Added
+
+- Firewall management cmdlets (21): rules, security groups, aliases, IP sets, options at cluster/node/VM/container levels
+- Backup/vzdump cmdlets (5): ad-hoc backup creation and scheduled backup job CRUD
+- SDN IPAM cmdlets (3): Get/New/Remove-PveSdnIpam for IPAM plugin management
+- SDN DNS cmdlets (3): Get/New/Remove-PveSdnDns for DNS plugin management
+- SDN Controller cmdlets (3): Get/New/Remove-PveSdnController for controller management
+- PSGallery version badge in README
+- Integration tests for firewall rules, aliases, IP sets, backup jobs, and OVA import
+
+### Fixed
+
+- `Remove-PveRole` now has `ConfirmImpact.High` for safety
+- URL-encode snapshot names in API paths for defense-in-depth
+- Extract auth header magic strings to named constants in PveHttpClient
+
 ## [0.1.0-preview] - 2026-03-19
 
 ### Added

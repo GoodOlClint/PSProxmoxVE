@@ -1,0 +1,1 @@
+{"data":[{"id":"backup-1a2b3c","type":"vzdump","enabled":1,"schedule":"0 2 * * *","storage":"local","mode":"snapshot","compress":"zstd","vmid":"100,101","comment":"Nightly backup"},{"id":"backup-4d5e6f","type":"vzdump","enabled":0,"schedule":"0 4 * * 0","storage":"nfs-backup","mode":"stop","all":1,"comment":"Weekly full"}]}

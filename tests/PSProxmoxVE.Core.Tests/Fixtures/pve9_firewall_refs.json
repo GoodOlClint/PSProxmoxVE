@@ -1,0 +1,1 @@
+{"data":[{"type":"alias","name":"local_network","comment":"RFC1918 private"},{"type":"ipset","name":"blocklist","comment":"Blocked IPs"}]}

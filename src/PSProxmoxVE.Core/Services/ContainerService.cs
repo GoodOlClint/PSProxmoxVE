@@ -173,7 +173,7 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(snapname)) throw new ArgumentNullException(nameof(snapname));
 
             using var client = new PveHttpClient(session);
-            var response = client.DeleteAsync($"nodes/{node}/lxc/{vmid}/snapshot/{snapname}")
+            var response = client.DeleteAsync($"nodes/{node}/lxc/{vmid}/snapshot/{Uri.EscapeDataString(snapname)}")
                 .GetAwaiter().GetResult();
             return ParseTask(response, node);
         }
@@ -192,7 +192,7 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(snapname)) throw new ArgumentNullException(nameof(snapname));
 
             using var client = new PveHttpClient(session);
-            var response = client.PostAsync($"nodes/{node}/lxc/{vmid}/snapshot/{snapname}/rollback")
+            var response = client.PostAsync($"nodes/{node}/lxc/{vmid}/snapshot/{Uri.EscapeDataString(snapname)}/rollback")
                 .GetAwaiter().GetResult();
             return ParseTask(response, node);
         }

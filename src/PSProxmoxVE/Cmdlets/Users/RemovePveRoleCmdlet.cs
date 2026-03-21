@@ -10,7 +10,7 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// Built-in roles cannot be removed.
     /// </para>
     /// </summary>
-    [Cmdlet(VerbsCommon.Remove, "PveRole", SupportsShouldProcess = true)]
+    [Cmdlet(VerbsCommon.Remove, "PveRole", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
     public class RemovePveRoleCmdlet : PveCmdletBase
     {
         /// <summary>The role identifier to remove.</summary>

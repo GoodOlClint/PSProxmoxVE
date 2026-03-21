@@ -1,0 +1,1 @@
+{"data":[{"group":"webservers","comment":"HTTP/HTTPS servers","digest":"abc123"},{"group":"dbservers","comment":"Database servers","digest":"def456"}]}

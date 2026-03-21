@@ -31,6 +31,10 @@ namespace PSProxmoxVE.Core.Client
         private readonly HttpClient _httpClient;
         private bool _disposed;
 
+        private const string ApiTokenPrefix = "PVEAPIToken=";
+        private const string AuthCookieName = "PVEAuthCookie=";
+        private const string CsrfHeaderName = "CSRFPreventionToken";
+
         /// <summary>
         /// Creates an HTTP client authenticated with the specified PVE session.
         /// </summary>
@@ -313,14 +317,14 @@ namespace PSProxmoxVE.Core.Client
 
             if (_session.AuthMode == PveAuthMode.ApiToken)
             {
-                request.Headers.TryAddWithoutValidation("Authorization", $"PVEAPIToken={_session.ApiToken}");
+                request.Headers.TryAddWithoutValidation("Authorization", $"{ApiTokenPrefix}{_session.ApiToken}");
             }
             else
             {
                 // Ticket auth
-                request.Headers.Add("Cookie", $"PVEAuthCookie={_session.Ticket}");
+                request.Headers.Add("Cookie", $"{AuthCookieName}{_session.Ticket}");
                 if (mutating && !string.IsNullOrEmpty(_session.CsrfToken))
-                    request.Headers.Add("CSRFPreventionToken", _session.CsrfToken);
+                    request.Headers.Add(CsrfHeaderName, _session.CsrfToken);
             }
 
             return request;

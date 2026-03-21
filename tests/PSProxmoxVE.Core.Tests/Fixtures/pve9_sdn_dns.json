@@ -1,0 +1,1 @@
+{"data":[{"dns":"powerdns1","type":"powerdns","url":"http://dns.example.com:8081","key":"secret123","ttl":3600}]}

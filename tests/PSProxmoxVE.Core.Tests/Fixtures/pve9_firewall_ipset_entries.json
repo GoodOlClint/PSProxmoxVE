@@ -1,0 +1,1 @@
+{"data":[{"cidr":"192.168.1.0/24","nomatch":0,"comment":"Local subnet"},{"cidr":"10.0.0.0/8","nomatch":1,"comment":"Exclude private"}]}

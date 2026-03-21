@@ -142,5 +142,125 @@ namespace PSProxmoxVE.Core.Tests.Models
             // Comments not present in fixture entries
             Assert.Null(vnets[0].Comments);
         }
+
+        // ── PveSdnIpam ─────────────────────────────────────────────────
+
+        [Fact]
+        public void PveSdnIpam_Deserialize_Pve9_ReturnsCorrectCount()
+        {
+            var json = TestHelper.LoadFixture("pve9_sdn_ipams.json");
+            var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
+            var ipams = data.ToObject<PveSdnIpam[]>();
+            Assert.NotNull(ipams);
+            Assert.Equal(2, ipams.Length);
+        }
+
+        [Fact]
+        public void PveSdnIpam_Deserialize_Pve9_FirstIpam_IsPveType()
+        {
+            var json = TestHelper.LoadFixture("pve9_sdn_ipams.json");
+            var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
+            var ipams = data.ToObject<PveSdnIpam[]>();
+            Assert.NotNull(ipams);
+            Assert.Equal("pve", ipams[0].Ipam);
+            Assert.Equal("pve", ipams[0].Type);
+        }
+
+        [Fact]
+        public void PveSdnIpam_Deserialize_Pve9_FirstIpam_OptionalFieldsAreNull()
+        {
+            var json = TestHelper.LoadFixture("pve9_sdn_ipams.json");
+            var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
+            var ipams = data.ToObject<PveSdnIpam[]>();
+            Assert.NotNull(ipams);
+            Assert.Null(ipams[0].Url);
+            Assert.Null(ipams[0].Token);
+            Assert.Null(ipams[0].Section);
+        }
+
+        [Fact]
+        public void PveSdnIpam_Deserialize_Pve9_SecondIpam_HasNetboxProperties()
+        {
+            var json = TestHelper.LoadFixture("pve9_sdn_ipams.json");
+            var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
+            var ipams = data.ToObject<PveSdnIpam[]>();
+            Assert.NotNull(ipams);
+            Assert.Equal("netbox1", ipams[1].Ipam);
+            Assert.Equal("netbox", ipams[1].Type);
+            Assert.Equal("https://netbox.example.com", ipams[1].Url);
+            Assert.Equal("abc123", ipams[1].Token);
+            Assert.Equal(1, ipams[1].Section);
+        }
+
+        // ── PveSdnDns ──────────────────────────────────────────────────
+
+        [Fact]
+        public void PveSdnDns_Deserialize_Pve9_ReturnsCorrectCount()
+        {
+            var json = TestHelper.LoadFixture("pve9_sdn_dns.json");
+            var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
+            var dnsEntries = data.ToObject<PveSdnDns[]>();
+            Assert.NotNull(dnsEntries);
+            Assert.Single(dnsEntries);
+        }
+
+        [Fact]
+        public void PveSdnDns_Deserialize_Pve9_FirstEntry_HasCorrectProperties()
+        {
+            var json = TestHelper.LoadFixture("pve9_sdn_dns.json");
+            var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
+            var dnsEntries = data.ToObject<PveSdnDns[]>();
+            Assert.NotNull(dnsEntries);
+            Assert.Equal("powerdns1", dnsEntries[0].Dns);
+            Assert.Equal("powerdns", dnsEntries[0].Type);
+            Assert.Equal("http://dns.example.com:8081", dnsEntries[0].Url);
+            Assert.Equal("secret123", dnsEntries[0].Key);
+            Assert.Equal(3600, dnsEntries[0].Ttl);
+        }
+
+        [Fact]
+        public void PveSdnDns_Deserialize_Pve9_FirstEntry_OptionalFieldsAreNull()
+        {
+            var json = TestHelper.LoadFixture("pve9_sdn_dns.json");
+            var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
+            var dnsEntries = data.ToObject<PveSdnDns[]>();
+            Assert.NotNull(dnsEntries);
+            Assert.Null(dnsEntries[0].ReverseMaskV6);
+        }
+
+        // ── PveSdnController ───────────────────────────────────────────
+
+        [Fact]
+        public void PveSdnController_Deserialize_Pve9_ReturnsCorrectCount()
+        {
+            var json = TestHelper.LoadFixture("pve9_sdn_controllers.json");
+            var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
+            var controllers = data.ToObject<PveSdnController[]>();
+            Assert.NotNull(controllers);
+            Assert.Single(controllers);
+        }
+
+        [Fact]
+        public void PveSdnController_Deserialize_Pve9_FirstController_HasCorrectProperties()
+        {
+            var json = TestHelper.LoadFixture("pve9_sdn_controllers.json");
+            var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
+            var controllers = data.ToObject<PveSdnController[]>();
+            Assert.NotNull(controllers);
+            Assert.Equal("evpn1", controllers[0].Controller);
+            Assert.Equal("evpn", controllers[0].Type);
+            Assert.Equal(65000, controllers[0].Asn);
+            Assert.Equal("10.0.0.1,10.0.0.2", controllers[0].Peers);
+            Assert.Equal("pve1", controllers[0].Node);
+        }
     }
 }

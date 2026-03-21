@@ -305,6 +305,141 @@ namespace PSProxmoxVE.Core.Services
         }
 
         // -------------------------------------------------------------------------
+        // SDN IPAM
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Returns all SDN IPAM plugins. Requires PVE 8.0+.
+        /// </summary>
+        public PveSdnIpam[] GetSdnIpams(PveSession session)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            RequireSdn(session);
+
+            using var client = new PveHttpClient(session);
+            var response = client.GetAsync("cluster/sdn/ipams").GetAwaiter().GetResult();
+            var data = JObject.Parse(response)["data"];
+            return data?.ToObject<PveSdnIpam[]>() ?? Array.Empty<PveSdnIpam>();
+        }
+
+        /// <summary>
+        /// Creates an SDN IPAM plugin. Requires PVE 8.0+.
+        /// </summary>
+        public void CreateSdnIpam(PveSession session, Dictionary<string, string> config)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            RequireSdn(session);
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            using var client = new PveHttpClient(session);
+            client.PostAsync("cluster/sdn/ipams", config).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Removes an SDN IPAM plugin. Requires PVE 8.0+.
+        /// </summary>
+        public void RemoveSdnIpam(PveSession session, string ipam)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            RequireSdn(session);
+            if (string.IsNullOrWhiteSpace(ipam)) throw new ArgumentNullException(nameof(ipam));
+
+            using var client = new PveHttpClient(session);
+            client.DeleteAsync($"cluster/sdn/ipams/{Uri.EscapeDataString(ipam)}")
+                .GetAwaiter().GetResult();
+        }
+
+        // -------------------------------------------------------------------------
+        // SDN DNS
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Returns all SDN DNS plugins. Requires PVE 8.0+.
+        /// </summary>
+        public PveSdnDns[] GetSdnDnsPlugins(PveSession session)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            RequireSdn(session);
+
+            using var client = new PveHttpClient(session);
+            var response = client.GetAsync("cluster/sdn/dns").GetAwaiter().GetResult();
+            var data = JObject.Parse(response)["data"];
+            return data?.ToObject<PveSdnDns[]>() ?? Array.Empty<PveSdnDns>();
+        }
+
+        /// <summary>
+        /// Creates an SDN DNS plugin. Requires PVE 8.0+.
+        /// </summary>
+        public void CreateSdnDnsPlugin(PveSession session, Dictionary<string, string> config)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            RequireSdn(session);
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            using var client = new PveHttpClient(session);
+            client.PostAsync("cluster/sdn/dns", config).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Removes an SDN DNS plugin. Requires PVE 8.0+.
+        /// </summary>
+        public void RemoveSdnDnsPlugin(PveSession session, string dns)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            RequireSdn(session);
+            if (string.IsNullOrWhiteSpace(dns)) throw new ArgumentNullException(nameof(dns));
+
+            using var client = new PveHttpClient(session);
+            client.DeleteAsync($"cluster/sdn/dns/{Uri.EscapeDataString(dns)}")
+                .GetAwaiter().GetResult();
+        }
+
+        // -------------------------------------------------------------------------
+        // SDN Controllers
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Returns all SDN controllers. Requires PVE 8.0+.
+        /// </summary>
+        public PveSdnController[] GetSdnControllers(PveSession session)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            RequireSdn(session);
+
+            using var client = new PveHttpClient(session);
+            var response = client.GetAsync("cluster/sdn/controllers").GetAwaiter().GetResult();
+            var data = JObject.Parse(response)["data"];
+            return data?.ToObject<PveSdnController[]>() ?? Array.Empty<PveSdnController>();
+        }
+
+        /// <summary>
+        /// Creates an SDN controller. Requires PVE 8.0+.
+        /// </summary>
+        public void CreateSdnController(PveSession session, Dictionary<string, string> config)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            RequireSdn(session);
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            using var client = new PveHttpClient(session);
+            client.PostAsync("cluster/sdn/controllers", config).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Removes an SDN controller. Requires PVE 8.0+.
+        /// </summary>
+        public void RemoveSdnController(PveSession session, string controller)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            RequireSdn(session);
+            if (string.IsNullOrWhiteSpace(controller)) throw new ArgumentNullException(nameof(controller));
+
+            using var client = new PveHttpClient(session);
+            client.DeleteAsync($"cluster/sdn/controllers/{Uri.EscapeDataString(controller)}")
+                .GetAwaiter().GetResult();
+        }
+
+        // -------------------------------------------------------------------------
         // Private helpers
         // -------------------------------------------------------------------------
 

@@ -2,9 +2,9 @@
 
 This document tracks which PVE API areas are implemented in PSProxmoxVE and which are planned for future releases.
 
-**Last updated:** 2026-03-20
+**Last updated:** 2026-03-21
 **Module version:** 0.1.0-preview
-**Total cmdlets:** 75
+**Total cmdlets:** 110
 
 ## Implemented
 
@@ -28,17 +28,18 @@ This document tracks which PVE API areas are implemented in PSProxmoxVE and whic
 | **Templates** | 4 | VM template conversion, listing, cloning, removal |
 | **Cloud-Init** | 3 | `/nodes/{node}/qemu/{vmid}/config` (cloud-init fields), `/nodes/{node}/qemu/{vmid}/cloudinit/regenerate` |
 | **Tasks** | 2 | `/nodes/{node}/tasks/{upid}/status` (get, wait) |
+| **Firewall** | 21 | `/cluster/firewall/*`, `/nodes/{node}/firewall/*`, `/nodes/{node}/qemu/{vmid}/firewall/*`, `/nodes/{node}/lxc/{vmid}/firewall/*` (rules, groups, aliases, IP sets, options, refs) |
+| **Backup** | 5 | `/nodes/{node}/vzdump`, `/cluster/backup/*` (ad-hoc backup, scheduled job CRUD) |
+| **SDN IPAM** | 3 | `/cluster/sdn/ipams/*` (CRUD) |
+| **SDN DNS** | 3 | `/cluster/sdn/dns/*` (CRUD) |
+| **SDN Controllers** | 3 | `/cluster/sdn/controllers/*` (CRUD) |
 
 ## Not Yet Implemented
 
-### High-Value Gaps
+### Gaps
 
-These are the most impactful areas for real-world automation that are not yet covered.
-
-| Area | Key Endpoints | Use Case | Priority |
-|------|--------------|----------|----------|
-| **Firewall** | `/cluster/firewall/*`, `/nodes/{node}/firewall/*`, `/nodes/{node}/qemu/{vmid}/firewall/*` | Security automation, rule management, IP sets, aliases | High |
-| **Backup / vzdump** | `/nodes/{node}/vzdump`, `/cluster/backup/*` | Disaster recovery, scheduled backups, backup job management | High |
+| Area | Key Endpoints | Notes | Priority |
+|------|--------------|-------|----------|
 | **Pool Management** | `/pools/*` | Multi-tenant environments, resource grouping | Medium |
 
 ### Lower Priority Gaps
@@ -56,9 +57,6 @@ These are the most impactful areas for real-world automation that are not yet co
 | **Node Management** | `/nodes/{node}/apt/*`, `/nodes/{node}/disks/*`, `/nodes/{node}/services/*` | Package updates, disk management, service control |
 | **Metrics** | `/cluster/metrics/*` | External metrics server configuration |
 | **Additional VM Agent** | `/nodes/{node}/qemu/{vmid}/agent/*` | File read/write, OS info, suspend/resume via agent |
-| **SDN IPAM** | `/cluster/sdn/ipams/*` | IP address management for SDN |
-| **SDN DNS** | `/cluster/sdn/dns/*` | DNS integration for SDN |
-| **SDN Controllers** | `/cluster/sdn/controllers/*` | SDN controller configuration |
 
 ## Contributing New Cmdlets
 

@@ -1,0 +1,1 @@
+{"data":{"enable":1,"policy_in":"DROP","policy_out":"ACCEPT","log_level_in":"nolog","log_level_out":"nolog"}}
