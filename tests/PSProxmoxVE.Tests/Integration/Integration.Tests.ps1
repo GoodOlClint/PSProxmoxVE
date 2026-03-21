@@ -1443,7 +1443,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
     Context 'Backup Jobs' {
         It 'Should create a backup job' {
             Skip-IfNoTarget
-            { New-PveBackupJob -Schedule 'sat 03:00' -Storage $script:Storage -Mode snapshot -Comment 'pester-test-backup' -ErrorAction Stop } | Should -Not -Throw
+            { New-PveBackupJob -Schedule 'sat 03:00' -Storage $script:Storage -Mode snapshot -All -Comment 'pester-test-backup' -ErrorAction Stop } | Should -Not -Throw
         }
 
         It 'Should list backup jobs and find the test job' {

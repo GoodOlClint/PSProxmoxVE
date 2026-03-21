@@ -73,10 +73,10 @@ namespace PSProxmoxVE.Cmdlets.Backup
         public string? MailNotification { get; set; }
 
         /// <summary>
-        /// <para type="description">Whether the backup job is enabled. Default is true.</para>
+        /// <para type="description">Whether the backup job is enabled. Enabled by default unless -Enabled:$false is specified.</para>
         /// </summary>
-        [Parameter(Mandatory = false, HelpMessage = "Whether the backup job is enabled.")]
-        public SwitchParameter Enabled { get; set; } = true;
+        [Parameter(Mandatory = false, HelpMessage = "Whether the backup job is enabled. Default is enabled.")]
+        public SwitchParameter Enabled { get; set; }
 
         /// <summary>
         /// <para type="description">A comment or description for the backup job.</para>
@@ -102,7 +102,7 @@ namespace PSProxmoxVE.Cmdlets.Backup
             {
                 ["schedule"] = Schedule,
                 ["storage"] = Storage,
-                ["enabled"] = Enabled.IsPresent ? "1" : "0"
+                ["enabled"] = MyInvocation.BoundParameters.ContainsKey("Enabled") && !Enabled.IsPresent ? "0" : "1"
             };
 
             if (!string.IsNullOrEmpty(Mode)) config["mode"] = Mode!;

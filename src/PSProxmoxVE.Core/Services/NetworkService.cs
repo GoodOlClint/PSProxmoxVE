@@ -11,7 +11,7 @@ namespace PSProxmoxVE.Core.Services
 {
     /// <summary>
     /// Service for Proxmox VE node network and SDN (Software-Defined Networking) API operations.
-    /// SDN methods require PVE 8.0 or later and will throw <see cref="PveVersionException"/> otherwise.
+    /// SDN methods require PVE 8.0 or later. Version checks are performed at the cmdlet layer.
     /// </summary>
     public class NetworkService
     {
