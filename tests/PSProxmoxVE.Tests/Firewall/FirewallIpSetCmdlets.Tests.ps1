@@ -86,7 +86,7 @@ Describe 'Get-PveFirewallIpSet' {
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'Get-PveFirewallIpSet'
-            { Get-PveFirewallIpSet -ErrorAction Stop } |
+            { Get-PveFirewallIpSet -Level Cluster -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
@@ -132,7 +132,7 @@ Describe 'New-PveFirewallIpSet' {
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'New-PveFirewallIpSet'
-            { New-PveFirewallIpSet -Name 'testipset' -ErrorAction Stop } |
+            { New-PveFirewallIpSet -Name 'testipset' -Level Cluster -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
@@ -179,7 +179,7 @@ Describe 'Remove-PveFirewallIpSet' {
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'Remove-PveFirewallIpSet'
-            { Remove-PveFirewallIpSet -Name 'testipset' -Confirm:$false -ErrorAction Stop } |
+            { Remove-PveFirewallIpSet -Name 'testipset' -Confirm:$false -Level Cluster -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
@@ -223,7 +223,7 @@ Describe 'Get-PveFirewallIpSetEntry' {
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'Get-PveFirewallIpSetEntry'
-            { Get-PveFirewallIpSetEntry -Name 'testipset' -ErrorAction Stop } |
+            { Get-PveFirewallIpSetEntry -Name 'testipset' -Level Cluster -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
@@ -269,7 +269,7 @@ Describe 'New-PveFirewallIpSetEntry' {
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'New-PveFirewallIpSetEntry'
-            { New-PveFirewallIpSetEntry -Name 'testipset' -Cidr '10.0.0.1' -ErrorAction Stop } |
+            { New-PveFirewallIpSetEntry -Name 'testipset' -Cidr '10.0.0.1' -Level Cluster -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
@@ -315,7 +315,7 @@ Describe 'Set-PveFirewallIpSetEntry' {
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'Set-PveFirewallIpSetEntry'
-            { Set-PveFirewallIpSetEntry -Name 'testipset' -Cidr '10.0.0.1' -ErrorAction Stop } |
+            { Set-PveFirewallIpSetEntry -Name 'testipset' -Cidr '10.0.0.1' -Level Cluster -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
@@ -369,7 +369,7 @@ Describe 'Remove-PveFirewallIpSetEntry' {
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'Remove-PveFirewallIpSetEntry'
-            { Remove-PveFirewallIpSetEntry -Name 'testipset' -Cidr '10.0.0.1' -Confirm:$false -ErrorAction Stop } |
+            { Remove-PveFirewallIpSetEntry -Name 'testipset' -Cidr '10.0.0.1' -Confirm:$false -Level Cluster -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }

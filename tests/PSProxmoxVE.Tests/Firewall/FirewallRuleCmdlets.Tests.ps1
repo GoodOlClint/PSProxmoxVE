@@ -172,16 +172,16 @@ Describe 'Set-PveFirewallRule' {
             $validateSet | Should -Not -BeNullOrEmpty
         }
 
-        It 'Should have Pos parameter' {
+        It 'Should have Position parameter' {
             Skip-IfMissing 'Set-PveFirewallRule'
-            $script:Cmd.Parameters.ContainsKey('Pos') | Should -BeTrue
+            $script:Cmd.Parameters.ContainsKey('Position') | Should -BeTrue
         }
     }
 
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'Set-PveFirewallRule'
-            { Set-PveFirewallRule -Level 'cluster' -Pos 0 -ErrorAction Stop } |
+            { Set-PveFirewallRule -Level 'cluster' -Position 0 -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
@@ -227,16 +227,16 @@ Describe 'Remove-PveFirewallRule' {
             $validateSet | Should -Not -BeNullOrEmpty
         }
 
-        It 'Should have Pos parameter' {
+        It 'Should have Position parameter' {
             Skip-IfMissing 'Remove-PveFirewallRule'
-            $script:Cmd.Parameters.ContainsKey('Pos') | Should -BeTrue
+            $script:Cmd.Parameters.ContainsKey('Position') | Should -BeTrue
         }
     }
 
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'Remove-PveFirewallRule'
-            { Remove-PveFirewallRule -Level 'cluster' -Pos 0 -Confirm:$false -ErrorAction Stop } |
+            { Remove-PveFirewallRule -Level 'cluster' -Position 0 -Confirm:$false -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }

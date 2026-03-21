@@ -77,7 +77,7 @@ Describe 'Get-PveFirewallAlias' {
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'Get-PveFirewallAlias'
-            { Get-PveFirewallAlias -ErrorAction Stop } |
+            { Get-PveFirewallAlias -Level Cluster -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
@@ -130,7 +130,7 @@ Describe 'New-PveFirewallAlias' {
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'New-PveFirewallAlias'
-            { New-PveFirewallAlias -Name 'testalias' -Cidr '10.0.0.0/24' -ErrorAction Stop } |
+            { New-PveFirewallAlias -Name 'testalias' -Cidr '10.0.0.0/24' -Level Cluster -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
@@ -165,18 +165,16 @@ Describe 'Set-PveFirewallAlias' {
             $isMandatory | Should -Not -BeNullOrEmpty
         }
 
-        It 'Cidr should be Mandatory' {
+        It 'Should have optional Cidr parameter' {
             Skip-IfMissing 'Set-PveFirewallAlias'
-            $isMandatory = $script:Cmd.Parameters['Cidr'].ParameterSets.Values |
-                Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
+            $script:Cmd.Parameters.ContainsKey('Cidr') | Should -BeTrue
         }
     }
 
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'Set-PveFirewallAlias'
-            { Set-PveFirewallAlias -Name 'testalias' -Cidr '10.0.0.0/24' -ErrorAction Stop } |
+            { Set-PveFirewallAlias -Name 'testalias' -Cidr '10.0.0.0/24' -Level Cluster -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
@@ -223,7 +221,7 @@ Describe 'Remove-PveFirewallAlias' {
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'Remove-PveFirewallAlias'
-            { Remove-PveFirewallAlias -Name 'testalias' -Confirm:$false -ErrorAction Stop } |
+            { Remove-PveFirewallAlias -Name 'testalias' -Confirm:$false -Level Cluster -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }

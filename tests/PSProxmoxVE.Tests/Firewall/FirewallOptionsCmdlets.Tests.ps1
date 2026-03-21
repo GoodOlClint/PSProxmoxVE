@@ -168,7 +168,7 @@ Describe 'Get-PveFirewallRef' {
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'Get-PveFirewallRef'
-            { Get-PveFirewallRef -ErrorAction Stop } |
+            { Get-PveFirewallRef -Level Cluster -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
