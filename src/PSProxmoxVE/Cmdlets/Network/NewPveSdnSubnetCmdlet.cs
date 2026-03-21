@@ -45,6 +45,14 @@ namespace PSProxmoxVE.Cmdlets.Network
 
             var session = GetSession();
             RequireVersion(session, "SDN", 6, 2, 8, 0);
+
+            if (!string.IsNullOrEmpty(DhcpRange)
+                && session.ServerVersion != null && !session.ServerVersion.IsAtLeast(8, 1))
+            {
+                WriteWarning("The -DhcpRange parameter requires PVE 8.1 or later. "
+                    + $"Connected server is PVE {session.ServerVersion}. The parameter will be sent but may be ignored.");
+            }
+
             using var client = new PveHttpClient(session);
 
             WriteVerbose($"Creating SDN subnet '{Subnet}' on VNet '{Vnet}'...");

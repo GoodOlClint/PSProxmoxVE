@@ -66,6 +66,14 @@ namespace PSProxmoxVE.Cmdlets.Storage
                 return;
 
             var session = GetSession();
+
+            if ((!string.IsNullOrEmpty(Checksum) || !string.IsNullOrEmpty(ChecksumAlgorithm))
+                && session.ServerVersion != null && !session.ServerVersion.IsAtLeast(7, 1))
+            {
+                WriteWarning("The -Checksum and -ChecksumAlgorithm parameters require PVE 7.1 or later. "
+                    + $"Connected server is PVE {session.ServerVersion}. The upload will proceed without checksum verification.");
+            }
+
             using var client = new PveHttpClient(session);
 
             WriteVerbose($"Uploading {fileName} to {Node}/{Storage} (content={ContentType})...");
