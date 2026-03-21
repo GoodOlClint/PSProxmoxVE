@@ -107,6 +107,24 @@ namespace PSProxmoxVE.Core.Services
         }
 
         // -------------------------------------------------------------------------
+        // Backup compliance info
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Returns the list of guests not covered by any backup job.
+        /// </summary>
+        public JArray GetNotBackedUp(PveSession session)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+
+            using var client = new PveHttpClient(session);
+            var response = client.GetAsync("cluster/backup-info/not-backed-up")
+                .GetAwaiter().GetResult();
+            var data = JObject.Parse(response)["data"];
+            return data as JArray ?? new JArray();
+        }
+
+        // -------------------------------------------------------------------------
         // Private helpers
         // -------------------------------------------------------------------------
 

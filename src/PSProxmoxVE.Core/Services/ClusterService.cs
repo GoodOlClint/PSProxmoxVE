@@ -24,5 +24,24 @@ namespace PSProxmoxVE.Core.Services
             var data = JObject.Parse(response)["data"];
             return data?.ToObject<PveClusterStatus[]>() ?? Array.Empty<PveClusterStatus>();
         }
+
+        /// <summary>
+        /// Returns cluster resources, optionally filtered by type.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="type">Optional resource type filter (vm, lxc, node, storage, sdn).</param>
+        public PveClusterResource[] GetClusterResources(PveSession session, string? type = null)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+
+            using var client = new PveHttpClient(session);
+            var resource = "cluster/resources";
+            if (!string.IsNullOrEmpty(type))
+                resource += $"?type={Uri.EscapeDataString(type!)}";
+
+            var response = client.GetAsync(resource).GetAwaiter().GetResult();
+            var data = JObject.Parse(response)["data"];
+            return data?.ToObject<PveClusterResource[]>() ?? Array.Empty<PveClusterResource>();
+        }
     }
 }

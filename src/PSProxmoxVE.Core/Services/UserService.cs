@@ -189,6 +189,23 @@ namespace PSProxmoxVE.Core.Services
                 .GetAwaiter().GetResult();
         }
 
+        /// <summary>
+        /// Updates an API token's configuration.
+        /// </summary>
+        public void UpdateApiToken(PveSession session, string userId, string tokenId, Dictionary<string, string> config)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentNullException(nameof(userId));
+            if (string.IsNullOrWhiteSpace(tokenId)) throw new ArgumentNullException(nameof(tokenId));
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            using var client = new PveHttpClient(session);
+            var encodedUser = Uri.EscapeDataString(userId);
+            var encodedToken = Uri.EscapeDataString(tokenId);
+            client.PutAsync($"access/users/{encodedUser}/token/{encodedToken}", config)
+                .GetAwaiter().GetResult();
+        }
+
         // -------------------------------------------------------------------------
         // Roles
         // -------------------------------------------------------------------------
@@ -233,6 +250,165 @@ namespace PSProxmoxVE.Core.Services
             using var client = new PveHttpClient(session);
             client.DeleteAsync($"access/roles/{Uri.EscapeDataString(roleId)}")
                 .GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Updates a role's privileges.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="roleId">The role identifier to update.</param>
+        /// <param name="privileges">Comma-separated list of privileges.</param>
+        public void UpdateRole(PveSession session, string roleId, string privileges)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(roleId)) throw new ArgumentNullException(nameof(roleId));
+            if (string.IsNullOrWhiteSpace(privileges)) throw new ArgumentNullException(nameof(privileges));
+
+            var formData = new Dictionary<string, string> { ["privs"] = privileges };
+            using var client = new PveHttpClient(session);
+            client.PutAsync($"access/roles/{Uri.EscapeDataString(roleId)}", formData)
+                .GetAwaiter().GetResult();
+        }
+
+        // -------------------------------------------------------------------------
+        // Groups
+        // -------------------------------------------------------------------------
+
+        /// <summary>Returns all groups.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        public PveGroup[] GetGroups(PveSession session)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+
+            using var client = new PveHttpClient(session);
+            var response = client.GetAsync("access/groups").GetAwaiter().GetResult();
+            var data = JObject.Parse(response)["data"];
+            return data?.ToObject<PveGroup[]>() ?? Array.Empty<PveGroup>();
+        }
+
+        /// <summary>Creates a new group.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="groupId">The group identifier.</param>
+        /// <param name="comment">Optional comment/description.</param>
+        public void CreateGroup(PveSession session, string groupId, string? comment = null)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(groupId)) throw new ArgumentNullException(nameof(groupId));
+
+            var formData = new Dictionary<string, string> { ["groupid"] = groupId };
+            if (!string.IsNullOrEmpty(comment))
+                formData["comment"] = comment!;
+
+            using var client = new PveHttpClient(session);
+            client.PostAsync("access/groups", formData).GetAwaiter().GetResult();
+        }
+
+        /// <summary>Updates a group's properties.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="groupId">The group identifier to update.</param>
+        /// <param name="config">Configuration parameters to update.</param>
+        public void UpdateGroup(PveSession session, string groupId, Dictionary<string, string> config)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(groupId)) throw new ArgumentNullException(nameof(groupId));
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            using var client = new PveHttpClient(session);
+            client.PutAsync($"access/groups/{Uri.EscapeDataString(groupId)}", config)
+                .GetAwaiter().GetResult();
+        }
+
+        /// <summary>Removes a group.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="groupId">The group identifier to remove.</param>
+        public void RemoveGroup(PveSession session, string groupId)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(groupId)) throw new ArgumentNullException(nameof(groupId));
+
+            using var client = new PveHttpClient(session);
+            client.DeleteAsync($"access/groups/{Uri.EscapeDataString(groupId)}")
+                .GetAwaiter().GetResult();
+        }
+
+        // -------------------------------------------------------------------------
+        // Domains / Realms
+        // -------------------------------------------------------------------------
+
+        /// <summary>Returns all authentication domains/realms.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        public PveDomain[] GetDomains(PveSession session)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+
+            using var client = new PveHttpClient(session);
+            var response = client.GetAsync("access/domains").GetAwaiter().GetResult();
+            var data = JObject.Parse(response)["data"];
+            return data?.ToObject<PveDomain[]>() ?? Array.Empty<PveDomain>();
+        }
+
+        /// <summary>Creates a new authentication domain/realm.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="config">Domain configuration parameters (must include realm and type).</param>
+        public void CreateDomain(PveSession session, Dictionary<string, string> config)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            using var client = new PveHttpClient(session);
+            client.PostAsync("access/domains", config).GetAwaiter().GetResult();
+        }
+
+        /// <summary>Updates an authentication domain/realm.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="realm">The realm identifier to update.</param>
+        /// <param name="config">Configuration parameters to update.</param>
+        public void UpdateDomain(PveSession session, string realm, Dictionary<string, string> config)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(realm)) throw new ArgumentNullException(nameof(realm));
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            using var client = new PveHttpClient(session);
+            client.PutAsync($"access/domains/{Uri.EscapeDataString(realm)}", config)
+                .GetAwaiter().GetResult();
+        }
+
+        /// <summary>Removes an authentication domain/realm.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="realm">The realm identifier to remove.</param>
+        public void RemoveDomain(PveSession session, string realm)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(realm)) throw new ArgumentNullException(nameof(realm));
+
+            using var client = new PveHttpClient(session);
+            client.DeleteAsync($"access/domains/{Uri.EscapeDataString(realm)}")
+                .GetAwaiter().GetResult();
+        }
+
+        // -------------------------------------------------------------------------
+        // Password
+        // -------------------------------------------------------------------------
+
+        /// <summary>Changes a user's password.</summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="userId">The user ID in "username@realm" format.</param>
+        /// <param name="password">The new password.</param>
+        public void ChangePassword(PveSession session, string userId, string password)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentNullException(nameof(userId));
+            if (string.IsNullOrWhiteSpace(password)) throw new ArgumentNullException(nameof(password));
+
+            var formData = new Dictionary<string, string>
+            {
+                ["userid"] = userId,
+                ["password"] = password
+            };
+
+            using var client = new PveHttpClient(session);
+            client.PutAsync("access/password", formData).GetAwaiter().GetResult();
         }
 
         // -------------------------------------------------------------------------

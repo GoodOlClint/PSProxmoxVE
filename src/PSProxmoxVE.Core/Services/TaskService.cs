@@ -103,5 +103,57 @@ namespace PSProxmoxVE.Core.Services
                 Thread.Sleep(effectivePoll);
             }
         }
+
+        /// <summary>
+        /// Returns a list of tasks on the specified node, with optional filters.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The node name.</param>
+        /// <param name="vmid">Optional VM ID filter.</param>
+        /// <param name="source">Optional source filter: "all" or "active".</param>
+        /// <param name="typeFilter">Optional task type filter (e.g., "qmstart").</param>
+        /// <param name="limit">Maximum number of tasks to return. Defaults to 50.</param>
+        public PveTask[] GetTasks(PveSession session, string node, int? vmid = null,
+            string? source = null, string? typeFilter = null, int limit = 50)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+
+            using var client = new PveHttpClient(session);
+            var queryParts = new List<string> { $"limit={limit}" };
+            if (vmid.HasValue)
+                queryParts.Add($"vmid={vmid.Value}");
+            if (!string.IsNullOrEmpty(source))
+                queryParts.Add($"source={Uri.EscapeDataString(source!)}");
+            if (!string.IsNullOrEmpty(typeFilter))
+                queryParts.Add($"typefilter={Uri.EscapeDataString(typeFilter!)}");
+
+            var query = string.Join("&", queryParts);
+            var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/tasks?{query}")
+                .GetAwaiter().GetResult();
+            var data = JObject.Parse(response)["data"];
+            var tasks = data?.ToObject<PveTask[]>() ?? Array.Empty<PveTask>();
+            foreach (var t in tasks)
+                t.Node ??= node;
+            return tasks;
+        }
+
+        /// <summary>
+        /// Stops (cancels) a running task on the specified node.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The node name.</param>
+        /// <param name="upid">The UPID of the task to stop.</param>
+        public void StopTask(PveSession session, string node, string upid)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (string.IsNullOrWhiteSpace(upid)) throw new ArgumentNullException(nameof(upid));
+
+            using var client = new PveHttpClient(session);
+            var encodedUpid = Uri.EscapeDataString(upid);
+            client.DeleteAsync($"nodes/{Uri.EscapeDataString(node)}/tasks/{encodedUpid}")
+                .GetAwaiter().GetResult();
+        }
     }
 }

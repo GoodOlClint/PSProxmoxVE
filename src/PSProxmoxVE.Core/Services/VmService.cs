@@ -522,6 +522,163 @@ namespace PSProxmoxVE.Core.Services
         }
 
         // -------------------------------------------------------------------------
+        // Disk operations
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Moves a VM disk to a different storage. Returns the task UPID.
+        /// </summary>
+        public PveTask MoveDisk(PveSession session, string node, int vmid, string disk, string storage, string? format = null, bool delete = true)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (string.IsNullOrWhiteSpace(disk)) throw new ArgumentNullException(nameof(disk));
+            if (string.IsNullOrWhiteSpace(storage)) throw new ArgumentNullException(nameof(storage));
+
+            var formData = new Dictionary<string, string>
+            {
+                ["disk"] = disk,
+                ["storage"] = storage,
+                ["delete"] = delete ? "1" : "0"
+            };
+            if (!string.IsNullOrEmpty(format))
+                formData["format"] = format!;
+
+            using var client = new PveHttpClient(session);
+            var response = client.PostAsync($"nodes/{node}/qemu/{vmid}/move_disk", formData)
+                .GetAwaiter().GetResult();
+            return ParseTask(response, node);
+        }
+
+        /// <summary>
+        /// Unlinks (detaches) disks from a VM.
+        /// </summary>
+        public void UnlinkDisk(PveSession session, string node, int vmid, string idlist, bool force = false)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (string.IsNullOrWhiteSpace(idlist)) throw new ArgumentNullException(nameof(idlist));
+
+            var formData = new Dictionary<string, string>
+            {
+                ["idlist"] = idlist
+            };
+            if (force)
+                formData["force"] = "1";
+
+            using var client = new PveHttpClient(session);
+            client.PutAsync($"nodes/{node}/qemu/{vmid}/unlink", formData)
+                .GetAwaiter().GetResult();
+        }
+
+        // -------------------------------------------------------------------------
+        // Guest agent — extended operations
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Retrieves OS information from the QEMU guest agent.
+        /// </summary>
+        public PveGuestOsInfo? GetGuestOsInfo(PveSession session, string node, int vmid)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+
+            using var client = new PveHttpClient(session);
+            var response = client.GetAsync($"nodes/{node}/qemu/{vmid}/agent/get-osinfo")
+                .GetAwaiter().GetResult();
+            var data = JObject.Parse(response)["data"];
+            var result = data?["result"];
+            return result?.ToObject<PveGuestOsInfo>();
+        }
+
+        /// <summary>
+        /// Retrieves filesystem information from the QEMU guest agent.
+        /// </summary>
+        public PveGuestFsInfo[] GetGuestFsInfo(PveSession session, string node, int vmid)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+
+            using var client = new PveHttpClient(session);
+            var response = client.GetAsync($"nodes/{node}/qemu/{vmid}/agent/get-fsinfo")
+                .GetAwaiter().GetResult();
+            var data = JObject.Parse(response)["data"];
+            var result = data?["result"];
+            return result?.ToObject<PveGuestFsInfo[]>() ?? Array.Empty<PveGuestFsInfo>();
+        }
+
+        /// <summary>
+        /// Reads a file from the guest filesystem via the QEMU guest agent.
+        /// </summary>
+        public string ReadGuestFile(PveSession session, string node, int vmid, string file)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (string.IsNullOrWhiteSpace(file)) throw new ArgumentNullException(nameof(file));
+
+            using var client = new PveHttpClient(session);
+            var response = client.GetAsync($"nodes/{node}/qemu/{vmid}/agent/file-read?file={Uri.EscapeDataString(file)}")
+                .GetAwaiter().GetResult();
+            var data = JObject.Parse(response)["data"];
+            return data?["content"]?.ToString() ?? string.Empty;
+        }
+
+        /// <summary>
+        /// Writes content to a file on the guest filesystem via the QEMU guest agent.
+        /// </summary>
+        public void WriteGuestFile(PveSession session, string node, int vmid, string file, string content)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (string.IsNullOrWhiteSpace(file)) throw new ArgumentNullException(nameof(file));
+
+            var formData = new Dictionary<string, string>
+            {
+                ["file"] = file,
+                ["content"] = content
+            };
+
+            using var client = new PveHttpClient(session);
+            client.PostAsync($"nodes/{node}/qemu/{vmid}/agent/file-write", formData)
+                .GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Sets a user password inside the guest via the QEMU guest agent.
+        /// </summary>
+        public void SetGuestPassword(PveSession session, string node, int vmid, string username, string password, bool crypted = false)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (string.IsNullOrWhiteSpace(username)) throw new ArgumentNullException(nameof(username));
+
+            var formData = new Dictionary<string, string>
+            {
+                ["username"] = username,
+                ["password"] = password
+            };
+            if (crypted)
+                formData["crypted"] = "1";
+
+            using var client = new PveHttpClient(session);
+            client.PostAsync($"nodes/{node}/qemu/{vmid}/agent/set-user-password", formData)
+                .GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Triggers an fstrim operation inside the guest via the QEMU guest agent.
+        /// </summary>
+        public void GuestFsTrim(PveSession session, string node, int vmid)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+
+            using var client = new PveHttpClient(session);
+            client.PostAsync($"nodes/{node}/qemu/{vmid}/agent/fstrim")
+                .GetAwaiter().GetResult();
+        }
+
+        // -------------------------------------------------------------------------
         // OVA Upload
         // -------------------------------------------------------------------------
 

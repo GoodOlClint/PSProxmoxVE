@@ -215,7 +215,86 @@
         # SDN — Controller
         'Get-PveSdnController',
         'New-PveSdnController',
-        'Remove-PveSdnController'
+        'Remove-PveSdnController',
+
+        # SDN — Update / Apply
+        'Set-PveSdnZone',
+        'Set-PveSdnVnet',
+        'Set-PveSdnSubnet',
+        'Set-PveSdnController',
+        'Set-PveSdnIpam',
+        'Set-PveSdnDns',
+        'Invoke-PveSdnApply',
+
+        # Role / Storage / Token — Update
+        'Set-PveRole',
+        'Set-PveStorage',
+        'Set-PveApiToken',
+
+        # Cluster
+        'Get-PveClusterResource',
+
+        # Tasks
+        'Get-PveTaskList',
+        'Stop-PveTask',
+
+        # Pools
+        'Get-PvePool',
+        'New-PvePool',
+        'Set-PvePool',
+        'Remove-PvePool',
+
+        # Backup Compliance
+        'Get-PveBackupInfo',
+
+        # VM Disk Operations
+        'Move-PveVmDisk',
+        'Remove-PveVmDisk',
+
+        # VM Guest Agent Extensions
+        'Get-PveVmGuestOsInfo',
+        'Get-PveVmGuestFsInfo',
+        'Read-PveVmGuestFile',
+        'Write-PveVmGuestFile',
+        'Set-PveVmGuestPassword',
+        'Invoke-PveVmGuestFsTrim',
+
+        # Container Gaps
+        'Suspend-PveContainer',
+        'Resume-PveContainer',
+        'Resize-PveContainerDisk',
+        'New-PveContainerTemplate',
+        'Move-PveContainerVolume',
+        'Get-PveContainerInterface',
+
+        # Storage Content Management
+        'Get-PveStorageStatus',
+        'Remove-PveStorageContent',
+        'Set-PveStorageContent',
+        'New-PveStorageDisk',
+
+        # Node Operations
+        'Get-PveNodeConfig',
+        'Set-PveNodeConfig',
+        'Get-PveNodeDns',
+        'Set-PveNodeDns',
+        'Start-PveNodeVms',
+        'Stop-PveNodeVms',
+
+        # Access — Groups
+        'Get-PveGroup',
+        'New-PveGroup',
+        'Set-PveGroup',
+        'Remove-PveGroup',
+
+        # Access — Domains / Realms
+        'Get-PveDomain',
+        'New-PveDomain',
+        'Set-PveDomain',
+        'Remove-PveDomain',
+
+        # Access — Password
+        'Set-PvePassword'
     )
 
     # Variables to export from this module

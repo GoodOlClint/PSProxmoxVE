@@ -187,6 +187,105 @@ namespace PSProxmoxVE.Core.Services
             client.DeleteAsync($"storage/{storage}").GetAwaiter().GetResult();
         }
 
+        /// <summary>
+        /// Updates a storage definition.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="storage">The storage identifier to update.</param>
+        /// <param name="config">Configuration parameters to update.</param>
+        public void UpdateStorage(PveSession session, string storage, Dictionary<string, string> config)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(storage)) throw new ArgumentNullException(nameof(storage));
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            using var client = new PveHttpClient(session);
+            client.PutAsync($"storage/{Uri.EscapeDataString(storage)}", config)
+                .GetAwaiter().GetResult();
+        }
+
+        // -------------------------------------------------------------------------
+        // Storage status & content management
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Returns the status of a specific storage on a node.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="storage">The storage identifier.</param>
+        public PveStorageStatus GetStorageStatus(PveSession session, string node, string storage)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (string.IsNullOrWhiteSpace(storage)) throw new ArgumentNullException(nameof(storage));
+
+            using var client = new PveHttpClient(session);
+            var response = client.GetAsync($"nodes/{node}/storage/{storage}/status").GetAwaiter().GetResult();
+            var data = JObject.Parse(response)["data"];
+            return data?.ToObject<PveStorageStatus>() ?? new PveStorageStatus();
+        }
+
+        /// <summary>
+        /// Removes a content volume from a storage on a node.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="storage">The storage identifier.</param>
+        /// <param name="volume">The volume identifier to remove.</param>
+        public void RemoveContent(PveSession session, string node, string storage, string volume)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (string.IsNullOrWhiteSpace(storage)) throw new ArgumentNullException(nameof(storage));
+            if (string.IsNullOrWhiteSpace(volume)) throw new ArgumentNullException(nameof(volume));
+
+            using var client = new PveHttpClient(session);
+            client.DeleteAsync($"nodes/{node}/storage/{storage}/content/{Uri.EscapeDataString(volume)}")
+                .GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Updates properties (e.g. notes) of a content volume on a storage.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="storage">The storage identifier.</param>
+        /// <param name="volume">The volume identifier to update.</param>
+        /// <param name="config">Configuration parameters to update.</param>
+        public void UpdateContent(PveSession session, string node, string storage, string volume, Dictionary<string, string> config)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (string.IsNullOrWhiteSpace(storage)) throw new ArgumentNullException(nameof(storage));
+            if (string.IsNullOrWhiteSpace(volume)) throw new ArgumentNullException(nameof(volume));
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            using var client = new PveHttpClient(session);
+            client.PutAsync($"nodes/{node}/storage/{storage}/content/{Uri.EscapeDataString(volume)}", config)
+                .GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Allocates a new disk image on a storage. Returns the task UPID.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="storage">The storage identifier.</param>
+        /// <param name="config">Allocation parameters (filename, size, format).</param>
+        public PveTask AllocateDisk(PveSession session, string node, string storage, Dictionary<string, string> config)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (string.IsNullOrWhiteSpace(storage)) throw new ArgumentNullException(nameof(storage));
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            using var client = new PveHttpClient(session);
+            var response = client.PostAsync($"nodes/{node}/storage/{storage}/content", config)
+                .GetAwaiter().GetResult();
+            return ParseTask(response, node);
+        }
+
         // -------------------------------------------------------------------------
         // Private helpers
         // -------------------------------------------------------------------------

@@ -359,19 +359,100 @@ SDN management requires Proxmox VE 8.0 or later. Connected server is version 7.4
 | `New-PveBackupJob` | Create a scheduled backup job |
 | `Set-PveBackupJob` | Update a scheduled backup job |
 | `Remove-PveBackupJob` | Delete a scheduled backup job |
+| `Get-PveBackupInfo` | Find VMs/containers not covered by backup jobs |
 
 ### SDN — IPAM / DNS / Controllers (PVE 8.0+)
 | Cmdlet | Description |
 |---|---|
 | `Get-PveSdnIpam` | List SDN IPAM plugins |
 | `New-PveSdnIpam` | Create an SDN IPAM plugin |
+| `Set-PveSdnIpam` | Update an SDN IPAM plugin |
 | `Remove-PveSdnIpam` | Remove an SDN IPAM plugin |
 | `Get-PveSdnDns` | List SDN DNS plugins |
 | `New-PveSdnDns` | Create an SDN DNS plugin |
+| `Set-PveSdnDns` | Update an SDN DNS plugin |
 | `Remove-PveSdnDns` | Remove an SDN DNS plugin |
 | `Get-PveSdnController` | List SDN controllers |
 | `New-PveSdnController` | Create an SDN controller |
+| `Set-PveSdnController` | Update an SDN controller |
 | `Remove-PveSdnController` | Remove an SDN controller |
+| `Invoke-PveSdnApply` | Apply pending SDN configuration changes |
+| `Set-PveSdnZone` | Update an SDN zone |
+| `Set-PveSdnVnet` | Update an SDN VNet |
+| `Set-PveSdnSubnet` | Update an SDN subnet |
+
+### Cluster
+| Cmdlet | Description |
+|---|---|
+| `Get-PveClusterResource` | List all resources (VMs, containers, nodes, storage) cluster-wide |
+
+### Pools
+| Cmdlet | Description |
+|---|---|
+| `Get-PvePool` | List resource pools |
+| `New-PvePool` | Create a resource pool |
+| `Set-PvePool` | Update a resource pool |
+| `Remove-PvePool` | Delete a resource pool |
+
+### VM Disk Operations
+| Cmdlet | Description |
+|---|---|
+| `Move-PveVmDisk` | Move a VM disk to a different storage |
+| `Remove-PveVmDisk` | Detach and optionally delete a VM disk |
+
+### Guest Agent Extensions
+| Cmdlet | Description |
+|---|---|
+| `Get-PveVmGuestOsInfo` | Get guest OS information via QEMU agent |
+| `Get-PveVmGuestFsInfo` | Get guest filesystem information |
+| `Read-PveVmGuestFile` | Read a file from inside a guest VM |
+| `Write-PveVmGuestFile` | Write a file inside a guest VM |
+| `Set-PveVmGuestPassword` | Change a user password inside a guest VM |
+| `Invoke-PveVmGuestFsTrim` | TRIM guest VM filesystems |
+
+### Additional Container Operations
+| Cmdlet | Description |
+|---|---|
+| `Suspend-PveContainer` | Suspend (freeze) a container |
+| `Resume-PveContainer` | Resume a suspended container |
+| `Resize-PveContainerDisk` | Resize a container disk/volume |
+| `New-PveContainerTemplate` | Convert a container to a template |
+| `Move-PveContainerVolume` | Move a container volume to a different storage |
+| `Get-PveContainerInterface` | Get container network interfaces |
+
+### Storage Content
+| Cmdlet | Description |
+|---|---|
+| `Get-PveStorageStatus` | Get storage usage statistics |
+| `Remove-PveStorageContent` | Delete a volume, backup, or ISO from storage |
+| `Set-PveStorageContent` | Update volume notes/properties |
+| `New-PveStorageDisk` | Allocate a new empty disk image |
+
+### Node Operations
+| Cmdlet | Description |
+|---|---|
+| `Get-PveNodeConfig` | Get node configuration |
+| `Set-PveNodeConfig` | Update node configuration |
+| `Get-PveNodeDns` | Get node DNS configuration |
+| `Set-PveNodeDns` | Update node DNS configuration |
+| `Start-PveNodeVms` | Start all VMs on a node |
+| `Stop-PveNodeVms` | Stop all VMs on a node |
+
+### Access — Groups & Domains
+| Cmdlet | Description |
+|---|---|
+| `Get-PveGroup` | List user groups |
+| `New-PveGroup` | Create a user group |
+| `Set-PveGroup` | Update a user group |
+| `Remove-PveGroup` | Delete a user group |
+| `Get-PveDomain` | List authentication realms (PAM, LDAP, AD, OpenID) |
+| `New-PveDomain` | Create an authentication realm |
+| `Set-PveDomain` | Update an authentication realm |
+| `Remove-PveDomain` | Delete an authentication realm |
+| `Set-PvePassword` | Change a user's password |
+| `Set-PveRole` | Update a role's privileges |
+| `Set-PveStorage` | Update a storage definition |
+| `Set-PveApiToken` | Update an API token |
 
 ## Known Limitations (v1)
 

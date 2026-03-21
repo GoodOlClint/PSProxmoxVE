@@ -4,7 +4,7 @@ This document tracks which PVE API areas are implemented in PSProxmoxVE and whic
 
 **Last updated:** 2026-03-21
 **Module version:** 0.1.0-preview
-**Total cmdlets:** 110
+**Total cmdlets:** 169
 
 ## Implemented
 
@@ -27,12 +27,26 @@ This document tracks which PVE API areas are implemented in PSProxmoxVE and whic
 | **API Tokens** | 3 | `/access/users/{userid}/tokens/*` (CRUD) |
 | **Templates** | 4 | VM template conversion, listing, cloning, removal |
 | **Cloud-Init** | 3 | `/nodes/{node}/qemu/{vmid}/config` (cloud-init fields), `/nodes/{node}/qemu/{vmid}/cloudinit/regenerate` |
-| **Tasks** | 2 | `/nodes/{node}/tasks/{upid}/status` (get, wait) |
+| **Tasks** | 4 | `/nodes/{node}/tasks` (list, get status, stop, wait) |
 | **Firewall** | 21 | `/cluster/firewall/*`, `/nodes/{node}/firewall/*`, `/nodes/{node}/qemu/{vmid}/firewall/*`, `/nodes/{node}/lxc/{vmid}/firewall/*` (rules, groups, aliases, IP sets, options, refs) |
-| **Backup** | 5 | `/nodes/{node}/vzdump`, `/cluster/backup/*` (ad-hoc backup, scheduled job CRUD) |
-| **SDN IPAM** | 3 | `/cluster/sdn/ipams/*` (CRUD) |
-| **SDN DNS** | 3 | `/cluster/sdn/dns/*` (CRUD) |
-| **SDN Controllers** | 3 | `/cluster/sdn/controllers/*` (CRUD) |
+| **Backup** | 7 | `/nodes/{node}/vzdump`, `/cluster/backup/*`, `/cluster/backup-info/not-backed-up` |
+| **SDN Zones** | 4 | `/cluster/sdn/zones/*` (CRUD + update) |
+| **SDN VNets** | 4 | `/cluster/sdn/vnets/*` (CRUD + update) |
+| **SDN Subnets** | 4 | `/cluster/sdn/vnets/{vnet}/subnets/*` (CRUD + update) |
+| **SDN IPAM** | 4 | `/cluster/sdn/ipams/*` (CRUD + update) |
+| **SDN DNS** | 4 | `/cluster/sdn/dns/*` (CRUD + update) |
+| **SDN Controllers** | 4 | `/cluster/sdn/controllers/*` (CRUD + update) |
+| **SDN Apply** | 1 | `PUT /cluster/sdn` (apply pending changes) |
+| **Cluster** | 1 | `GET /cluster/resources` (cluster-wide inventory) |
+| **Pools** | 4 | `/pools/*` (CRUD) |
+| **VM Disk Ops** | 2 | `move_disk`, `unlink` |
+| **Guest Agent (ext)** | 6 | `get-osinfo`, `get-fsinfo`, `file-read`, `file-write`, `set-user-password`, `fstrim` |
+| **Container Ops** | 6 | `suspend`, `resume`, `resize`, `template`, `move_volume`, `interfaces` |
+| **Storage Content** | 4 | `status`, `content` DELETE/PUT/POST |
+| **Node Ops** | 6 | `config`, `dns`, `startall`, `stopall` |
+| **Access Groups** | 4 | `/access/groups/*` (CRUD) |
+| **Access Domains** | 4 | `/access/domains/*` (CRUD) |
+| **Access Password** | 1 | `PUT /access/password` |
 
 ## Not Yet Implemented
 
@@ -40,7 +54,6 @@ This document tracks which PVE API areas are implemented in PSProxmoxVE and whic
 
 | Area | Key Endpoints | Notes | Priority |
 |------|--------------|-------|----------|
-| **Pool Management** | `/pools/*` | Multi-tenant environments, resource grouping | Medium |
 
 ### Lower Priority Gaps
 

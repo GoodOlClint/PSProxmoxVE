@@ -439,6 +439,108 @@ namespace PSProxmoxVE.Core.Services
         }
 
         // -------------------------------------------------------------------------
+        // SDN Update operations
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Applies pending SDN configuration changes cluster-wide.
+        /// </summary>
+        public void ApplySdn(PveSession session)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+
+            using var client = new PveHttpClient(session);
+            client.PutAsync("cluster/sdn", new Dictionary<string, string>())
+                .GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Updates an SDN zone configuration.
+        /// </summary>
+        public void UpdateSdnZone(PveSession session, string zone, Dictionary<string, string> config)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(zone)) throw new ArgumentNullException(nameof(zone));
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            using var client = new PveHttpClient(session);
+            client.PutAsync($"cluster/sdn/zones/{Uri.EscapeDataString(zone)}", config)
+                .GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Updates an SDN VNet configuration.
+        /// </summary>
+        public void UpdateSdnVnet(PveSession session, string vnet, Dictionary<string, string> config)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(vnet)) throw new ArgumentNullException(nameof(vnet));
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            using var client = new PveHttpClient(session);
+            client.PutAsync($"cluster/sdn/vnets/{Uri.EscapeDataString(vnet)}", config)
+                .GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Updates an SDN subnet configuration.
+        /// </summary>
+        public void UpdateSdnSubnet(PveSession session, string vnet, string subnet, Dictionary<string, string> config)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(vnet)) throw new ArgumentNullException(nameof(vnet));
+            if (string.IsNullOrWhiteSpace(subnet)) throw new ArgumentNullException(nameof(subnet));
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            using var client = new PveHttpClient(session);
+            client.PutAsync(
+                $"cluster/sdn/vnets/{Uri.EscapeDataString(vnet)}/subnets/{Uri.EscapeDataString(subnet)}",
+                config).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Updates an SDN controller configuration.
+        /// </summary>
+        public void UpdateSdnController(PveSession session, string controller, Dictionary<string, string> config)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(controller)) throw new ArgumentNullException(nameof(controller));
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            using var client = new PveHttpClient(session);
+            client.PutAsync($"cluster/sdn/controllers/{Uri.EscapeDataString(controller)}", config)
+                .GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Updates an SDN IPAM plugin configuration.
+        /// </summary>
+        public void UpdateSdnIpam(PveSession session, string ipam, Dictionary<string, string> config)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(ipam)) throw new ArgumentNullException(nameof(ipam));
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            using var client = new PveHttpClient(session);
+            client.PutAsync($"cluster/sdn/ipams/{Uri.EscapeDataString(ipam)}", config)
+                .GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Updates an SDN DNS plugin configuration.
+        /// </summary>
+        public void UpdateSdnDns(PveSession session, string dns, Dictionary<string, string> config)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(dns)) throw new ArgumentNullException(nameof(dns));
+            if (config == null) throw new ArgumentNullException(nameof(config));
+
+            using var client = new PveHttpClient(session);
+            client.PutAsync($"cluster/sdn/dns/{Uri.EscapeDataString(dns)}", config)
+                .GetAwaiter().GetResult();
+        }
+
+        // -------------------------------------------------------------------------
         // Private helpers
         // -------------------------------------------------------------------------
 

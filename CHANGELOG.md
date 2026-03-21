@@ -16,6 +16,19 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 - SDN Controller cmdlets (3): Get/New/Remove-PveSdnController for controller management
 - PSGallery version badge in README
 - Integration tests for firewall rules, aliases, IP sets, backup jobs, and OVA import
+- SDN Update cmdlets (7): Set-PveSdnZone/Vnet/Subnet/Controller/Ipam/Dns + Invoke-PveSdnApply
+- Set-PveRole, Set-PveStorage, Set-PveApiToken for missing update operations
+- Get-PveClusterResource: single-call cluster-wide inventory of all VMs, containers, nodes, storage
+- Task management: Get-PveTaskList (list tasks on node), Stop-PveTask (cancel running tasks)
+- Pool management cmdlets (4): Get/New/Set/Remove-PvePool
+- Get-PveBackupInfo: find VMs/containers not covered by backup jobs
+- VM disk operations: Move-PveVmDisk (storage migration), Remove-PveVmDisk (detach/delete)
+- Guest agent extensions (6): Get-PveVmGuestOsInfo, Get-PveVmGuestFsInfo, Read/Write-PveVmGuestFile, Set-PveVmGuestPassword, Invoke-PveVmGuestFsTrim
+- Container gaps (6): Suspend/Resume-PveContainer, Resize-PveContainerDisk, New-PveContainerTemplate, Move-PveContainerVolume, Get-PveContainerInterface
+- Storage content management (4): Get-PveStorageStatus, Remove/Set-PveStorageContent, New-PveStorageDisk
+- Node operations (6): Get/Set-PveNodeConfig, Get/Set-PveNodeDns, Start/Stop-PveNodeVms
+- Access management (9): Get/New/Set/Remove-PveGroup, Get/New/Set/Remove-PveDomain, Set-PvePassword
+- Two-tier version gating: introduced vs default version with clear user messaging
 
 ### Fixed
 

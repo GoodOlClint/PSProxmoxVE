@@ -319,6 +319,104 @@ namespace PSProxmoxVE.Core.Services
         }
 
         // -------------------------------------------------------------------------
+        // Suspend / Resume
+        // -------------------------------------------------------------------------
+
+        /// <summary>Suspends a container. Returns the task UPID.</summary>
+        public PveTask SuspendContainer(PveSession session, string node, int vmid)
+            => PostStatus(session, node, vmid, "suspend");
+
+        /// <summary>Resumes a suspended container. Returns the task UPID.</summary>
+        public PveTask ResumeContainer(PveSession session, string node, int vmid)
+            => PostStatus(session, node, vmid, "resume");
+
+        // -------------------------------------------------------------------------
+        // Disk / volume operations
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Resizes a container disk/volume. Returns the task UPID.
+        /// </summary>
+        public PveTask ResizeContainerDisk(PveSession session, string node, int vmid, string disk, string size)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (string.IsNullOrWhiteSpace(disk)) throw new ArgumentNullException(nameof(disk));
+            if (string.IsNullOrWhiteSpace(size)) throw new ArgumentNullException(nameof(size));
+
+            var formData = new Dictionary<string, string>
+            {
+                ["disk"] = disk,
+                ["size"] = size
+            };
+
+            using var client = new PveHttpClient(session);
+            var response = client.PutAsync($"nodes/{node}/lxc/{vmid}/resize", formData)
+                .GetAwaiter().GetResult();
+            return ParseTask(response, node);
+        }
+
+        /// <summary>
+        /// Moves a container volume to a different storage. Returns the task UPID.
+        /// </summary>
+        public PveTask MoveVolume(PveSession session, string node, int vmid, string volume, string storage, bool delete = true)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+            if (string.IsNullOrWhiteSpace(volume)) throw new ArgumentNullException(nameof(volume));
+            if (string.IsNullOrWhiteSpace(storage)) throw new ArgumentNullException(nameof(storage));
+
+            var formData = new Dictionary<string, string>
+            {
+                ["volume"] = volume,
+                ["storage"] = storage,
+                ["delete"] = delete ? "1" : "0"
+            };
+
+            using var client = new PveHttpClient(session);
+            var response = client.PostAsync($"nodes/{node}/lxc/{vmid}/move_volume", formData)
+                .GetAwaiter().GetResult();
+            return ParseTask(response, node);
+        }
+
+        // -------------------------------------------------------------------------
+        // Template
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Converts a container to a template. This is irreversible. Returns the task UPID.
+        /// </summary>
+        public PveTask ConvertToTemplate(PveSession session, string node, int vmid)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+
+            using var client = new PveHttpClient(session);
+            var response = client.PostAsync($"nodes/{node}/lxc/{vmid}/template")
+                .GetAwaiter().GetResult();
+            return ParseTask(response, node);
+        }
+
+        // -------------------------------------------------------------------------
+        // Interfaces
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Returns network interface information for a container.
+        /// </summary>
+        public PveContainerInterface[] GetInterfaces(PveSession session, string node, int vmid)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+
+            using var client = new PveHttpClient(session);
+            var response = client.GetAsync($"nodes/{node}/lxc/{vmid}/interfaces")
+                .GetAwaiter().GetResult();
+            var data = JObject.Parse(response)["data"];
+            return data?.ToObject<PveContainerInterface[]>() ?? Array.Empty<PveContainerInterface>();
+        }
+
+        // -------------------------------------------------------------------------
         // Private helpers
         // -------------------------------------------------------------------------
 
