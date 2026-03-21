@@ -275,7 +275,7 @@ Describe 'New-PveSdnDns' {
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'New-PveSdnDns'
-            { New-PveSdnDns -Dns 'testdns' -Type 'powerdns' -ErrorAction Stop } |
+            { New-PveSdnDns -Dns 'testdns' -Type 'powerdns' -Url 'http://localhost:8081' -Key 'testkey' -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
