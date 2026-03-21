@@ -4,7 +4,6 @@ using System.Linq;
 using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Client;
-using PSProxmoxVE.Core.Exceptions;
 using PSProxmoxVE.Core.Models.Network;
 using PSProxmoxVE.Core.Models.Vms;
 
@@ -140,7 +139,7 @@ namespace PSProxmoxVE.Core.Services
         public PveSdnZone[] GetSdnZones(PveSession session)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            RequireSdn(session);
+
 
             using var client = new PveHttpClient(session);
             var response = client.GetAsync("cluster/sdn/zones").GetAwaiter().GetResult();
@@ -155,7 +154,7 @@ namespace PSProxmoxVE.Core.Services
         public PveSdnVnet[] GetSdnVnets(PveSession session)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            RequireSdn(session);
+
 
             using var client = new PveHttpClient(session);
             var response = client.GetAsync("cluster/sdn/vnets").GetAwaiter().GetResult();
@@ -173,7 +172,7 @@ namespace PSProxmoxVE.Core.Services
             Dictionary<string, object> config)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            RequireSdn(session);
+
             if (config == null) throw new ArgumentNullException(nameof(config));
 
             using var client = new PveHttpClient(session);
@@ -194,7 +193,7 @@ namespace PSProxmoxVE.Core.Services
         public void RemoveSdnZone(PveSession session, string zone)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            RequireSdn(session);
+
             if (string.IsNullOrWhiteSpace(zone)) throw new ArgumentNullException(nameof(zone));
 
             using var client = new PveHttpClient(session);
@@ -211,7 +210,7 @@ namespace PSProxmoxVE.Core.Services
             Dictionary<string, object> config)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            RequireSdn(session);
+
             if (config == null) throw new ArgumentNullException(nameof(config));
 
             using var client = new PveHttpClient(session);
@@ -232,7 +231,7 @@ namespace PSProxmoxVE.Core.Services
         public void RemoveSdnVnet(PveSession session, string vnet)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            RequireSdn(session);
+
             if (string.IsNullOrWhiteSpace(vnet)) throw new ArgumentNullException(nameof(vnet));
 
             using var client = new PveHttpClient(session);
@@ -251,7 +250,7 @@ namespace PSProxmoxVE.Core.Services
         public PveSdnSubnet[] GetSdnSubnets(PveSession session, string vnet)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            RequireSdn(session);
+
             if (string.IsNullOrWhiteSpace(vnet)) throw new ArgumentNullException(nameof(vnet));
 
             using var client = new PveHttpClient(session);
@@ -273,7 +272,7 @@ namespace PSProxmoxVE.Core.Services
             Dictionary<string, object> config)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            RequireSdn(session);
+
             if (string.IsNullOrWhiteSpace(vnet)) throw new ArgumentNullException(nameof(vnet));
             if (config == null) throw new ArgumentNullException(nameof(config));
 
@@ -294,7 +293,7 @@ namespace PSProxmoxVE.Core.Services
         public void RemoveSdnSubnet(PveSession session, string vnet, string subnet)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            RequireSdn(session);
+
             if (string.IsNullOrWhiteSpace(vnet)) throw new ArgumentNullException(nameof(vnet));
             if (string.IsNullOrWhiteSpace(subnet)) throw new ArgumentNullException(nameof(subnet));
 
@@ -314,7 +313,7 @@ namespace PSProxmoxVE.Core.Services
         public PveSdnIpam[] GetSdnIpams(PveSession session)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            RequireSdn(session);
+
 
             using var client = new PveHttpClient(session);
             var response = client.GetAsync("cluster/sdn/ipams").GetAwaiter().GetResult();
@@ -328,7 +327,7 @@ namespace PSProxmoxVE.Core.Services
         public void CreateSdnIpam(PveSession session, Dictionary<string, string> config)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            RequireSdn(session);
+
             if (config == null) throw new ArgumentNullException(nameof(config));
 
             using var client = new PveHttpClient(session);
@@ -341,7 +340,7 @@ namespace PSProxmoxVE.Core.Services
         public void RemoveSdnIpam(PveSession session, string ipam)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            RequireSdn(session);
+
             if (string.IsNullOrWhiteSpace(ipam)) throw new ArgumentNullException(nameof(ipam));
 
             using var client = new PveHttpClient(session);
@@ -359,7 +358,7 @@ namespace PSProxmoxVE.Core.Services
         public PveSdnDns[] GetSdnDnsPlugins(PveSession session)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            RequireSdn(session);
+
 
             using var client = new PveHttpClient(session);
             var response = client.GetAsync("cluster/sdn/dns").GetAwaiter().GetResult();
@@ -373,7 +372,7 @@ namespace PSProxmoxVE.Core.Services
         public void CreateSdnDnsPlugin(PveSession session, Dictionary<string, string> config)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            RequireSdn(session);
+
             if (config == null) throw new ArgumentNullException(nameof(config));
 
             using var client = new PveHttpClient(session);
@@ -386,7 +385,7 @@ namespace PSProxmoxVE.Core.Services
         public void RemoveSdnDnsPlugin(PveSession session, string dns)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            RequireSdn(session);
+
             if (string.IsNullOrWhiteSpace(dns)) throw new ArgumentNullException(nameof(dns));
 
             using var client = new PveHttpClient(session);
@@ -404,7 +403,7 @@ namespace PSProxmoxVE.Core.Services
         public PveSdnController[] GetSdnControllers(PveSession session)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            RequireSdn(session);
+
 
             using var client = new PveHttpClient(session);
             var response = client.GetAsync("cluster/sdn/controllers").GetAwaiter().GetResult();
@@ -418,7 +417,7 @@ namespace PSProxmoxVE.Core.Services
         public void CreateSdnController(PveSession session, Dictionary<string, string> config)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            RequireSdn(session);
+
             if (config == null) throw new ArgumentNullException(nameof(config));
 
             using var client = new PveHttpClient(session);
@@ -431,7 +430,7 @@ namespace PSProxmoxVE.Core.Services
         public void RemoveSdnController(PveSession session, string controller)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
-            RequireSdn(session);
+
             if (string.IsNullOrWhiteSpace(controller)) throw new ArgumentNullException(nameof(controller));
 
             using var client = new PveHttpClient(session);
@@ -442,15 +441,6 @@ namespace PSProxmoxVE.Core.Services
         // -------------------------------------------------------------------------
         // Private helpers
         // -------------------------------------------------------------------------
-
-        /// <summary>
-        /// Throws <see cref="PveVersionException"/> if the session's server version is below 8.0.
-        /// </summary>
-        private static void RequireSdn(PveSession session)
-        {
-            if (session.ServerVersion != null && !session.ServerVersion.IsAtLeast(8, 0))
-                throw new PveVersionException(8, 0, session.ServerVersion);
-        }
 
         private static PveTask ParseTask(string response, string node)
         {

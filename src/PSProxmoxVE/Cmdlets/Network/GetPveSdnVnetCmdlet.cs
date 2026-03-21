@@ -27,6 +27,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         protected override void ProcessRecord()
         {
             var session = GetSession();
+            RequireVersion(session, "SDN", 6, 2, 8, 0);
             using var client = new PveHttpClient(session);
 
             WriteVerbose("Getting SDN VNets...");

@@ -23,6 +23,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         protected override void ProcessRecord()
         {
             var session = GetSession();
+            RequireVersion(session, "SDN IPAM/DNS/Controller", 6, 2, 8, 1);
             var service = new NetworkService();
 
             WriteVerbose("Getting SDN IPAM plugins...");

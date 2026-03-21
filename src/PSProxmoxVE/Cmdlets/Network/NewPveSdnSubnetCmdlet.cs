@@ -44,6 +44,7 @@ namespace PSProxmoxVE.Cmdlets.Network
                 return;
 
             var session = GetSession();
+            RequireVersion(session, "SDN", 6, 2, 8, 0);
             using var client = new PveHttpClient(session);
 
             WriteVerbose($"Creating SDN subnet '{Subnet}' on VNet '{Vnet}'...");

@@ -137,6 +137,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
                 return;
 
             var session = GetSession();
+            RequireVersion(session, "VM disk import", 8, 1);
             var vmService = new VmService();
             var taskService = new TaskService();
 

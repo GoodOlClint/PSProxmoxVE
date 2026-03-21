@@ -42,6 +42,56 @@ namespace PSProxmoxVE.Cmdlets
         }
 
         /// <summary>
+        /// Checks the connected PVE server version against a two-tier requirement:
+        /// <list type="bullet">
+        /// <item><b>Introduced</b> — the API endpoint was added in this version.
+        ///   If the server is older, the cmdlet emits a terminating error because
+        ///   the endpoint does not exist at all.</item>
+        /// <item><b>Default</b> (optional) — the feature is installed/enabled by
+        ///   default since this version. If the server is between <paramref name="introducedMajor"/>
+        ///   and <paramref name="defaultMajor"/>, a warning is emitted but the call
+        ///   proceeds, allowing users who manually enabled the feature to succeed.</item>
+        /// </list>
+        /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="featureName">Human-readable name shown in messages (e.g. "SDN IPAM").</param>
+        /// <param name="introducedMajor">Major version that introduced the API endpoint.</param>
+        /// <param name="introducedMinor">Minor version that introduced the API endpoint.</param>
+        /// <param name="defaultMajor">Major version where the feature is enabled by default (null to skip warning tier).</param>
+        /// <param name="defaultMinor">Minor version where the feature is enabled by default.</param>
+        protected void RequireVersion(
+            PveSession session,
+            string featureName,
+            int introducedMajor,
+            int introducedMinor,
+            int? defaultMajor = null,
+            int? defaultMinor = null)
+        {
+            var version = session.ServerVersion;
+            if (version == null) return; // version unknown — optimistic, let the call proceed
+
+            // Hard fail: endpoint does not exist
+            if (!version.IsAtLeast(introducedMajor, introducedMinor))
+            {
+                ThrowTerminatingError(new ErrorRecord(
+                    new PveVersionException(introducedMajor, introducedMinor, version),
+                    "PveVersionTooOld",
+                    ErrorCategory.InvalidOperation,
+                    null));
+                return;
+            }
+
+            // Soft warning: feature exists but may not be enabled by default
+            if (defaultMajor.HasValue && defaultMinor.HasValue
+                && !version.IsAtLeast(defaultMajor.Value, defaultMinor.Value))
+            {
+                WriteWarning(
+                    $"{featureName} is available since PVE {introducedMajor}.{introducedMinor} but is not enabled by default until PVE {defaultMajor}.{defaultMinor}. " +
+                    $"Connected server is PVE {version}. The command will proceed, but may fail if the feature is not manually enabled.");
+            }
+        }
+
+        /// <summary>
         /// Waits for a PVE task to complete, then optionally polls VM status until
         /// it matches <paramref name="expectedStatus"/>. Used by lifecycle cmdlets
         /// (Start, Stop, Suspend, Resume, etc.) when -Wait is specified.

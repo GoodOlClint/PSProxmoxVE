@@ -827,6 +827,35 @@ Describe 'Integration Tests' -Tag 'Integration' {
     }
 
     # -----------------------------------------------------------------------
+    Context 'SDN — IPAM, DNS, Controllers' {
+        It 'Should list SDN IPAM plugins (Get-PveSdnIpam)' {
+            if (Skip-IfNoTarget) { return }
+            if ($script:SkipSdn) { Set-ItResult -Skipped -Because $script:SkipSdn; return }
+
+            # PVE always has a built-in 'pve' IPAM plugin
+            $ipams = Get-PveSdnIpam
+            $ipams | Should -Not -BeNullOrEmpty
+            ($ipams | Where-Object { $_.Type -eq 'pve' }) | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should list SDN DNS plugins (Get-PveSdnDns)' {
+            if (Skip-IfNoTarget) { return }
+            if ($script:SkipSdn) { Set-ItResult -Skipped -Because $script:SkipSdn; return }
+
+            # Zero DNS plugins is acceptable; just verify no throw.
+            { Get-PveSdnDns -ErrorAction Stop } | Should -Not -Throw
+        }
+
+        It 'Should list SDN controllers (Get-PveSdnController)' {
+            if (Skip-IfNoTarget) { return }
+            if ($script:SkipSdn) { Set-ItResult -Skipped -Because $script:SkipSdn; return }
+
+            # Zero controllers is acceptable; just verify no throw.
+            { Get-PveSdnController -ErrorAction Stop } | Should -Not -Throw
+        }
+    }
+
+    # -----------------------------------------------------------------------
     Context 'Templates' {
         It 'Should list templates' {
             if (Skip-IfNoTarget) { return }

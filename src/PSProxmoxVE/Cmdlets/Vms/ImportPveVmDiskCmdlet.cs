@@ -76,6 +76,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
                 return;
 
             var session = GetSession();
+            RequireVersion(session, "VM disk import", 8, 1);
             var vmService = new VmService();
 
             WriteVerbose($"Importing disk to VM {VmId} slot {Disk}: {Source} -> {TargetStorage}...");
