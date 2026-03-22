@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -12,14 +11,12 @@ public class PvePool
     /// <summary>
     /// The pool identifier.
     /// </summary>
-    [JsonPropertyName("poolid")]
     [JsonProperty("poolid")]
     public string? PoolId { get; set; }
 
     /// <summary>
     /// An optional comment or description for the pool.
     /// </summary>
-    [JsonPropertyName("comment")]
     [JsonProperty("comment")]
     public string? Comment { get; set; }
 
@@ -27,7 +24,6 @@ public class PvePool
     /// The pool members (VMs, containers, storage). Returned as a raw array
     /// when querying a specific pool.
     /// </summary>
-    [JsonPropertyName("members")]
     [JsonProperty("members")]
     public JArray? Members { get; set; }
 

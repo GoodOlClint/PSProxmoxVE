@@ -1,5 +1,4 @@
 using System;
-using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
 namespace PSProxmoxVE.Core.Models.Vms;
@@ -12,35 +11,30 @@ public class PveSnapshot
     /// <summary>
     /// The snapshot name / identifier.
     /// </summary>
-    [JsonPropertyName("name")]
     [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// Optional human-readable description of what this snapshot captures.
     /// </summary>
-    [JsonPropertyName("description")]
     [JsonProperty("description")]
     public string? Description { get; set; }
 
     /// <summary>
     /// Unix timestamp when the snapshot was created.
     /// </summary>
-    [JsonPropertyName("snaptime")]
     [JsonProperty("snaptime")]
     public long? SnapTime { get; set; }
 
     /// <summary>
     /// Indicates whether the VM RAM state was saved with this snapshot (1) or not (0).
     /// </summary>
-    [JsonPropertyName("vmstate")]
     [JsonProperty("vmstate")]
     public int? VmState { get; set; }
 
     /// <summary>
     /// The name of the parent snapshot, or null if this is the root snapshot.
     /// </summary>
-    [JsonPropertyName("parent")]
     [JsonProperty("parent")]
     public string? Parent { get; set; }
 

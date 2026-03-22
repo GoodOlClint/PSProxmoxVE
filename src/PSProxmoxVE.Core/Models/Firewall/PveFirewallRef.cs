@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
 namespace PSProxmoxVE.Core.Models.Firewall;
@@ -12,21 +11,18 @@ public class PveFirewallRef
     /// <summary>
     /// The reference type (e.g. "alias", "ipset").
     /// </summary>
-    [JsonPropertyName("type")]
     [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 
     /// <summary>
     /// The reference name.
     /// </summary>
-    [JsonPropertyName("name")]
     [JsonProperty("name")]
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// Optional comment.
     /// </summary>
-    [JsonPropertyName("comment")]
     [JsonProperty("comment")]
     public string? Comment { get; set; }
 

@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
 namespace PSProxmoxVE.Core.Models.Network;
@@ -13,42 +12,36 @@ public class PveSdnVnet
     /// <summary>
     /// The unique VNet identifier.
     /// </summary>
-    [JsonPropertyName("vnet")]
     [JsonProperty("vnet")]
     public string Vnet { get; set; } = string.Empty;
 
     /// <summary>
     /// The SDN zone this VNet belongs to.
     /// </summary>
-    [JsonPropertyName("zone")]
     [JsonProperty("zone")]
     public string? Zone { get; set; }
 
     /// <summary>
     /// The VLAN or VXLAN tag associated with this VNet.
     /// </summary>
-    [JsonPropertyName("tag")]
     [JsonProperty("tag")]
     public int? Tag { get; set; }
 
     /// <summary>
     /// An optional human-readable alias for this VNet.
     /// </summary>
-    [JsonPropertyName("alias")]
     [JsonProperty("alias")]
     public string? Alias { get; set; }
 
     /// <summary>
     /// Indicates whether VLAN-aware mode is enabled on this VNet (1) or not (0).
     /// </summary>
-    [JsonPropertyName("vlanaware")]
     [JsonProperty("vlanaware")]
     public int? VlanAware { get; set; }
 
     /// <summary>
     /// Optional comment or description for this SDN VNet.
     /// </summary>
-    [JsonPropertyName("comments")]
     [JsonProperty("comments")]
     public string? Comments { get; set; }
 

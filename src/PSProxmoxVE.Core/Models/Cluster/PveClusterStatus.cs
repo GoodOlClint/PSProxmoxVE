@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
 namespace PSProxmoxVE.Core.Models.Cluster;
@@ -13,21 +12,18 @@ public class PveClusterStatus
     /// <summary>
     /// The entry type: "cluster" for the cluster-wide record, or "node" for a node record.
     /// </summary>
-    [JsonPropertyName("type")]
     [JsonProperty("type")]
     public string? Type { get; set; }
 
     /// <summary>
     /// The name of the cluster (present when Type == "cluster") or the node name (when Type == "node").
     /// </summary>
-    [JsonPropertyName("name")]
     [JsonProperty("name")]
     public string? Name { get; set; }
 
     /// <summary>
     /// The total number of nodes in the cluster. Only present when Type == "cluster".
     /// </summary>
-    [JsonPropertyName("nodes")]
     [JsonProperty("nodes")]
     public int? Nodes { get; set; }
 
@@ -36,14 +32,12 @@ public class PveClusterStatus
     /// Without quorum, most write operations are blocked to maintain data consistency.
     /// Only present when Type == "cluster".
     /// </summary>
-    [JsonPropertyName("quorate")]
     [JsonProperty("quorate")]
     public int? Quorate { get; set; }
 
     /// <summary>
     /// The cluster configuration version number. Only present when Type == "cluster".
     /// </summary>
-    [JsonPropertyName("version")]
     [JsonProperty("version")]
     public int? Version { get; set; }
 
@@ -51,7 +45,6 @@ public class PveClusterStatus
     /// The IP address used for cluster communication on this node.
     /// Only present when Type == "node".
     /// </summary>
-    [JsonPropertyName("ip")]
     [JsonProperty("ip")]
     public string? Ip { get; set; }
 
@@ -59,7 +52,6 @@ public class PveClusterStatus
     /// Indicates whether this node is currently online (1) or offline (0).
     /// Only present when Type == "node".
     /// </summary>
-    [JsonPropertyName("online")]
     [JsonProperty("online")]
     public int? Online { get; set; }
 
@@ -67,7 +59,6 @@ public class PveClusterStatus
     /// Indicates whether this is the local node making the request (1) or a remote node (0).
     /// Only present when Type == "node".
     /// </summary>
-    [JsonPropertyName("local")]
     [JsonProperty("local")]
     public int? Local { get; set; }
 
@@ -75,7 +66,6 @@ public class PveClusterStatus
     /// The numeric node ID within the cluster Corosync configuration.
     /// Only present when Type == "node".
     /// </summary>
-    [JsonPropertyName("nodeid")]
     [JsonProperty("nodeid")]
     public int? NodeId { get; set; }
 

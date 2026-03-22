@@ -1,5 +1,4 @@
 using System;
-using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
 namespace PSProxmoxVE.Core.Models.Storage;
@@ -15,56 +14,48 @@ public class PveStorageContent
     /// The full volume identifier in the form "storage:volumename"
     /// (e.g., "local-lvm:vm-100-disk-0").
     /// </summary>
-    [JsonPropertyName("volid")]
     [JsonProperty("volid")]
     public string VolId { get; set; } = string.Empty;
 
     /// <summary>
     /// The content type of this volume (e.g., "images", "backup", "iso", "vztmpl", "rootdir").
     /// </summary>
-    [JsonPropertyName("content")]
     [JsonProperty("content")]
     public string? Content { get; set; }
 
     /// <summary>
     /// The disk image format (e.g., "raw", "qcow2", "vmdk", "subvol").
     /// </summary>
-    [JsonPropertyName("format")]
     [JsonProperty("format")]
     public string? Format { get; set; }
 
     /// <summary>
     /// The size of the volume in bytes.
     /// </summary>
-    [JsonPropertyName("size")]
     [JsonProperty("size")]
     public long? Size { get; set; }
 
     /// <summary>
     /// Unix timestamp of when the volume was created.
     /// </summary>
-    [JsonPropertyName("ctime")]
     [JsonProperty("ctime")]
     public long? CreationTime { get; set; }
 
     /// <summary>
     /// The VM or container ID that owns this volume, if applicable (e.g., for disk images and backups).
     /// </summary>
-    [JsonPropertyName("vmid")]
     [JsonProperty("vmid")]
     public int? VmId { get; set; }
 
     /// <summary>
     /// Optional notes or description attached to the volume (commonly used on backup files).
     /// </summary>
-    [JsonPropertyName("notes")]
     [JsonProperty("notes")]
     public string? Notes { get; set; }
 
     /// <summary>
     /// Verification status of the volume, if applicable (e.g., for backups verified with vzdump).
     /// </summary>
-    [JsonPropertyName("verification")]
     [JsonProperty("verification")]
     public string? Verification { get; set; }
 

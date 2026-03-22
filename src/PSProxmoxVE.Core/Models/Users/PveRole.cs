@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
 namespace PSProxmoxVE.Core.Models.Users;
@@ -12,7 +11,6 @@ public class PveRole
     /// <summary>
     /// The unique role identifier (e.g., "Administrator", "PVEVMAdmin", "PVEDatastoreUser").
     /// </summary>
-    [JsonPropertyName("roleid")]
     [JsonProperty("roleid")]
     public string RoleId { get; set; } = string.Empty;
 
@@ -20,7 +18,6 @@ public class PveRole
     /// Comma-separated list of privilege strings assigned to this role
     /// (e.g., "VM.Allocate,VM.Config.Disk,Datastore.AllocateSpace").
     /// </summary>
-    [JsonPropertyName("privs")]
     [JsonProperty("privs")]
     public string? Privileges { get; set; }
 
@@ -28,7 +25,6 @@ public class PveRole
     /// Indicates whether this is a built-in / special role (1) that cannot be deleted,
     /// or a custom role (0).
     /// </summary>
-    [JsonPropertyName("special")]
     [JsonProperty("special")]
     public int? Special { get; set; }
 

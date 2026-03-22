@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
 namespace PSProxmoxVE.Core.Models.Storage;
@@ -11,14 +10,12 @@ public class PveStorage
     /// <summary>
     /// The unique identifier / name of the storage pool.
     /// </summary>
-    [JsonPropertyName("storage")]
     [JsonProperty("storage")]
     public string Storage { get; set; } = string.Empty;
 
     /// <summary>
     /// The storage backend type (e.g., "dir", "lvm", "zfspool", "nfs", "cifs", "rbd").
     /// </summary>
-    [JsonPropertyName("type")]
     [JsonProperty("type")]
     public string? Type { get; set; }
 
@@ -26,49 +23,42 @@ public class PveStorage
     /// Comma-separated list of content types this storage supports
     /// (e.g., "images,rootdir,backup,snippets,iso,vztmpl").
     /// </summary>
-    [JsonPropertyName("content")]
     [JsonProperty("content")]
     public string? Content { get; set; }
 
     /// <summary>
     /// Total capacity of the storage pool, in bytes.
     /// </summary>
-    [JsonPropertyName("total")]
     [JsonProperty("total")]
     public long? Total { get; set; }
 
     /// <summary>
     /// Used capacity of the storage pool, in bytes.
     /// </summary>
-    [JsonPropertyName("used")]
     [JsonProperty("used")]
     public long? Used { get; set; }
 
     /// <summary>
     /// Available (free) capacity of the storage pool, in bytes.
     /// </summary>
-    [JsonPropertyName("avail")]
     [JsonProperty("avail")]
     public long? Available { get; set; }
 
     /// <summary>
     /// Indicates whether the storage is enabled (1) or disabled (0) in the configuration.
     /// </summary>
-    [JsonPropertyName("enabled")]
     [JsonProperty("enabled")]
     public int? Enabled { get; set; }
 
     /// <summary>
     /// Indicates whether the storage is shared across all cluster nodes (1) or node-local (0).
     /// </summary>
-    [JsonPropertyName("shared")]
     [JsonProperty("shared")]
     public int? Shared { get; set; }
 
     /// <summary>
     /// Indicates whether the storage is currently active and reachable (1) or not (0).
     /// </summary>
-    [JsonPropertyName("active")]
     [JsonProperty("active")]
     public int? Active { get; set; }
 

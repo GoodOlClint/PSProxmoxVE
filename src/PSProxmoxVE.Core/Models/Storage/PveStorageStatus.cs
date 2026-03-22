@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
 namespace PSProxmoxVE.Core.Models.Storage;
@@ -10,42 +9,34 @@ namespace PSProxmoxVE.Core.Models.Storage;
 public class PveStorageStatus
 {
     /// <summary>Total capacity in bytes.</summary>
-    [JsonPropertyName("total")]
     [JsonProperty("total")]
     public long? Total { get; set; }
 
     /// <summary>Used capacity in bytes.</summary>
-    [JsonPropertyName("used")]
     [JsonProperty("used")]
     public long? Used { get; set; }
 
     /// <summary>Available (free) capacity in bytes.</summary>
-    [JsonPropertyName("avail")]
     [JsonProperty("avail")]
     public long? Available { get; set; }
 
     /// <summary>Whether the storage is currently active (1) or not (0).</summary>
-    [JsonPropertyName("active")]
     [JsonProperty("active")]
     public int? Active { get; set; }
 
     /// <summary>Comma-separated list of supported content types.</summary>
-    [JsonPropertyName("content")]
     [JsonProperty("content")]
     public string? Content { get; set; }
 
     /// <summary>Whether the storage is enabled (1) or disabled (0).</summary>
-    [JsonPropertyName("enabled")]
     [JsonProperty("enabled")]
     public int? Enabled { get; set; }
 
     /// <summary>Whether the storage is shared across cluster nodes (1) or node-local (0).</summary>
-    [JsonPropertyName("shared")]
     [JsonProperty("shared")]
     public int? Shared { get; set; }
 
     /// <summary>The storage backend type.</summary>
-    [JsonPropertyName("type")]
     [JsonProperty("type")]
     public string? Type { get; set; }
 

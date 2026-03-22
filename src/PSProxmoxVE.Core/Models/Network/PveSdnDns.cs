@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Newtonsoft.Json;
 
 namespace PSProxmoxVE.Core.Models.Network;
@@ -12,42 +11,36 @@ public class PveSdnDns
     /// <summary>
     /// The DNS plugin identifier.
     /// </summary>
-    [JsonPropertyName("dns")]
     [JsonProperty("dns")]
     public string Dns { get; set; } = string.Empty;
 
     /// <summary>
     /// The DNS plugin type (e.g. "powerdns").
     /// </summary>
-    [JsonPropertyName("type")]
     [JsonProperty("type")]
     public string Type { get; set; } = string.Empty;
 
     /// <summary>
     /// The URL of the DNS service API.
     /// </summary>
-    [JsonPropertyName("url")]
     [JsonProperty("url")]
     public string? Url { get; set; }
 
     /// <summary>
     /// The API key for the DNS service.
     /// </summary>
-    [JsonPropertyName("key")]
     [JsonProperty("key")]
     public string? Key { get; set; }
 
     /// <summary>
     /// The IPv6 reverse zone mask length.
     /// </summary>
-    [JsonPropertyName("reversemaskv6")]
     [JsonProperty("reversemaskv6")]
     public int? ReverseMaskV6 { get; set; }
 
     /// <summary>
     /// The TTL (time-to-live) for DNS records.
     /// </summary>
-    [JsonPropertyName("ttl")]
     [JsonProperty("ttl")]
     public int? Ttl { get; set; }
 
