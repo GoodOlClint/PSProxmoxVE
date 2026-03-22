@@ -8,7 +8,7 @@ namespace PSProxmoxVE.Cmdlets.Firewall
 {
     [Cmdlet(VerbsCommon.Get, "PveFirewallRule")]
     [OutputType(typeof(PveFirewallRule))]
-    public class GetPveFirewallRuleCmdlet : PveCmdletBase
+    public sealed class GetPveFirewallRuleCmdlet : PveCmdletBase
     {
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The firewall level: Cluster, Node, Vm, or Container.")]
         [ValidateSet("Cluster", "Node", "Vm", "Container")]
@@ -19,7 +19,7 @@ namespace PSProxmoxVE.Cmdlets.Firewall
 
         [Parameter(Mandatory = false, HelpMessage = "The VM/Container ID. Required when Level is Vm or Container.")]
         [ValidateRange(100, 999999999)]
-        public int VmId { get; set; }
+        public int? VmId { get; set; }
 
         [Parameter(Mandatory = false, HelpMessage = "Optional rule position to filter by.")]
         public int? Position { get; set; }
@@ -40,7 +40,7 @@ namespace PSProxmoxVE.Cmdlets.Firewall
             if (string.Equals(level, "Vm", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(level, "Container", StringComparison.OrdinalIgnoreCase))
             {
-                if (VmId == 0)
+                if (!VmId.HasValue)
                 {
                     ThrowTerminatingError(new ErrorRecord(
                         new PSArgumentException("VmId is required when Level is Vm or Container."),
@@ -51,7 +51,7 @@ namespace PSProxmoxVE.Cmdlets.Firewall
 
             var session = GetSession();
             var service = new FirewallService();
-            int? vmid = VmId > 0 ? VmId : (int?)null;
+            var vmid = VmId;
 
             WriteVerbose($"Getting firewall rules at level '{level}'...");
             var rules = service.GetRules(session, level, Node, vmid);

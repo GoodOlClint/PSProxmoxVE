@@ -7,7 +7,7 @@ namespace PSProxmoxVE.Cmdlets.Firewall
 {
     [Cmdlet(VerbsCommon.Remove, "PveFirewallRule", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
     [OutputType(typeof(void))]
-    public class RemovePveFirewallRuleCmdlet : PveCmdletBase
+    public sealed class RemovePveFirewallRuleCmdlet : PveCmdletBase
     {
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The firewall level: Cluster, Node, Vm, or Container.")]
         [ValidateSet("Cluster", "Node", "Vm", "Container")]
@@ -18,7 +18,7 @@ namespace PSProxmoxVE.Cmdlets.Firewall
 
         [Parameter(Mandatory = false, HelpMessage = "The VM/Container ID. Required when Level is Vm or Container.")]
         [ValidateRange(100, 999999999)]
-        public int VmId { get; set; }
+        public int? VmId { get; set; }
 
         [Parameter(Mandatory = true, HelpMessage = "The rule position to remove.")]
         public int Position { get; set; }
@@ -39,7 +39,7 @@ namespace PSProxmoxVE.Cmdlets.Firewall
             if (string.Equals(level, "Vm", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(level, "Container", StringComparison.OrdinalIgnoreCase))
             {
-                if (VmId == 0)
+                if (!VmId.HasValue)
                 {
                     ThrowTerminatingError(new ErrorRecord(
                         new PSArgumentException("VmId is required when Level is Vm or Container."),
@@ -53,7 +53,7 @@ namespace PSProxmoxVE.Cmdlets.Firewall
 
             var session = GetSession();
             var service = new FirewallService();
-            int? vmid = VmId > 0 ? VmId : (int?)null;
+            var vmid = VmId;
 
             WriteVerbose($"Removing firewall rule at position {Position} ({level})...");
             service.RemoveRule(session, level, Position, Node, vmid);

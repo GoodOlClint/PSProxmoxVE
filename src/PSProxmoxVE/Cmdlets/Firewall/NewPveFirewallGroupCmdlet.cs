@@ -7,7 +7,7 @@ namespace PSProxmoxVE.Cmdlets.Firewall
 {
     [Cmdlet(VerbsCommon.New, "PveFirewallGroup", SupportsShouldProcess = true)]
     [OutputType(typeof(void))]
-    public class NewPveFirewallGroupCmdlet : PveCmdletBase
+    public sealed class NewPveFirewallGroupCmdlet : PveCmdletBase
     {
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The security group name.")]
         public string Group { get; set; } = string.Empty;

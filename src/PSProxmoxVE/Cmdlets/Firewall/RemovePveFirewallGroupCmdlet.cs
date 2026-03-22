@@ -7,7 +7,7 @@ namespace PSProxmoxVE.Cmdlets.Firewall
 {
     [Cmdlet(VerbsCommon.Remove, "PveFirewallGroup", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
     [OutputType(typeof(void))]
-    public class RemovePveFirewallGroupCmdlet : PveCmdletBase
+    public sealed class RemovePveFirewallGroupCmdlet : PveCmdletBase
     {
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The security group name to remove.")]
         public string Group { get; set; } = string.Empty;
