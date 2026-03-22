@@ -202,6 +202,21 @@ Describe 'Invoke-PveVmGuestExec' {
                 Where-Object { $_.IsMandatory }
             $isMandatory | Should -Not -BeNullOrEmpty
         }
+
+        It 'Should have Timeout parameter of type int' {
+            Skip-IfMissing 'Invoke-PveVmGuestExec'
+            $script:Cmd.Parameters.ContainsKey('Timeout') | Should -BeTrue
+            $script:Cmd.Parameters['Timeout'].ParameterType | Should -Be ([int])
+        }
+
+        It 'Timeout should have ValidateRange(1,3600)' {
+            Skip-IfMissing 'Invoke-PveVmGuestExec'
+            $rangeAttr = $script:Cmd.Parameters['Timeout'].Attributes |
+                Where-Object { $_ -is [System.Management.Automation.ValidateRangeAttribute] }
+            $rangeAttr | Should -Not -BeNullOrEmpty
+            $rangeAttr.MinRange | Should -Be 1
+            $rangeAttr.MaxRange | Should -Be 3600
+        }
     }
 
     Context 'Without active session' {

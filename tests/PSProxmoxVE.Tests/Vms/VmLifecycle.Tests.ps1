@@ -165,11 +165,18 @@ Describe 'Suspend-PveVm' {
         It 'Should support ShouldProcess' {
             $script:Cmd.Parameters.ContainsKey('WhatIf') | Should -BeTrue
         }
+
+        It 'Should declare ConfirmImpact High' {
+            $attr = $script:Cmd.ImplementingType.GetCustomAttributes(
+                [System.Management.Automation.CmdletAttribute], $false) |
+                Select-Object -First 1
+            $attr.ConfirmImpact | Should -Be ([System.Management.Automation.ConfirmImpact]::High)
+        }
     }
 
     Context 'Without active session' {
         It 'Should throw when no session is active (without -WhatIf)' {
-            { Suspend-PveVm -Node 'pve-node1' -VmId 100 -ErrorAction Stop } |
+            { Suspend-PveVm -Node 'pve-node1' -VmId 100 -Confirm:$false -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
@@ -303,11 +310,18 @@ Describe 'Restart-PveVm' {
         It 'Should support ShouldProcess' {
             $script:Cmd.Parameters.ContainsKey('WhatIf') | Should -BeTrue
         }
+
+        It 'Should declare ConfirmImpact High' {
+            $attr = $script:Cmd.ImplementingType.GetCustomAttributes(
+                [System.Management.Automation.CmdletAttribute], $false) |
+                Select-Object -First 1
+            $attr.ConfirmImpact | Should -Be ([System.Management.Automation.ConfirmImpact]::High)
+        }
     }
 
     Context 'Without active session' {
         It 'Should throw when no session is active (without -WhatIf)' {
-            { Restart-PveVm -Node 'pve-node1' -VmId 100 -ErrorAction Stop } |
+            { Restart-PveVm -Node 'pve-node1' -VmId 100 -Confirm:$false -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
 

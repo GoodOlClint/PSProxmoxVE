@@ -272,10 +272,19 @@ Describe 'Set-PveVmGuestPassword' -Tag 'Unit' {
         }
     }
 
+    Context 'Parameter types' {
+        It 'Password should be SecureString' {
+            Skip-IfMissing 'Set-PveVmGuestPassword'
+            $script:Cmd.Parameters['Password'].ParameterType |
+                Should -Be ([System.Security.SecureString])
+        }
+    }
+
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'Set-PveVmGuestPassword'
-            { Set-PveVmGuestPassword -Node 'pve' -VmId 100 -Username 'root' -Password 'dummy' -ErrorAction Stop } |
+            $secPwd = ConvertTo-SecureString 'dummy' -AsPlainText -Force
+            { Set-PveVmGuestPassword -Node 'pve' -VmId 100 -Username 'root' -Password $secPwd -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }

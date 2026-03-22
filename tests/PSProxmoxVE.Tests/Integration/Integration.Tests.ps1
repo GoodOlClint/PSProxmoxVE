@@ -1210,7 +1210,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
             if (Skip-IfNoLinuxVm) { return }
 
             # Suspend — -Wait -Timeout polls qmpstatus until 'paused'
-            $suspendTask = Suspend-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -Timeout 30
+            $suspendTask = Suspend-PveVm -Node $script:Node -VmId $script:LinuxVmId -Wait -Timeout 30 -Confirm:$false
             $suspendTask | Should -Not -BeNullOrEmpty
 
             # Verify with -Detailed (fetches qmpstatus from status/current endpoint)
