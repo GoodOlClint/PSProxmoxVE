@@ -1,4 +1,6 @@
 using System.Management.Automation;
+using System.Runtime.InteropServices;
+using System.Security;
 using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Vms
@@ -12,6 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Set, "PveVmGuestPassword", SupportsShouldProcess = true)]
+    [OutputType(typeof(void))]
     public sealed class SetPveVmGuestPasswordCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
@@ -33,7 +36,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
         /// <para type="description">The new password for the user.</para>
         /// </summary>
         [Parameter(Mandatory = true, HelpMessage = "The new password.")]
-        public string Password { get; set; } = string.Empty;
+        public SecureString Password { get; set; } = new SecureString();
 
         /// <summary>
         /// <para type="description">When specified, indicates the password is already in crypted/hashed format.</para>
@@ -48,9 +51,20 @@ namespace PSProxmoxVE.Cmdlets.Vms
 
             var session = GetSession();
 
+            var ptr = Marshal.SecureStringToGlobalAllocUnicode(Password);
+            string plainPassword;
+            try
+            {
+                plainPassword = Marshal.PtrToStringUni(ptr) ?? string.Empty;
+            }
+            finally
+            {
+                Marshal.ZeroFreeGlobalAllocUnicode(ptr);
+            }
+
             WriteVerbose($"Setting password for user '{Username}' on VM {VmId} via guest agent...");
             var service = new VmService();
-            service.SetGuestPassword(session, Node, VmId, Username, Password, Crypted.IsPresent);
+            service.SetGuestPassword(session, Node, VmId, Username, plainPassword, Crypted.IsPresent);
         }
     }
 }

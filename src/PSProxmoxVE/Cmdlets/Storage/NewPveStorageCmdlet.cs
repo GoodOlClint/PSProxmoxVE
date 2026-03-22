@@ -15,7 +15,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
     /// </summary>
     [Cmdlet(VerbsCommon.New, "PveStorage", SupportsShouldProcess = true)]
     [OutputType(typeof(PveStorage))]
-    public class NewPveStorageCmdlet : PveCmdletBase
+    public sealed class NewPveStorageCmdlet : PveCmdletBase
     {
         /// <summary>The unique storage identifier/name.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The storage pool name.")]
@@ -79,6 +79,14 @@ namespace PSProxmoxVE.Cmdlets.Storage
         {
             if (!ShouldProcess(Storage, "Create PVE Storage"))
                 return;
+
+            if (!string.IsNullOrEmpty(Pool) && !string.IsNullOrEmpty(CephPool))
+            {
+                ThrowTerminatingError(new ErrorRecord(
+                    new PSArgumentException("Pool and CephPool cannot both be specified. Use Pool for ZFS pools or CephPool for Ceph/RBD pools."),
+                    "PoolConflict", ErrorCategory.InvalidArgument, null));
+                return;
+            }
 
             var session = GetSession();
             using var client = new PveHttpClient(session);
