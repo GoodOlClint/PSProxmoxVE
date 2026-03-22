@@ -106,7 +106,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
                     {
                         service.EnrichVmStatus(session, vm.Node ?? Node ?? string.Empty, vm);
                     }
-                    catch
+                    catch (PSProxmoxVE.Core.Exceptions.PveApiException)
                     {
                         // Skip enrichment for inaccessible VMs (e.g. locked, migrating)
                     }

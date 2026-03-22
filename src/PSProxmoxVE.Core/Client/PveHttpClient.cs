@@ -383,7 +383,7 @@ namespace PSProxmoxVE.Core.Client
                 if (!string.IsNullOrWhiteSpace(message))
                     return message!;
             }
-            catch
+            catch (Newtonsoft.Json.JsonException)
             {
                 // If parsing fails, fall through to returning the raw body (truncated)
             }

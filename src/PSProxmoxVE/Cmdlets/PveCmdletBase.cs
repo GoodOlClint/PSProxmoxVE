@@ -146,7 +146,7 @@ namespace PSProxmoxVE.Cmdlets
                     if (string.Equals(effectiveStatus, expectedStatus, StringComparison.OrdinalIgnoreCase))
                         return task;
                 }
-                catch
+                catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
                 {
                     // Ignore transient errors during polling
                 }

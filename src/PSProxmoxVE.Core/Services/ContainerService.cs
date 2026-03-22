@@ -41,7 +41,7 @@ namespace PSProxmoxVE.Core.Services
                         ct.Node ??= n.Name;
                     all.AddRange(containers);
                 }
-                catch
+                catch (Exception ex) when (ex is PSProxmoxVE.Core.Exceptions.PveApiException or System.Net.Http.HttpRequestException)
                 {
                     // Skip offline/inaccessible nodes
                 }
@@ -52,7 +52,7 @@ namespace PSProxmoxVE.Core.Services
         private PveContainer[] GetContainersOnNode(PveSession session, string node)
         {
             using var client = new PveHttpClient(session);
-            var response = client.GetAsync($"nodes/{node}/lxc").GetAwaiter().GetResult();
+            var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/lxc").GetAwaiter().GetResult();
             var data = JObject.Parse(response)["data"];
             return data?.ToObject<PveContainer[]>() ?? Array.Empty<PveContainer>();
         }
@@ -82,7 +82,7 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
             using var client = new PveHttpClient(session);
-            var response = client.GetAsync($"nodes/{node}/lxc/{vmid}/config")
+            var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/config")
                 .GetAwaiter().GetResult();
             var data = JObject.Parse(response)["data"];
             return data?.ToObject<PveContainerConfig>() ?? new PveContainerConfig();
@@ -109,7 +109,7 @@ namespace PSProxmoxVE.Core.Services
             var formData = config.ToDictionary(
                 kvp => kvp.Key,
                 kvp => kvp.Value?.ToString() ?? string.Empty);
-            client.PutAsync($"nodes/{node}/lxc/{vmid}/config", formData)
+            client.PutAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/config", formData)
                 .GetAwaiter().GetResult();
         }
 
@@ -126,7 +126,7 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
             using var client = new PveHttpClient(session);
-            var response = client.GetAsync($"nodes/{node}/lxc/{vmid}/snapshot")
+            var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/snapshot")
                 .GetAwaiter().GetResult();
             var data = JObject.Parse(response)["data"];
             return data?.ToObject<PveSnapshot[]>() ?? Array.Empty<PveSnapshot>();
@@ -154,7 +154,7 @@ namespace PSProxmoxVE.Core.Services
                 formData["description"] = description!;
 
             using var client = new PveHttpClient(session);
-            var response = client.PostAsync($"nodes/{node}/lxc/{vmid}/snapshot", formData)
+            var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/snapshot", formData)
                 .GetAwaiter().GetResult();
             return ParseTask(response, node);
         }
@@ -173,7 +173,7 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(snapname)) throw new ArgumentNullException(nameof(snapname));
 
             using var client = new PveHttpClient(session);
-            var response = client.DeleteAsync($"nodes/{node}/lxc/{vmid}/snapshot/{Uri.EscapeDataString(snapname)}")
+            var response = client.DeleteAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/snapshot/{Uri.EscapeDataString(snapname)}")
                 .GetAwaiter().GetResult();
             return ParseTask(response, node);
         }
@@ -192,7 +192,7 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(snapname)) throw new ArgumentNullException(nameof(snapname));
 
             using var client = new PveHttpClient(session);
-            var response = client.PostAsync($"nodes/{node}/lxc/{vmid}/snapshot/{Uri.EscapeDataString(snapname)}/rollback")
+            var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/snapshot/{Uri.EscapeDataString(snapname)}/rollback")
                 .GetAwaiter().GetResult();
             return ParseTask(response, node);
         }
@@ -217,7 +217,7 @@ namespace PSProxmoxVE.Core.Services
             var formData = config.ToDictionary(
                 kvp => kvp.Key,
                 kvp => kvp.Value?.ToString() ?? string.Empty);
-            var response = client.PostAsync($"nodes/{node}/lxc", formData)
+            var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/lxc", formData)
                 .GetAwaiter().GetResult();
             return ParseTask(response, node);
         }
@@ -245,7 +245,7 @@ namespace PSProxmoxVE.Core.Services
                 formData["timeout"] = timeoutSeconds.Value.ToString();
 
             using var client = new PveHttpClient(session);
-            var response = client.PostAsync($"nodes/{node}/lxc/{vmid}/status/shutdown", formData)
+            var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/status/shutdown", formData)
                 .GetAwaiter().GetResult();
             return ParseTask(response, node);
         }
@@ -262,7 +262,7 @@ namespace PSProxmoxVE.Core.Services
 
             var purgeParam = purge ? "?purge=1" : "?purge=0";
             using var client = new PveHttpClient(session);
-            var response = client.DeleteAsync($"nodes/{node}/lxc/{vmid}{purgeParam}")
+            var response = client.DeleteAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}{purgeParam}")
                 .GetAwaiter().GetResult();
             return ParseTask(response, node);
         }
@@ -289,7 +289,7 @@ namespace PSProxmoxVE.Core.Services
             if (!string.IsNullOrEmpty(targetNode)) formData["target"] = targetNode!;
 
             using var client = new PveHttpClient(session);
-            var response = client.PostAsync($"nodes/{node}/lxc/{vmid}/clone", formData)
+            var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/clone", formData)
                 .GetAwaiter().GetResult();
             return ParseTask(response, node);
         }
@@ -313,7 +313,7 @@ namespace PSProxmoxVE.Core.Services
             };
 
             using var client = new PveHttpClient(session);
-            var response = client.PostAsync($"nodes/{node}/lxc/{vmid}/migrate", formData)
+            var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/migrate", formData)
                 .GetAwaiter().GetResult();
             return ParseTask(response, node);
         }
@@ -351,7 +351,7 @@ namespace PSProxmoxVE.Core.Services
             };
 
             using var client = new PveHttpClient(session);
-            var response = client.PutAsync($"nodes/{node}/lxc/{vmid}/resize", formData)
+            var response = client.PutAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/resize", formData)
                 .GetAwaiter().GetResult();
             return ParseTask(response, node);
         }
@@ -374,7 +374,7 @@ namespace PSProxmoxVE.Core.Services
             };
 
             using var client = new PveHttpClient(session);
-            var response = client.PostAsync($"nodes/{node}/lxc/{vmid}/move_volume", formData)
+            var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/move_volume", formData)
                 .GetAwaiter().GetResult();
             return ParseTask(response, node);
         }
@@ -392,7 +392,7 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
             using var client = new PveHttpClient(session);
-            var response = client.PostAsync($"nodes/{node}/lxc/{vmid}/template")
+            var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/template")
                 .GetAwaiter().GetResult();
             return ParseTask(response, node);
         }
@@ -410,7 +410,7 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
             using var client = new PveHttpClient(session);
-            var response = client.GetAsync($"nodes/{node}/lxc/{vmid}/interfaces")
+            var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/interfaces")
                 .GetAwaiter().GetResult();
             var data = JObject.Parse(response)["data"];
             return data?.ToObject<PveContainerInterface[]>() ?? Array.Empty<PveContainerInterface>();
@@ -426,7 +426,7 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
             using var client = new PveHttpClient(session);
-            var response = client.PostAsync($"nodes/{node}/lxc/{vmid}/status/{action}")
+            var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/status/{action}")
                 .GetAwaiter().GetResult();
             return ParseTask(response, node);
         }
