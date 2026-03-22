@@ -11,6 +11,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Set, "PveStorage", SupportsShouldProcess = true)]
+    [OutputType(typeof(void))]
     public sealed class SetPveStorageCmdlet : PveCmdletBase
     {
         /// <summary>The storage identifier to update.</summary>

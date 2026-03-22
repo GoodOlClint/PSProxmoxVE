@@ -12,7 +12,8 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.New, "PveSdnSubnet", SupportsShouldProcess = true)]
-    public class NewPveSdnSubnetCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class NewPveSdnSubnetCmdlet : PveCmdletBase
     {
         /// <summary>The SDN VNet to add the subnet to.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The SDN VNet name.")]

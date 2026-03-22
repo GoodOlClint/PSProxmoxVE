@@ -18,7 +18,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
         SupportsShouldProcess = true,
         ConfirmImpact = ConfirmImpact.High)]
     [OutputType(typeof(PveTask))]
-    public class RestorePveContainerSnapshotCmdlet : PveCmdletBase
+    public sealed class RestorePveContainerSnapshotCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]

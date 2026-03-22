@@ -11,7 +11,8 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Remove, "PveSdnIpam", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
-    public class RemovePveSdnIpamCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class RemovePveSdnIpamCmdlet : PveCmdletBase
     {
         /// <summary>The IPAM plugin identifier to remove.</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The IPAM plugin identifier to remove.")]

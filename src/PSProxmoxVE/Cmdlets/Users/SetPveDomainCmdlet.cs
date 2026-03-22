@@ -12,7 +12,8 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Set, "PveDomain", SupportsShouldProcess = true)]
-    public class SetPveDomainCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class SetPveDomainCmdlet : PveCmdletBase
     {
         /// <summary>The realm identifier to update.</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The realm identifier.")]

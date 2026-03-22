@@ -11,7 +11,8 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Set, "PveGroup", SupportsShouldProcess = true)]
-    public class SetPveGroupCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class SetPveGroupCmdlet : PveCmdletBase
     {
         /// <summary>The group identifier to update.</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The group identifier.")]

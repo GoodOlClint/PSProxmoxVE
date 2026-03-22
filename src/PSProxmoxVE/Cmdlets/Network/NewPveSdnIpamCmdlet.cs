@@ -12,7 +12,8 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.New, "PveSdnIpam", SupportsShouldProcess = true)]
-    public class NewPveSdnIpamCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class NewPveSdnIpamCmdlet : PveCmdletBase
     {
         /// <summary>The IPAM plugin identifier.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The IPAM plugin identifier.")]

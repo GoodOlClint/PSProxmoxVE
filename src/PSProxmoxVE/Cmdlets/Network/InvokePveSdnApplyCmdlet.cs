@@ -11,7 +11,8 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// </para>
     /// </summary>
     [Cmdlet(VerbsLifecycle.Invoke, "PveSdnApply", SupportsShouldProcess = true)]
-    public class InvokePveSdnApplyCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class InvokePveSdnApplyCmdlet : PveCmdletBase
     {
         protected override void ProcessRecord()
         {

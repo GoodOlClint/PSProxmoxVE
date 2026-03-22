@@ -12,7 +12,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
     /// before the operation is considered failed. Use -Wait to block until both tasks complete.
     /// </para>
     /// </summary>
-    [Cmdlet(VerbsLifecycle.Restart, "PveVm", SupportsShouldProcess = true)]
+    [Cmdlet(VerbsLifecycle.Restart, "PveVm", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
     [OutputType(typeof(PveTask))]
     public sealed class RestartPveVmCmdlet : PveCmdletBase
     {

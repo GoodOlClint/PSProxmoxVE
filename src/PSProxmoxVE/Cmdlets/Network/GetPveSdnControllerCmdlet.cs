@@ -14,7 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveSdnController")]
     [OutputType(typeof(PveSdnController))]
-    public class GetPveSdnControllerCmdlet : PveCmdletBase
+    public sealed class GetPveSdnControllerCmdlet : PveCmdletBase
     {
         /// <summary>Optional controller identifier filter.</summary>
         [Parameter(Mandatory = false, Position = 0, HelpMessage = "Filter by controller identifier.")]

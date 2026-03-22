@@ -14,7 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveUser")]
     [OutputType(typeof(PveUser))]
-    public class GetPveUserCmdlet : PveCmdletBase
+    public sealed class GetPveUserCmdlet : PveCmdletBase
     {
         /// <summary>
         /// Filter results to a specific user ID or pattern (e.g., "admin@pam", "*@pve").

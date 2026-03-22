@@ -13,7 +13,8 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Set, "PveUser", SupportsShouldProcess = true)]
-    public class SetPveUserCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class SetPveUserCmdlet : PveCmdletBase
     {
         /// <summary>The user identifier to update (e.g., "jdoe@pve").</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The user ID in user@realm format.")]

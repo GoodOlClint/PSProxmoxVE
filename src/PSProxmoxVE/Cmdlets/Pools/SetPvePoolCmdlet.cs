@@ -12,6 +12,7 @@ namespace PSProxmoxVE.Cmdlets.Pools
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Set, "PvePool", SupportsShouldProcess = true)]
+    [OutputType(typeof(void))]
     public sealed class SetPvePoolCmdlet : PveCmdletBase
     {
         /// <summary>

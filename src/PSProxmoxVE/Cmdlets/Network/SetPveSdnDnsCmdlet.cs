@@ -12,7 +12,8 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Set, "PveSdnDns", SupportsShouldProcess = true)]
-    public class SetPveSdnDnsCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class SetPveSdnDnsCmdlet : PveCmdletBase
     {
         /// <summary>The DNS plugin identifier.</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The SDN DNS plugin identifier.")]

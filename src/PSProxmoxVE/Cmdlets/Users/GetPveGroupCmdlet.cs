@@ -14,7 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveGroup")]
     [OutputType(typeof(PveGroup))]
-    public class GetPveGroupCmdlet : PveCmdletBase
+    public sealed class GetPveGroupCmdlet : PveCmdletBase
     {
         /// <summary>Optional group ID to filter by.</summary>
         [Parameter(Mandatory = false, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "Optional group ID to filter results.")]

@@ -15,7 +15,7 @@ namespace PSProxmoxVE.Cmdlets.Templates
     /// </summary>
     [Cmdlet(VerbsCommon.New, "PveVmFromTemplate", SupportsShouldProcess = true)]
     [OutputType(typeof(PveTask))]
-    public class NewPveVmFromTemplateCmdlet : PveCmdletBase
+    public sealed class NewPveVmFromTemplateCmdlet : PveCmdletBase
     {
         /// <summary>The node where the source template resides. Alias: Node.</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The node where the template resides.")]

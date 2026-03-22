@@ -14,6 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Set, "PveVmConfig", SupportsShouldProcess = true)]
+    [OutputType(typeof(void))]
     public sealed class SetPveVmConfigCmdlet : PveCmdletBase
     {
         /// <summary>

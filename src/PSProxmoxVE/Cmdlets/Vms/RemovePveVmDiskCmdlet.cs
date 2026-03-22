@@ -13,6 +13,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
     [Cmdlet(VerbsCommon.Remove, "PveVmDisk",
         SupportsShouldProcess = true,
         ConfirmImpact = ConfirmImpact.High)]
+    [OutputType(typeof(void))]
     public sealed class RemovePveVmDiskCmdlet : PveCmdletBase
     {
         /// <summary>

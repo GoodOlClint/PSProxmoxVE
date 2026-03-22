@@ -12,7 +12,8 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Set, "PvePermission", SupportsShouldProcess = true)]
-    public class SetPvePermissionCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class SetPvePermissionCmdlet : PveCmdletBase
     {
         /// <summary>The resource path this ACL applies to (e.g., "/", "/vms/100").</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The resource path (e.g. /, /vms/100).")]

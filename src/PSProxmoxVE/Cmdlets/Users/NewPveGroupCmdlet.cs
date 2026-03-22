@@ -12,7 +12,7 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// </summary>
     [Cmdlet(VerbsCommon.New, "PveGroup", SupportsShouldProcess = true)]
     [OutputType(typeof(PveGroup))]
-    public class NewPveGroupCmdlet : PveCmdletBase
+    public sealed class NewPveGroupCmdlet : PveCmdletBase
     {
         /// <summary>The group identifier.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The group identifier.")]

@@ -14,7 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveSdnDns")]
     [OutputType(typeof(PveSdnDns))]
-    public class GetPveSdnDnsCmdlet : PveCmdletBase
+    public sealed class GetPveSdnDnsCmdlet : PveCmdletBase
     {
         /// <summary>Optional DNS plugin identifier filter.</summary>
         [Parameter(Mandatory = false, Position = 0, HelpMessage = "Filter by DNS plugin identifier.")]

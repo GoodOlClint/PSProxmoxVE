@@ -11,7 +11,8 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Remove, "PveRole", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
-    public class RemovePveRoleCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class RemovePveRoleCmdlet : PveCmdletBase
     {
         /// <summary>The role identifier to remove.</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The role identifier.")]

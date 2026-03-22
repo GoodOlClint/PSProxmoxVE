@@ -13,7 +13,8 @@ namespace PSProxmoxVE.Cmdlets.Users
     [Cmdlet(VerbsCommon.Remove, "PveDomain",
         SupportsShouldProcess = true,
         ConfirmImpact = ConfirmImpact.High)]
-    public class RemovePveDomainCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class RemovePveDomainCmdlet : PveCmdletBase
     {
         /// <summary>The realm identifier to remove.</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The realm identifier to remove.")]

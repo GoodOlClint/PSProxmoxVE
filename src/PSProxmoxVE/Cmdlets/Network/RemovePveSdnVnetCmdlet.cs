@@ -10,7 +10,8 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Remove, "PveSdnVnet", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
-    public class RemovePveSdnVnetCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class RemovePveSdnVnetCmdlet : PveCmdletBase
     {
         /// <summary>The VNet identifier to remove.</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The SDN VNet name.")]

@@ -13,7 +13,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveStorageContent")]
     [OutputType(typeof(PveStorageContent))]
-    public class GetPveStorageContentCmdlet : PveCmdletBase
+    public sealed class GetPveStorageContentCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name that hosts the storage.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]

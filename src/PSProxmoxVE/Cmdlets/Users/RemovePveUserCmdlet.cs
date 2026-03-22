@@ -10,7 +10,8 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Remove, "PveUser", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
-    public class RemovePveUserCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class RemovePveUserCmdlet : PveCmdletBase
     {
         /// <summary>The user identifier to remove (e.g., "jdoe@pve").</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The user ID in user@realm format.")]

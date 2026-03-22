@@ -15,7 +15,7 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// </summary>
     [Cmdlet(VerbsCommon.New, "PveUser", SupportsShouldProcess = true)]
     [OutputType(typeof(PveUser))]
-    public class NewPveUserCmdlet : PveCmdletBase
+    public sealed class NewPveUserCmdlet : PveCmdletBase
     {
         /// <summary>The user identifier in "user@realm" format (e.g., "jdoe@pve").</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The user ID in user@realm format.")]

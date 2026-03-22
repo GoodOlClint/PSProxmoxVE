@@ -15,7 +15,7 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// </summary>
     [Cmdlet(VerbsCommon.New, "PveApiToken", SupportsShouldProcess = true)]
     [OutputType(typeof(PveApiToken))]
-    public class NewPveApiTokenCmdlet : PveCmdletBase
+    public sealed class NewPveApiTokenCmdlet : PveCmdletBase
     {
         /// <summary>
         /// The user ID to create the token for, in "username@realm" format (e.g., "admin@pam").

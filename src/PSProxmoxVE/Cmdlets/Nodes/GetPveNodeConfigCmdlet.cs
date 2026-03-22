@@ -12,7 +12,7 @@ namespace PSProxmoxVE.Cmdlets.Nodes
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveNodeConfig")]
     [OutputType(typeof(PSObject))]
-    public class GetPveNodeConfigCmdlet : PveCmdletBase
+    public sealed class GetPveNodeConfigCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The PVE node name.")]

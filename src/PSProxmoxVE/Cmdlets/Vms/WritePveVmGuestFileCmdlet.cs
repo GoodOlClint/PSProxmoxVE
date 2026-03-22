@@ -11,6 +11,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommunications.Write, "PveVmGuestFile", SupportsShouldProcess = true)]
+    [OutputType(typeof(void))]
     public sealed class WritePveVmGuestFileCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>

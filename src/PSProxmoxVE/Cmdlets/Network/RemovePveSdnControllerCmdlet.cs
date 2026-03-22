@@ -11,7 +11,8 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Remove, "PveSdnController", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
-    public class RemovePveSdnControllerCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class RemovePveSdnControllerCmdlet : PveCmdletBase
     {
         /// <summary>The controller identifier to remove.</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The controller identifier to remove.")]

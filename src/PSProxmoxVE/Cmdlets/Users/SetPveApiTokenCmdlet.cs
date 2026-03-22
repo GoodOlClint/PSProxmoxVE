@@ -12,6 +12,7 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Set, "PveApiToken", SupportsShouldProcess = true)]
+    [OutputType(typeof(void))]
     public sealed class SetPveApiTokenCmdlet : PveCmdletBase
     {
         /// <summary>The user ID that owns the token (e.g. 'user@realm').</summary>

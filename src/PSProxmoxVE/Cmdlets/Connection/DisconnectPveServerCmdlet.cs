@@ -16,6 +16,7 @@ namespace PSProxmoxVE.Cmdlets.Connection
     /// </summary>
     [Cmdlet(VerbsCommunications.Disconnect, "PveServer",
         SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.Low)]
+    [OutputType(typeof(void))]
     [Alias("dpve")]
     public sealed class DisconnectPveServerCmdlet : PSCmdlet
     {

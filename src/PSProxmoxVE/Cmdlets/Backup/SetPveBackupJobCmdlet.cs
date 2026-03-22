@@ -12,6 +12,7 @@ namespace PSProxmoxVE.Cmdlets.Backup
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Set, "PveBackupJob", SupportsShouldProcess = true)]
+    [OutputType(typeof(void))]
     public sealed class SetPveBackupJobCmdlet : PveCmdletBase
     {
         /// <summary>

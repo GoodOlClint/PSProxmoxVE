@@ -18,7 +18,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
     /// </summary>
     [Cmdlet(VerbsCommunications.Send, "PveFile", SupportsShouldProcess = true)]
     [OutputType(typeof(PveTask))]
-    public class SendPveFileCmdlet : PveCmdletBase
+    public sealed class SendPveFileCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node to upload to.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]

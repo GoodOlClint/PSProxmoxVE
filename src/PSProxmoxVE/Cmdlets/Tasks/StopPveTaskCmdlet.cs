@@ -13,6 +13,7 @@ namespace PSProxmoxVE.Cmdlets.Tasks
     [Cmdlet(VerbsLifecycle.Stop, "PveTask",
         SupportsShouldProcess = true,
         ConfirmImpact = ConfirmImpact.High)]
+    [OutputType(typeof(void))]
     public sealed class StopPveTaskCmdlet : PveCmdletBase
     {
         /// <summary>

@@ -18,7 +18,7 @@ namespace PSProxmoxVE.Cmdlets.Tasks
     /// </summary>
     [Cmdlet(VerbsLifecycle.Wait, "PveTask")]
     [OutputType(typeof(PveTask))]
-    public class WaitPveTaskCmdlet : PveCmdletBase
+    public sealed class WaitPveTaskCmdlet : PveCmdletBase
     {
         /// <summary>The node on which the task is running.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]

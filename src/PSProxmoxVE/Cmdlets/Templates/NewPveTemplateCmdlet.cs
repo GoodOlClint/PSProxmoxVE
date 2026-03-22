@@ -14,7 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Templates
     /// </summary>
     [Cmdlet(VerbsCommon.New, "PveTemplate", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
     [OutputType(typeof(PveTask))]
-    public class NewPveTemplateCmdlet : PveCmdletBase
+    public sealed class NewPveTemplateCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]

@@ -10,6 +10,7 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Set, "PveRole", SupportsShouldProcess = true)]
+    [OutputType(typeof(void))]
     public sealed class SetPveRoleCmdlet : PveCmdletBase
     {
         /// <summary>The role identifier to update.</summary>

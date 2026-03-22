@@ -16,7 +16,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
     /// </summary>
     [Cmdlet(VerbsLifecycle.Invoke, "PveStorageDownload", SupportsShouldProcess = true)]
     [OutputType(typeof(PveTask))]
-    public class InvokePveStorageDownloadCmdlet : PveCmdletBase
+    public sealed class InvokePveStorageDownloadCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node that will perform the download.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]

@@ -13,7 +13,7 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveSdnZone")]
     [OutputType(typeof(PveSdnZone))]
-    public class GetPveSdnZoneCmdlet : PveCmdletBase
+    public sealed class GetPveSdnZoneCmdlet : PveCmdletBase
     {
         /// <summary>Optional zone identifier to retrieve a specific zone.</summary>
         [Parameter(Mandatory = false, Position = 0, HelpMessage = "The SDN zone name.")]

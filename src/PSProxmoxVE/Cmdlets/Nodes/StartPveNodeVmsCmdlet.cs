@@ -14,7 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Nodes
     /// </summary>
     [Cmdlet(VerbsLifecycle.Start, "PveNodeVms", SupportsShouldProcess = true)]
     [OutputType(typeof(PveTask))]
-    public class StartPveNodeVmsCmdlet : PveCmdletBase
+    public sealed class StartPveNodeVmsCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The PVE node name.")]

@@ -14,7 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PvePermission")]
     [OutputType(typeof(PvePermission))]
-    public class GetPvePermissionCmdlet : PveCmdletBase
+    public sealed class GetPvePermissionCmdlet : PveCmdletBase
     {
         /// <summary>Filter results to a specific resource path (e.g., "/", "/vms/100").</summary>
         [Parameter(Mandatory = false, Position = 0, HelpMessage = "Filter by resource path (e.g. /, /vms/100).")]

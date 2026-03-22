@@ -12,6 +12,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
     /// </para>
     /// </summary>
     [Cmdlet(VerbsLifecycle.Invoke, "PveVmGuestFsTrim", SupportsShouldProcess = true)]
+    [OutputType(typeof(void))]
     public sealed class InvokePveVmGuestFsTrimCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>

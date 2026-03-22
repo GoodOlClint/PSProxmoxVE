@@ -15,7 +15,7 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveApiToken")]
     [OutputType(typeof(PveApiToken))]
-    public class GetPveApiTokenCmdlet : PveCmdletBase
+    public sealed class GetPveApiTokenCmdlet : PveCmdletBase
     {
         /// <summary>
         /// The user ID whose tokens to list, in "username@realm" format (e.g., "admin@pam").

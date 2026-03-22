@@ -14,7 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveSdnIpam")]
     [OutputType(typeof(PveSdnIpam))]
-    public class GetPveSdnIpamCmdlet : PveCmdletBase
+    public sealed class GetPveSdnIpamCmdlet : PveCmdletBase
     {
         /// <summary>Optional IPAM identifier filter.</summary>
         [Parameter(Mandatory = false, Position = 0, HelpMessage = "Filter by IPAM plugin identifier.")]

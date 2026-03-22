@@ -13,7 +13,7 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// </summary>
     [Cmdlet(VerbsCommon.New, "PveDomain", SupportsShouldProcess = true)]
     [OutputType(typeof(PveDomain))]
-    public class NewPveDomainCmdlet : PveCmdletBase
+    public sealed class NewPveDomainCmdlet : PveCmdletBase
     {
         /// <summary>The realm identifier.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The realm identifier.")]

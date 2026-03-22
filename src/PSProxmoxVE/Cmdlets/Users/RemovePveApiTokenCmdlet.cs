@@ -12,7 +12,8 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// </summary>
     [Cmdlet(VerbsCommon.Remove, "PveApiToken", SupportsShouldProcess = true,
         ConfirmImpact = ConfirmImpact.High)]
-    public class RemovePveApiTokenCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class RemovePveApiTokenCmdlet : PveCmdletBase
     {
         /// <summary>
         /// The user ID that owns the token, in "username@realm" format (e.g., "admin@pam").

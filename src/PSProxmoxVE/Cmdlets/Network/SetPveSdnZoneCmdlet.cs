@@ -12,7 +12,8 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Set, "PveSdnZone", SupportsShouldProcess = true)]
-    public class SetPveSdnZoneCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class SetPveSdnZoneCmdlet : PveCmdletBase
     {
         /// <summary>The zone identifier.</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The SDN zone name.")]

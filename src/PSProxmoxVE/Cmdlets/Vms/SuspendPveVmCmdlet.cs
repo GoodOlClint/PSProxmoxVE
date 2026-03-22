@@ -12,7 +12,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
     /// Use -Wait to block until the suspend task completes.
     /// </para>
     /// </summary>
-    [Cmdlet(VerbsLifecycle.Suspend, "PveVm", SupportsShouldProcess = true)]
+    [Cmdlet(VerbsLifecycle.Suspend, "PveVm", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
     [OutputType(typeof(PveTask))]
     public sealed class SuspendPveVmCmdlet : PveCmdletBase
     {

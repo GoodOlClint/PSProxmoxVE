@@ -14,7 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveSdnVnet")]
     [OutputType(typeof(PveSdnVnet))]
-    public class GetPveSdnVnetCmdlet : PveCmdletBase
+    public sealed class GetPveSdnVnetCmdlet : PveCmdletBase
     {
         /// <summary>Filter VNets to a specific zone.</summary>
         [Parameter(Mandatory = false, Position = 0, HelpMessage = "The SDN zone name.")]

@@ -15,7 +15,7 @@ namespace PSProxmoxVE.Cmdlets.Tasks
     [Cmdlet(VerbsCommon.Get, "PveTask")]
     [Alias("gpt")]
     [OutputType(typeof(PveTask))]
-    public class GetPveTaskCmdlet : PveCmdletBase
+    public sealed class GetPveTaskCmdlet : PveCmdletBase
     {
         /// <summary>The node on which the task ran.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]

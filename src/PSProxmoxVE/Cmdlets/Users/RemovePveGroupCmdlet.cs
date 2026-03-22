@@ -12,7 +12,8 @@ namespace PSProxmoxVE.Cmdlets.Users
     [Cmdlet(VerbsCommon.Remove, "PveGroup",
         SupportsShouldProcess = true,
         ConfirmImpact = ConfirmImpact.High)]
-    public class RemovePveGroupCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class RemovePveGroupCmdlet : PveCmdletBase
     {
         /// <summary>The group identifier to remove.</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The group identifier to remove.")]

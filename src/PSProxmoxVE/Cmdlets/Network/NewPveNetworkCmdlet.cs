@@ -12,7 +12,8 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.New, "PveNetwork", SupportsShouldProcess = true)]
-    public class NewPveNetworkCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class NewPveNetworkCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]

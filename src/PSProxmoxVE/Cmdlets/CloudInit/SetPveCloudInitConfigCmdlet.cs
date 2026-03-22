@@ -18,7 +18,7 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
     /// </summary>
     [Cmdlet(VerbsCommon.Set, "PveCloudInitConfig", SupportsShouldProcess = true)]
     [OutputType(typeof(PveTask))]
-    public class SetPveCloudInitConfigCmdlet : PveCmdletBase
+    public sealed class SetPveCloudInitConfigCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]

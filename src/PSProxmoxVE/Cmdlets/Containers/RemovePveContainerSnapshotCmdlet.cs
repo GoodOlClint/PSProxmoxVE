@@ -15,7 +15,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
     /// </summary>
     [Cmdlet(VerbsCommon.Remove, "PveContainerSnapshot", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
     [OutputType(typeof(PveTask))]
-    public class RemovePveContainerSnapshotCmdlet : PveCmdletBase
+    public sealed class RemovePveContainerSnapshotCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]

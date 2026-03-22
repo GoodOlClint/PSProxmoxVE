@@ -14,7 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Templates
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveTemplate")]
     [OutputType(typeof(PveVm))]
-    public class GetPveTemplateCmdlet : PveCmdletBase
+    public sealed class GetPveTemplateCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name. When omitted, queries all nodes in the cluster.</summary>
         [Parameter(Mandatory = false, Position = 0, HelpMessage = "The PVE node name.")]

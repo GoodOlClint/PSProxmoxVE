@@ -14,7 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveDomain")]
     [OutputType(typeof(PveDomain))]
-    public class GetPveDomainCmdlet : PveCmdletBase
+    public sealed class GetPveDomainCmdlet : PveCmdletBase
     {
         /// <summary>Optional realm name to filter by.</summary>
         [Parameter(Mandatory = false, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "Optional realm name to filter results.")]

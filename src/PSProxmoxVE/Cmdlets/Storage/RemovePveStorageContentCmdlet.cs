@@ -13,7 +13,8 @@ namespace PSProxmoxVE.Cmdlets.Storage
     [Cmdlet(VerbsCommon.Remove, "PveStorageContent",
         SupportsShouldProcess = true,
         ConfirmImpact = ConfirmImpact.High)]
-    public class RemovePveStorageContentCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class RemovePveStorageContentCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]

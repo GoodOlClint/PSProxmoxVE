@@ -13,7 +13,8 @@ namespace PSProxmoxVE.Cmdlets.Storage
     [Cmdlet(VerbsCommon.Remove, "PveStorage",
         SupportsShouldProcess = true,
         ConfirmImpact = ConfirmImpact.High)]
-    public class RemovePveStorageCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class RemovePveStorageCmdlet : PveCmdletBase
     {
         /// <summary>The storage identifier to remove.</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The storage pool name.")]

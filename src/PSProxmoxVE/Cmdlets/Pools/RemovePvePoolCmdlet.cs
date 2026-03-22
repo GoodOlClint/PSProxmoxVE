@@ -13,6 +13,7 @@ namespace PSProxmoxVE.Cmdlets.Pools
     [Cmdlet(VerbsCommon.Remove, "PvePool",
         SupportsShouldProcess = true,
         ConfirmImpact = ConfirmImpact.High)]
+    [OutputType(typeof(void))]
     public sealed class RemovePvePoolCmdlet : PveCmdletBase
     {
         /// <summary>

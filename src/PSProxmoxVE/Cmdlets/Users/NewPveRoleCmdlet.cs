@@ -13,7 +13,7 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// </summary>
     [Cmdlet(VerbsCommon.New, "PveRole", SupportsShouldProcess = true)]
     [OutputType(typeof(PveRole))]
-    public class NewPveRoleCmdlet : PveCmdletBase
+    public sealed class NewPveRoleCmdlet : PveCmdletBase
     {
         /// <summary>The role identifier/name.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The role identifier.")]

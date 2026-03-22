@@ -14,7 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveContainerSnapshot")]
     [OutputType(typeof(PveSnapshot))]
-    public class GetPveContainerSnapshotCmdlet : PveCmdletBase
+    public sealed class GetPveContainerSnapshotCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]

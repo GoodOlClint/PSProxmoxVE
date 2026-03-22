@@ -11,7 +11,8 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Remove, "PveSdnDns", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
-    public class RemovePveSdnDnsCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class RemovePveSdnDnsCmdlet : PveCmdletBase
     {
         /// <summary>The DNS plugin identifier to remove.</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The DNS plugin identifier to remove.")]

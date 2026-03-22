@@ -13,6 +13,7 @@ namespace PSProxmoxVE.Cmdlets.Backup
     [Cmdlet(VerbsCommon.Remove, "PveBackupJob",
         SupportsShouldProcess = true,
         ConfirmImpact = ConfirmImpact.High)]
+    [OutputType(typeof(void))]
     public sealed class RemovePveBackupJobCmdlet : PveCmdletBase
     {
         /// <summary>

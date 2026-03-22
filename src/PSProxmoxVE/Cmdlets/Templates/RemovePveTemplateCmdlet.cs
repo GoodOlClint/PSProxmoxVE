@@ -15,7 +15,7 @@ namespace PSProxmoxVE.Cmdlets.Templates
         SupportsShouldProcess = true,
         ConfirmImpact = ConfirmImpact.High)]
     [OutputType(typeof(PveTask))]
-    public class RemovePveTemplateCmdlet : PveCmdletBase
+    public sealed class RemovePveTemplateCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]

@@ -14,6 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Set, "PveContainerConfig", SupportsShouldProcess = true)]
+    [OutputType(typeof(void))]
     public sealed class SetPveContainerConfigCmdlet : PveCmdletBase
     {
         /// <summary>

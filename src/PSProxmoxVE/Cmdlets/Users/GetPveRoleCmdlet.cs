@@ -14,7 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveRole")]
     [OutputType(typeof(PveRole))]
-    public class GetPveRoleCmdlet : PveCmdletBase
+    public sealed class GetPveRoleCmdlet : PveCmdletBase
     {
         /// <summary>Optional role identifier to retrieve a specific role.</summary>
         [Parameter(Mandatory = false, Position = 0, HelpMessage = "The role identifier.")]

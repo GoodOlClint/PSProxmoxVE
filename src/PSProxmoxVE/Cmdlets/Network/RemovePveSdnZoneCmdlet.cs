@@ -11,7 +11,8 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Remove, "PveSdnZone", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
-    public class RemovePveSdnZoneCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class RemovePveSdnZoneCmdlet : PveCmdletBase
     {
         /// <summary>The zone identifier to remove.</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The SDN zone name.")]

@@ -11,7 +11,8 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Remove, "PveSdnSubnet", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
-    public class RemovePveSdnSubnetCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class RemovePveSdnSubnetCmdlet : PveCmdletBase
     {
         /// <summary>The SDN VNet containing the subnet.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The SDN VNet name.")]

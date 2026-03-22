@@ -12,7 +12,8 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.New, "PveSdnController", SupportsShouldProcess = true)]
-    public class NewPveSdnControllerCmdlet : PveCmdletBase
+    [OutputType(typeof(void))]
+    public sealed class NewPveSdnControllerCmdlet : PveCmdletBase
     {
         /// <summary>The controller identifier.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The controller identifier.")]

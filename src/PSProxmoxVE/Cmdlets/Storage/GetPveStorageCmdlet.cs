@@ -15,7 +15,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
     [Cmdlet(VerbsCommon.Get, "PveStorage")]
     [Alias("gpvs")]
     [OutputType(typeof(PveStorage))]
-    public class GetPveStorageCmdlet : PveCmdletBase
+    public sealed class GetPveStorageCmdlet : PveCmdletBase
     {
         /// <summary>
         /// The Proxmox VE node name. Accepts pipeline input from Get-PveNode (PveNode.Name).

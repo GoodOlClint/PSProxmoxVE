@@ -16,7 +16,7 @@ namespace PSProxmoxVE.Cmdlets.Nodes
         SupportsShouldProcess = true,
         ConfirmImpact = ConfirmImpact.High)]
     [OutputType(typeof(PveTask))]
-    public class StopPveNodeVmsCmdlet : PveCmdletBase
+    public sealed class StopPveNodeVmsCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The PVE node name.")]

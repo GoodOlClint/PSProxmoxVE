@@ -15,7 +15,7 @@ namespace PSProxmoxVE.Cmdlets.Network
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveNetwork")]
     [OutputType(typeof(PveNetwork))]
-    public class GetPveNetworkCmdlet : PveCmdletBase
+    public sealed class GetPveNetworkCmdlet : PveCmdletBase
     {
         /// <summary>
         /// The Proxmox VE node name. Accepts pipeline input from Get-PveNode (PveNode.Name).
