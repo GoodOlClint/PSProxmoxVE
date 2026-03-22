@@ -9,8 +9,9 @@ $ErrorActionPreference = 'Stop'
 $DebugDir   = $PSScriptRoot
 $ProxyPort  = 8080
 $TestFile   = '/tmp/pvetest.iso'
-$UploadUri  = 'https://172.16.100.205:8006/api2/json/nodes/pve/storage/local/upload'
-$AuthHeader = 'PVEAPIToken=root@pam!integration=4c4b598b-fef2-4e6f-8471-316b35ff40c3'
+# Replace with your PVE host and API token before running
+$UploadUri  = 'https://<PVE_HOST>:8006/api2/json/nodes/pve/storage/local/upload'
+$AuthHeader = 'PVEAPIToken=<USER>@<REALM>!<TOKENID>=<TOKEN_UUID>'
 $ModuleDll  = '/Users/goodolclint/Source/PSProxmoxVE/src/PSProxmoxVE/bin/Debug/net9.0/PSProxmoxVE.dll'
 
 if (-not (Test-Path $TestFile)) {
@@ -108,8 +109,9 @@ $env:HTTP_PROXY  = "http://localhost:$ProxyPort"
 try {
     Import-Module $ModuleDll -Force -ErrorAction Stop
 
-    Connect-PveServer -Server 172.16.100.205 -Port 8006 `
-        -ApiToken 'root@pam!integration=4c4b598b-fef2-4e6f-8471-316b35ff40c3' `
+    # Replace with your PVE host and API token before running
+    Connect-PveServer -Server '<PVE_HOST>' -Port 8006 `
+        -ApiToken '<USER>@<REALM>!<TOKENID>=<TOKEN_UUID>' `
         -SkipCertificateCheck
 
     Write-Host "  Calling Send-PveIso..."
