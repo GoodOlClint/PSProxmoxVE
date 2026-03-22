@@ -1,3 +1,5 @@
+using System;
+using System.Diagnostics;
 using System.Management.Automation;
 using PSProxmoxVE.Core.Services;
 
@@ -32,6 +34,11 @@ namespace PSProxmoxVE.Cmdlets.Vms
         [Parameter(Mandatory = false, HelpMessage = "Arguments to pass to the command.")]
         public string[]? Args { get; set; }
 
+        /// <summary>Maximum time in seconds to wait for the command to complete. Defaults to 300 (5 minutes).</summary>
+        [Parameter(Mandatory = false, HelpMessage = "Timeout in seconds to wait for command completion. Defaults to 300.")]
+        [ValidateRange(1, 3600)]
+        public int Timeout { get; set; } = 300;
+
         protected override void ProcessRecord()
         {
             if (!ShouldProcess($"VM {VmId} on node '{Node}'", $"Execute guest command: {Command}"))
@@ -43,11 +50,15 @@ namespace PSProxmoxVE.Cmdlets.Vms
             WriteVerbose($"Executing command on VM {VmId} via guest agent...");
             var pid = service.ExecuteGuestCommand(session, Node, VmId, Command, Args);
 
-            // Poll for completion
+            // Poll for completion with timeout
+            var sw = Stopwatch.StartNew();
+            var deadline = TimeSpan.FromSeconds(Timeout);
             Newtonsoft.Json.Linq.JObject result;
             do
             {
                 System.Threading.Thread.Sleep(1000);
+                if (sw.Elapsed >= deadline)
+                    throw new TimeoutException($"Guest command did not complete within {Timeout} seconds.");
                 result = service.GetGuestExecStatus(session, Node, VmId, pid);
             } while (result["exited"]?.ToObject<int>() != 1);
 
@@ -68,7 +79,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
                 var bytes = System.Convert.FromBase64String(encoded);
                 return System.Text.Encoding.UTF8.GetString(bytes);
             }
-            catch
+            catch (FormatException)
             {
                 return encoded!;
             }
