@@ -66,7 +66,7 @@ required variable causes every integration test to be skipped with a clear reaso
 | `PVETEST_NODE`           | Yes      | Node name as it appears in `pvesh get /nodes`                        | `pve-test1`                                         |
 | `PVETEST_STORAGE`        | Yes      | Storage pool to use for disk and ISO operations                       | `local`                                             |
 | `PVETEST_ISO_PATH`       | Yes      | Local path to a small `.iso` file used for upload tests               | `/tmp/tinycorelinux.iso`                            |
-| `PVETEST_PASSWORD`       | No       | Root password for cloud-init Linux VM provisioning                    | `Testpass123!`                                      |
+| `PVETEST_PASSWORD`       | No       | Root password for cloud-init Linux VM provisioning                    | *(use a strong password)*                           |
 | `PVETEST_CLOUD_IMAGE_URL`| No      | URL for cloud image download (defaults to Ubuntu Noble)               | `https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img` |
 | `PVETEST_PVE_VERSION`    | No       | Expected PVE major version (8 or 9)                                   | `9`                                                 |
 
@@ -80,7 +80,7 @@ export PVETEST_NODE="pve-test1"
 export PVETEST_STORAGE="local"
 export PVETEST_ISO_PATH="/tmp/tinycorelinux.iso"
 # Optional — required for Linux VM provisioning tests
-export PVETEST_PASSWORD="Testpass123!"
+export PVETEST_PASSWORD="<your-test-password>"
 ```
 
 ### Setting variables (PowerShell)
@@ -93,7 +93,7 @@ $env:PVETEST_NODE      = 'pve-test1'
 $env:PVETEST_STORAGE   = 'local'
 $env:PVETEST_ISO_PATH  = '/tmp/tinycorelinux.iso'
 # Optional — required for Linux VM provisioning tests
-$env:PVETEST_PASSWORD  = 'Testpass123!'
+$env:PVETEST_PASSWORD  = '<your-test-password>'
 ```
 
 ### GitHub Actions / CI

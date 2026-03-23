@@ -11,3 +11,5 @@ nupkg/
 *.ps1xml.bak
 *.DotSettings.user
 BenchmarkDotNet.Artifacts/
+.env
+.env.*

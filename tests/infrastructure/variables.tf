@@ -66,8 +66,7 @@ variable "network_bridge" {
 }
 
 variable "test_vm_password" {
-  description = "Root password for the nested PVE instances"
+  description = "Root password for the nested PVE instances. Set via TF_VAR_test_vm_password env var."
   type        = string
   sensitive   = true
-  default     = "Testpass123!"
 }

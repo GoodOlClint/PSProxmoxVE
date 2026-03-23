@@ -3,7 +3,7 @@
 # then wait for the PVE API and create an API token.
 #
 # Usage: create-api-token.sh <parent-pve-endpoint> <parent-api-token> <vm-id> <root-password> [max-wait-seconds]
-#   parent-pve-endpoint: Full URL e.g. https://172.16.100.150:8006
+#   parent-pve-endpoint: Full URL e.g. https://pve.example.com:8006
 #   Outputs two lines:
 #     IP=<discovered-ip>
 #     TOKEN=root@pam!integration=<secret>

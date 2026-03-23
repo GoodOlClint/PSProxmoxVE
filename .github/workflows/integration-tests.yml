@@ -43,7 +43,7 @@ permissions:
 env:
   INFRA_DIR: tests/infrastructure
   SCRIPTS_DIR: tests/infrastructure/scripts
-  PVE_PASSWORD: "Testpass123!"
+  PVE_PASSWORD: ${{ secrets.PVE_TEST_PASSWORD }}
   TEST_IMAGE: ghcr.io/goodolclint/psproxmoxve-integration
   CACHE_DIR: /opt/pve-isos
 
