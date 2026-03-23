@@ -50,7 +50,7 @@ namespace PSProxmoxVE.Core.Services
             IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
             try
             {
-                var response = client.GetAsync($"nodes/{node}/qemu/{vmid}/config")
+                var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/config")
                     .GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 if (data == null) return new PveCloudInitConfig();
@@ -95,7 +95,7 @@ namespace PSProxmoxVE.Core.Services
                 var formData = config.ToDictionary(
                     kvp => kvp.Key,
                     kvp => kvp.Value?.ToString() ?? string.Empty);
-                client.PutAsync($"nodes/{node}/qemu/{vmid}/config", formData)
+                client.PutAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/config", formData)
                     .GetAwaiter().GetResult();
             }
             finally
@@ -121,7 +121,7 @@ namespace PSProxmoxVE.Core.Services
             try
             {
                 // Request a Cloud-Init dump (user-data section) — this causes PVE to rebuild the image
-                var dumpResponse = client.GetAsync($"nodes/{node}/qemu/{vmid}/cloudinit/dump?type=user")
+                var dumpResponse = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/cloudinit/dump?type=user")
                     .GetAwaiter().GetResult();
                 var data = JObject.Parse(dumpResponse)["data"];
                 return data?.ToString() ?? string.Empty;

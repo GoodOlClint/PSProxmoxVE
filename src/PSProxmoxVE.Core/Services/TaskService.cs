@@ -43,7 +43,7 @@ namespace PSProxmoxVE.Core.Services
             try
             {
                 var encodedUpid = Uri.EscapeDataString(upid);
-                var response = client.GetAsync($"nodes/{node}/tasks/{encodedUpid}/status")
+                var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/tasks/{encodedUpid}/status")
                     .GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 var task = data?.ToObject<PveTask>() ?? new PveTask { Upid = upid };
@@ -69,7 +69,7 @@ namespace PSProxmoxVE.Core.Services
             try
             {
                 var encodedUpid = Uri.EscapeDataString(upid);
-                var response = client.GetAsync($"nodes/{node}/tasks/{encodedUpid}/log")
+                var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/tasks/{encodedUpid}/log")
                     .GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveTaskLog[]>() ?? Array.Empty<PveTaskLog>();

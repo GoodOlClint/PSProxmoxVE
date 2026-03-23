@@ -44,7 +44,7 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            var resource = $"nodes/{node}/network";
+            var resource = $"nodes/{Uri.EscapeDataString(node)}/network";
             if (!string.IsNullOrEmpty(type))
                 resource += $"?type={Uri.EscapeDataString(type!)}";
 
@@ -83,7 +83,7 @@ namespace PSProxmoxVE.Core.Services
                 var formData = config.ToDictionary(
                     kvp => kvp.Key,
                     kvp => kvp.Value?.ToString() ?? string.Empty);
-                var response = client.PostAsync($"nodes/{node}/network", formData)
+                var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/network", formData)
                     .GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveNetwork>() ?? new PveNetwork();
@@ -119,7 +119,7 @@ namespace PSProxmoxVE.Core.Services
                 var formData = config.ToDictionary(
                     kvp => kvp.Key,
                     kvp => kvp.Value?.ToString() ?? string.Empty);
-                client.PutAsync($"nodes/{node}/network/{iface}", formData)
+                client.PutAsync($"nodes/{Uri.EscapeDataString(node)}/network/{Uri.EscapeDataString(iface)}", formData)
                     .GetAwaiter().GetResult();
             }
             finally
@@ -144,7 +144,7 @@ namespace PSProxmoxVE.Core.Services
             IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
             try
             {
-                client.DeleteAsync($"nodes/{node}/network/{iface}").GetAwaiter().GetResult();
+                client.DeleteAsync($"nodes/{Uri.EscapeDataString(node)}/network/{Uri.EscapeDataString(iface)}").GetAwaiter().GetResult();
             }
             finally
             {
@@ -165,7 +165,7 @@ namespace PSProxmoxVE.Core.Services
             IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
             try
             {
-                var response = client.PutAsync($"nodes/{node}/network")
+                var response = client.PutAsync($"nodes/{Uri.EscapeDataString(node)}/network")
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
             }
@@ -263,7 +263,7 @@ namespace PSProxmoxVE.Core.Services
             IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
             try
             {
-                client.DeleteAsync($"cluster/sdn/zones/{zone}").GetAwaiter().GetResult();
+                client.DeleteAsync($"cluster/sdn/zones/{Uri.EscapeDataString(zone)}").GetAwaiter().GetResult();
             }
             finally
             {
@@ -313,7 +313,7 @@ namespace PSProxmoxVE.Core.Services
             IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
             try
             {
-                client.DeleteAsync($"cluster/sdn/vnets/{vnet}").GetAwaiter().GetResult();
+                client.DeleteAsync($"cluster/sdn/vnets/{Uri.EscapeDataString(vnet)}").GetAwaiter().GetResult();
             }
             finally
             {

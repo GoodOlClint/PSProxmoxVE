@@ -61,7 +61,7 @@ namespace PSProxmoxVE.Core.Services
             IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
             try
             {
-                var response = client.PostAsync($"nodes/{node}/qemu/{vmid}/template")
+                var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/template")
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
             }
