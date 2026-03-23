@@ -13,9 +13,8 @@ Removes an entry from a firewall IP set.
 ## SYNTAX
 
 ```
-Remove-PveFirewallIpSetEntry [-Level] <String> [-Node <String>] [-VmId <Int32>] -Name <String>
- -Cidr <String> [-Session <PveSession>] [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm]
- [<CommonParameters>]
+Remove-PveFirewallIpSetEntry [-Level] <String> [-Node <String>] [-VmId <Int32>] -Name <String> -Cidr <String>
+ [-Session <PveSession>] [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -30,18 +29,62 @@ PS C:\> Remove-PveFirewallIpSetEntry -Level Cluster -Name trusted -Cidr 10.0.0.0
 
 ## PARAMETERS
 
+### -Cidr
+The CIDR network address to remove.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: True
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Confirm
+Prompts you for confirmation before running the cmdlet.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases: cf
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
 ### -Level
 The firewall level: Cluster, Node, Vm, or Container.
 
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases: 
-
+Aliases:
 Accepted values: Cluster, Node, Vm, Container
 
 Required: True
 Position: 0
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Name
+The IP set name.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: True
+Position: Named
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -53,7 +96,22 @@ The node name. Required when Level is Node, Vm, or Container.
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases: 
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Session
+{{ Fill Session Description }}
+
+```yaml
+Type: PveSession
+Parameter Sets: (All)
+Aliases:
 
 Required: False
 Position: Named
@@ -67,51 +125,6 @@ The VM/Container ID. Required when Level is Vm or Container.
 
 ```yaml
 Type: Int32
-Parameter Sets: (All)
-Aliases: 
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -Name
-The IP set name.
-
-```yaml
-Type: String
-Parameter Sets: (All)
-Aliases: 
-
-Required: True
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -Cidr
-The CIDR network address to remove.
-
-```yaml
-Type: String
-Parameter Sets: (All)
-Aliases: 
-
-Required: True
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -Session
-{{ Fill Session Description }}
-
-```yaml
-Type: PveSession
 Parameter Sets: (All)
 Aliases:
 
@@ -137,21 +150,6 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Confirm
-Prompts you for confirmation before running the cmdlet.
-
-```yaml
-Type: SwitchParameter
-Parameter Sets: (All)
-Aliases: cf
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
 ### -ProgressAction
 {{ Fill ProgressAction Description }}
 
@@ -169,7 +167,6 @@ Accept wildcard characters: False
 
 ### CommonParameters
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
-
 
 ## INPUTS
 

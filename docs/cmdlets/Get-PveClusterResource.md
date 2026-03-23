@@ -38,22 +38,6 @@ Returns only VM resources across the cluster.
 
 ## PARAMETERS
 
-### -Type
-Filter by resource type.
-
-```yaml
-Type: String
-Parameter Sets: (All)
-Aliases:
-Accepted values: vm, lxc, node, storage, sdn
-
-Required: False
-Position: 0
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
 ### -Node
 Filter results to a specific node name.
 
@@ -79,6 +63,22 @@ Aliases:
 
 Required: False
 Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Type
+Filter by resource type.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+Accepted values: vm, lxc, node, storage, sdn
+
+Required: False
+Position: 0
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False

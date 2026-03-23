@@ -13,10 +13,10 @@ schema: 2.0.0
 ## SYNTAX
 
 ```
-Set-PveNetwork [-Node] <String> [-Iface] <String> [-Address <String>] [-Netmask <String>] [-Gateway <String>]
- [-Address6 <String>] [-Netmask6 <Int32>] [-Gateway6 <String>] [-BridgePorts <String>] [-BondSlaves <String>]
- [-Mtu <Int32>] [-Autostart] [-Comments <String>] [-Session <PveSession>] [-ProgressAction <ActionPreference>]
- [-WhatIf] [-Confirm] [<CommonParameters>]
+Set-PveNetwork [-Node] <String> [-Iface] <String> -Type <String> [-Address <String>] [-Netmask <String>]
+ [-Gateway <String>] [-Address6 <String>] [-Netmask6 <Int32>] [-Gateway6 <String>] [-BridgePorts <String>]
+ [-BondSlaves <String>] [-Mtu <Int32>] [-Autostart] [-Comments <String>] [-Session <PveSession>]
+ [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -283,6 +283,21 @@ Parameter Sets: (All)
 Aliases: proga
 
 Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Type
+Interface type (bridge, bond, eth, vlan, OVSBridge).
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: True
 Position: Named
 Default value: None
 Accept pipeline input: False

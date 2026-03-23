@@ -62,11 +62,11 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -VmId
-The VM/Container ID. Required when Level is Vm or Container.
+### -Session
+{{ Fill Session Description }}
 
 ```yaml
-Type: Int32
+Type: PveSession
 Parameter Sets: (All)
 Aliases:
 
@@ -77,11 +77,11 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Session
-{{ Fill Session Description }}
+### -VmId
+The VM/Container ID. Required when Level is Vm or Container.
 
 ```yaml
-Type: PveSession
+Type: Int32
 Parameter Sets: (All)
 Aliases:
 

@@ -13,8 +13,8 @@ Updates an SDN IPAM plugin configuration in Proxmox VE.
 ## SYNTAX
 
 ```
-Set-PveSdnIpam [-Ipam] <String> [-Url <String>] [-Token <String>] [-Section <Int32>]
- [-Session <PveSession>] [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
+Set-PveSdnIpam [-Ipam] <String> [-Url <String>] [-Token <String>] [-Section <Int32>] [-Session <PveSession>]
+ [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -29,13 +29,28 @@ PS C:\> Set-PveSdnIpam -Ipam myipam -Url https://ipam.example.com
 
 ## PARAMETERS
 
+### -Confirm
+Prompts you for confirmation before running the cmdlet.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases: cf
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
 ### -Ipam
 The SDN IPAM plugin identifier.
 
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases: 
+Aliases:
 
 Required: True
 Position: 0
@@ -44,13 +59,28 @@ Accept pipeline input: True (ByPropertyName)
 Accept wildcard characters: False
 ```
 
-### -Url
-The IPAM server URL.
+### -Section
+The section ID in the IPAM server.
 
 ```yaml
-Type: String
+Type: Int32
 Parameter Sets: (All)
-Aliases: 
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Session
+{{ Fill Session Description }}
+
+```yaml
+Type: PveSession
+Parameter Sets: (All)
+Aliases:
 
 Required: False
 Position: Named
@@ -65,7 +95,7 @@ The API token for the IPAM server.
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases: 
+Aliases:
 
 Required: False
 Position: Named
@@ -74,26 +104,11 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Section
-The section ID in the IPAM server.
+### -Url
+The IPAM server URL.
 
 ```yaml
-Type: Int32
-Parameter Sets: (All)
-Aliases: 
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -Session
-{{ Fill Session Description }}
-
-```yaml
-Type: PveSession
+Type: String
 Parameter Sets: (All)
 Aliases:
 
@@ -119,21 +134,6 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Confirm
-Prompts you for confirmation before running the cmdlet.
-
-```yaml
-Type: SwitchParameter
-Parameter Sets: (All)
-Aliases: cf
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
 ### -ProgressAction
 {{ Fill ProgressAction Description }}
 
@@ -151,7 +151,6 @@ Accept wildcard characters: False
 
 ### CommonParameters
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
-
 
 ## INPUTS
 

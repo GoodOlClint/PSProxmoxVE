@@ -14,7 +14,7 @@ schema: 2.0.0
 
 ```
 Get-PveVm [-Node <String>] [-VmId <Int32>] [-Name <String>] [-Status <String>] [-Tag <String>] [-TemplatesOnly]
- [-Session <PveSession>] [-ProgressAction <ActionPreference>] [<CommonParameters>]
+ [-Detailed] [-Session <PveSession>] [-ProgressAction <ActionPreference>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -144,6 +144,21 @@ Accept wildcard characters: False
 Type: ActionPreference
 Parameter Sets: (All)
 Aliases: proga
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Detailed
+Include detailed status (QmpStatus) via per-VM API call.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases:
 
 Required: False
 Position: Named

@@ -29,14 +29,28 @@ PS C:\> Remove-PveFirewallRule -Level Cluster -Position 0
 
 ## PARAMETERS
 
+### -Confirm
+Prompts you for confirmation before running the cmdlet.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases: cf
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
 ### -Level
 The firewall level: Cluster, Node, Vm, or Container.
 
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases: 
-
+Aliases:
 Accepted values: Cluster, Node, Vm, Container
 
 Required: True
@@ -52,22 +66,7 @@ The node name. Required when Level is Node, Vm, or Container.
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases: 
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -VmId
-The VM/Container ID. Required when Level is Vm or Container.
-
-```yaml
-Type: Int32
-Parameter Sets: (All)
-Aliases: 
+Aliases:
 
 Required: False
 Position: Named
@@ -82,7 +81,7 @@ The rule position to remove.
 ```yaml
 Type: Int32
 Parameter Sets: (All)
-Aliases: 
+Aliases:
 
 Required: True
 Position: Named
@@ -96,6 +95,21 @@ Accept wildcard characters: False
 
 ```yaml
 Type: PveSession
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -VmId
+The VM/Container ID. Required when Level is Vm or Container.
+
+```yaml
+Type: Int32
 Parameter Sets: (All)
 Aliases:
 
@@ -121,21 +135,6 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Confirm
-Prompts you for confirmation before running the cmdlet.
-
-```yaml
-Type: SwitchParameter
-Parameter Sets: (All)
-Aliases: cf
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
 ### -ProgressAction
 {{ Fill ProgressAction Description }}
 
@@ -153,7 +152,6 @@ Accept wildcard characters: False
 
 ### CommonParameters
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
-
 
 ## INPUTS
 

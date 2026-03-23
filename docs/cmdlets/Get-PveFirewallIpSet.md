@@ -47,8 +47,8 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Node
-The node name. Required when Level is Node, Vm, or Container.
+### -Name
+Optional IP set name to filter by.
 
 ```yaml
 Type: String
@@ -62,23 +62,8 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -VmId
-The VM/Container ID. Required when Level is Vm or Container.
-
-```yaml
-Type: Int32
-Parameter Sets: (All)
-Aliases:
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -Name
-Optional IP set name to filter by.
+### -Node
+The node name. Required when Level is Node, Vm, or Container.
 
 ```yaml
 Type: String
@@ -97,6 +82,21 @@ Accept wildcard characters: False
 
 ```yaml
 Type: PveSession
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -VmId
+The VM/Container ID. Required when Level is Vm or Container.
+
+```yaml
+Type: Int32
 Parameter Sets: (All)
 Aliases:
 

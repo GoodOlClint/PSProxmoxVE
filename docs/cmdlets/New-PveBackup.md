@@ -32,43 +32,29 @@ Creates a snapshot backup of VM 100 and waits for completion.
 
 ## PARAMETERS
 
-### -Node
-The PVE node name.
+### -Compress
+The compression algorithm.
 
 ```yaml
 Type: String
 Parameter Sets: (All)
 Aliases:
+Accepted values: zstd, lzo, gzip, none
 
-Required: True
-Position: 0
+Required: False
+Position: Named
 Default value: None
-Accept pipeline input: True (ByPropertyName)
+Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -VmId
-The VM identifier.
+### -Confirm
+Prompts you for confirmation before running the cmdlet.
 
 ```yaml
-Type: Int32
+Type: SwitchParameter
 Parameter Sets: (All)
-Aliases:
-
-Required: True
-Position: 1
-Default value: None
-Accept pipeline input: True (ByPropertyName)
-Accept wildcard characters: False
-```
-
-### -Storage
-The target storage for the backup.
-
-```yaml
-Type: String
-Parameter Sets: (All)
-Aliases:
+Aliases: cf
 
 Required: False
 Position: Named
@@ -93,14 +79,28 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Compress
-The compression algorithm.
+### -Node
+The PVE node name.
 
 ```yaml
 Type: String
 Parameter Sets: (All)
 Aliases:
-Accepted values: zstd, lzo, gzip, none
+
+Required: True
+Position: 0
+Default value: None
+Accept pipeline input: True (ByPropertyName)
+Accept wildcard characters: False
+```
+
+### -Session
+{{ Fill Session Description }}
+
+```yaml
+Type: PveSession
+Parameter Sets: (All)
+Aliases:
 
 Required: False
 Position: Named
@@ -109,11 +109,11 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Wait
-Wait for the task to complete before returning.
+### -Storage
+The target storage for the backup.
 
 ```yaml
-Type: SwitchParameter
+Type: String
 Parameter Sets: (All)
 Aliases:
 
@@ -139,11 +139,26 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Session
-{{ Fill Session Description }}
+### -VmId
+The VM identifier.
 
 ```yaml
-Type: PveSession
+Type: Int32
+Parameter Sets: (All)
+Aliases:
+
+Required: True
+Position: 1
+Default value: None
+Accept pipeline input: True (ByPropertyName)
+Accept wildcard characters: False
+```
+
+### -Wait
+Wait for the task to complete before returning.
+
+```yaml
+Type: SwitchParameter
 Parameter Sets: (All)
 Aliases:
 
@@ -161,21 +176,6 @@ Shows what would happen if the cmdlet runs. The cmdlet is not run.
 Type: SwitchParameter
 Parameter Sets: (All)
 Aliases: wi
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -Confirm
-Prompts you for confirmation before running the cmdlet.
-
-```yaml
-Type: SwitchParameter
-Parameter Sets: (All)
-Aliases: cf
 
 Required: False
 Position: Named

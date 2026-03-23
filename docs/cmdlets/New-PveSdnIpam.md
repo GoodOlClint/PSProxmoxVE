@@ -29,13 +29,28 @@ PS C:\> New-PveSdnIpam -Ipam pveipam -Type pve
 
 ## PARAMETERS
 
+### -Confirm
+Prompts you for confirmation before running the cmdlet.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases: cf
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
 ### -Ipam
 The IPAM plugin identifier.
 
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases: 
+Aliases:
 
 Required: True
 Position: 0
@@ -44,30 +59,28 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Type
-The IPAM plugin type.
+### -Section
+The configuration section identifier.
 
 ```yaml
-Type: String
+Type: Int32
 Parameter Sets: (All)
-Aliases: 
+Aliases:
 
-Accepted values: pve, netbox, phpipam
-
-Required: True
-Position: 1
+Required: False
+Position: Named
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Url
-The URL of the external IPAM service.
+### -Session
+{{ Fill Session Description }}
 
 ```yaml
-Type: String
+Type: PveSession
 Parameter Sets: (All)
-Aliases: 
+Aliases:
 
 Required: False
 Position: Named
@@ -82,7 +95,7 @@ The API token for the external IPAM service.
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases: 
+Aliases:
 
 Required: False
 Position: Named
@@ -91,26 +104,27 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Section
-The configuration section identifier.
+### -Type
+The IPAM plugin type.
 
 ```yaml
-Type: Int32
+Type: String
 Parameter Sets: (All)
-Aliases: 
+Aliases:
+Accepted values: pve, netbox, phpipam
 
-Required: False
-Position: Named
+Required: True
+Position: 1
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Session
-{{ Fill Session Description }}
+### -Url
+The URL of the external IPAM service.
 
 ```yaml
-Type: PveSession
+Type: String
 Parameter Sets: (All)
 Aliases:
 
@@ -136,21 +150,6 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Confirm
-Prompts you for confirmation before running the cmdlet.
-
-```yaml
-Type: SwitchParameter
-Parameter Sets: (All)
-Aliases: cf
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
 ### -ProgressAction
 {{ Fill ProgressAction Description }}
 
@@ -168,7 +167,6 @@ Accept wildcard characters: False
 
 ### CommonParameters
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
-
 
 ## INPUTS
 

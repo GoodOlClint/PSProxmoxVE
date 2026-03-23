@@ -62,21 +62,6 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -VmId
-The VM/Container ID. Required when Level is Vm or Container.
-
-```yaml
-Type: Int32
-Parameter Sets: (All)
-Aliases:
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
 ### -Position
 Optional rule position to filter by.
 
@@ -97,6 +82,21 @@ Accept wildcard characters: False
 
 ```yaml
 Type: PveSession
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -VmId
+The VM/Container ID. Required when Level is Vm or Container.
+
+```yaml
+Type: Int32
 Parameter Sets: (All)
 Aliases:
 

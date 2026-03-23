@@ -13,9 +13,8 @@ Creates a new SDN controller in Proxmox VE.
 ## SYNTAX
 
 ```
-New-PveSdnController [-Controller] <String> [-Type] <String> [-Asn <Int32>] [-Peers <String>]
- [-Node <String>] [-Session <PveSession>] [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm]
- [<CommonParameters>]
+New-PveSdnController [-Controller] <String> [-Type] <String> [-Asn <Int32>] [-Peers <String>] [-Node <String>]
+ [-Session <PveSession>] [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -30,13 +29,43 @@ PS C:\> New-PveSdnController -Controller bgp1 -Type bgp -Asn 65001
 
 ## PARAMETERS
 
+### -Asn
+The Autonomous System Number for BGP/EVPN.
+
+```yaml
+Type: Int32
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Confirm
+Prompts you for confirmation before running the cmdlet.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases: cf
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
 ### -Controller
 The controller identifier.
 
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases: 
+Aliases:
 
 Required: True
 Position: 0
@@ -45,30 +74,13 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Type
-The controller type.
+### -Node
+The node this controller is configured on.
 
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases: 
-
-Accepted values: evpn, bgp
-
-Required: True
-Position: 1
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -Asn
-The Autonomous System Number for BGP/EVPN.
-
-```yaml
-Type: Int32
-Parameter Sets: (All)
-Aliases: 
+Aliases:
 
 Required: False
 Position: Named
@@ -83,22 +95,7 @@ Comma-separated list of BGP peer addresses.
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases: 
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -Node
-The node this controller is configured on.
-
-```yaml
-Type: String
-Parameter Sets: (All)
-Aliases: 
+Aliases:
 
 Required: False
 Position: Named
@@ -122,6 +119,22 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
+### -Type
+The controller type.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+Accepted values: evpn, bgp
+
+Required: True
+Position: 1
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
 ### -WhatIf
 Shows what would happen if the cmdlet runs. The cmdlet is not run.
 
@@ -129,21 +142,6 @@ Shows what would happen if the cmdlet runs. The cmdlet is not run.
 Type: SwitchParameter
 Parameter Sets: (All)
 Aliases: wi
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -Confirm
-Prompts you for confirmation before running the cmdlet.
-
-```yaml
-Type: SwitchParameter
-Parameter Sets: (All)
-Aliases: cf
 
 Required: False
 Position: Named
@@ -169,7 +167,6 @@ Accept wildcard characters: False
 
 ### CommonParameters
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
-
 
 ## INPUTS
 

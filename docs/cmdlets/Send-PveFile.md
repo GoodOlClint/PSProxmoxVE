@@ -30,75 +30,13 @@ PS C:\> Send-PveFile -Node pve1 -Storage local -Path ./ubuntu.iso -ContentType i
 
 ## PARAMETERS
 
-### -Node
-The PVE node name.
-
-```yaml
-Type: String
-Parameter Sets: (All)
-Aliases: 
-
-Required: True
-Position: 0
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -Storage
-The storage pool name.
-
-```yaml
-Type: String
-Parameter Sets: (All)
-Aliases: 
-
-Required: True
-Position: 1
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -Path
-Local path to the file to upload.
-
-```yaml
-Type: String
-Parameter Sets: (All)
-Aliases: 
-
-Required: True
-Position: 2
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -ContentType
-Content type: iso, vztmpl, or import.
-
-```yaml
-Type: String
-Parameter Sets: (All)
-Aliases: 
-
-Accepted values: iso, vztmpl, import
-
-Required: False
-Position: 3
-Default value: iso
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
 ### -Checksum
 Checksum value to verify the upload.
 
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases: 
+Aliases:
 
 Required: False
 Position: Named
@@ -113,8 +51,7 @@ Checksum algorithm (md5, sha1, sha256, sha512).
 ```yaml
 Type: String
 Parameter Sets: (All)
-Aliases: 
-
+Aliases:
 Accepted values: md5, sha1, sha256, sha512
 
 Required: False
@@ -124,16 +61,62 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Wait
-Wait for the task to complete before returning.
+### -Confirm
+Prompts you for confirmation before running the cmdlet.
 
 ```yaml
 Type: SwitchParameter
 Parameter Sets: (All)
-Aliases: 
+Aliases: cf
 
 Required: False
 Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -ContentType
+Content type: iso, vztmpl, or import.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+Accepted values: iso, vztmpl, import
+
+Required: False
+Position: 3
+Default value: iso
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Node
+The PVE node name.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: True
+Position: 0
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Path
+Local path to the file to upload.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: True
+Position: 2
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -144,6 +127,36 @@ Accept wildcard characters: False
 
 ```yaml
 Type: PveSession
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Storage
+The storage pool name.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: True
+Position: 1
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Wait
+Wait for the task to complete before returning.
+
+```yaml
+Type: SwitchParameter
 Parameter Sets: (All)
 Aliases:
 
@@ -169,21 +182,6 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Confirm
-Prompts you for confirmation before running the cmdlet.
-
-```yaml
-Type: SwitchParameter
-Parameter Sets: (All)
-Aliases: cf
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
 ### -ProgressAction
 {{ Fill ProgressAction Description }}
 
@@ -201,7 +199,6 @@ Accept wildcard characters: False
 
 ### CommonParameters
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
-
 
 ## INPUTS
 
