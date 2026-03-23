@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -74,7 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Log in to GHCR
         uses: docker/login-action@v4
@@ -142,7 +142,7 @@ jobs:
       - name: Mask test password
         run: echo "::add-mask::${PVE_PASSWORD}"
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Download module artifact
         uses: actions/download-artifact@v8
