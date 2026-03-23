@@ -2,6 +2,7 @@
 
 [![Build](https://github.com/goodolclint/PSProxmoxVE/actions/workflows/build.yml/badge.svg)](https://github.com/goodolclint/PSProxmoxVE/actions/workflows/build.yml)
 [![Unit Tests](https://github.com/goodolclint/PSProxmoxVE/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/goodolclint/PSProxmoxVE/actions/workflows/unit-tests.yml)
+[![Integration Tests](https://github.com/goodolclint/PSProxmoxVE/actions/workflows/integration-tests.yml/badge.svg)](https://github.com/goodolclint/PSProxmoxVE/actions/workflows/integration-tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/goodolclint/PSProxmoxVE/blob/main/LICENSE)
 [![PowerShell Gallery](https://img.shields.io/powershellgallery/v/PSProxmoxVE)](https://www.powershellgallery.com/packages/PSProxmoxVE)
 
@@ -31,14 +32,14 @@ Most cmdlets target endpoints available since PVE 4.2 and require no version che
 - **OS**: Windows, Linux, macOS
 - **Network**: HTTPS access to Proxmox VE API (default port 8006)
 
-## .NET Framework Compatibility
+## .NET Compatibility
 
-| PowerShell Version | .NET Target | Notes |
+The module ships as a single `netstandard2.0` assembly, which runs on both .NET Framework and .NET Core/.NET:
+
+| PowerShell Version | Runtime | Status |
 |---|---|---|
-| 5.1 (Windows PowerShell) | net48 (.NET Framework 4.8) | Full feature parity |
-| 7.2, 7.4, 7.5 | net8.0 | Full feature parity |
-
-All public API surface compiles and functions correctly on both targets.
+| 5.1 (Windows PowerShell) | .NET Framework 4.8 | Fully supported |
+| 7.2, 7.4, 7.5 | .NET 8.0 / 10.0 | Fully supported |
 
 ## Installation
 
@@ -314,6 +315,9 @@ SDN management requires Proxmox VE 8.0 or later. Connected server is version 7.4
 | `Remove-PveRole` | Delete a role |
 | `Get-PvePermission` | List permissions |
 | `Set-PvePermission` | Set a permission |
+| `Get-PveApiToken` | List API tokens for a user |
+| `New-PveApiToken` | Create an API token |
+| `Remove-PveApiToken` | Delete an API token |
 
 ### Templates
 | Cmdlet | Description |
@@ -334,6 +338,8 @@ SDN management requires Proxmox VE 8.0 or later. Connected server is version 7.4
 | Cmdlet | Description |
 |---|---|
 | `Get-PveTask` | Get task status |
+| `Get-PveTaskList` | List tasks on a node with optional filters |
+| `Stop-PveTask` | Cancel a running task |
 | `Wait-PveTask` | Wait for a task to complete |
 
 ### Firewall
@@ -464,7 +470,7 @@ SDN management requires Proxmox VE 8.0 or later. Connected server is version 7.4
 | `Set-PveStorage` | Update a storage definition |
 | `Set-PveApiToken` | Update an API token |
 
-## Known Limitations (v1)
+## Known Limitations
 
 - **No automatic retries**: Failed API calls are not retried. Implement your own retry logic if needed.
 - **Integration tests require live node**: Integration tests require a dedicated Proxmox VE test node. See `tests/PSProxmoxVE.Tests/Integration/README.md`.
