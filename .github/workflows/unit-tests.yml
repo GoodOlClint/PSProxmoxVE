@@ -16,8 +16,6 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            framework: net48
-          - os: windows-latest
             framework: netstandard2.0
           - os: ubuntu-latest
             framework: netstandard2.0
@@ -53,7 +51,7 @@ jobs:
         include:
           - os: windows-latest
             ps_version: '5.1'
-            framework: net48
+            framework: netstandard2.0
             artifact_os: windows-latest
             shell: powershell
           - os: windows-latest
