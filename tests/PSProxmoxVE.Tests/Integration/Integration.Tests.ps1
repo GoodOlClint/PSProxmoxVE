@@ -980,7 +980,7 @@ Describe 'Integration Tests' -Tag 'Integration' {
             # Start first so we can restart
             Start-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait -Timeout 30 | Out-Null
 
-            $task = Restart-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait -Timeout 30
+            $task = Restart-PveContainer -Node $script:Node -VmId $script:TestContainerId -Wait -Timeout 30 -Confirm:$false
             $task | Should -Not -BeNullOrEmpty
 
             $ct = Get-PveContainer -Node $script:Node -VmId $script:TestContainerId

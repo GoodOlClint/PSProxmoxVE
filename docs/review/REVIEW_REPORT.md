@@ -1,29 +1,27 @@
-# PSProxmoxVE Comprehensive Review Report
+# PSProxmoxVE Module Review Report — Scan 6
 
 ```
-Scan date:           2026-03-22
-Prior report date:   2026-03-22 (scan-3)
+Scan date:           2026-03-23
+Prior report date:   2026-03-23 (scan-5)
 PVE API spec date:   2026-03-21T15:04:50.641Z
 PVE API spec SHA256: 4af79be30166209a4714b771f65e1e9540c5b738f414ff30c98454402e29d030
-PVE version hint:    (not set in spec)
+PVE version hint:    N/A (not set in spec)
 Total API endpoints: 646
-Findings DB:         docs/review/findings.json (F001–F076)
-Open findings:       22 (before scan) → 27 (after scan)
-New this scan:       6   Resolved this scan: 1   Regressed: 0
+Findings DB:         docs/review/findings.json (F001–F083)
+Open findings:       11 (before scan) → 15 (after scan)
+New this scan:       4  Resolved this scan: 0  Regressed: 0
+Last CI run:         integration-tests.yml | failure | 2026-03-23T18:51:46Z | https://github.com/goodolclint/PSProxmoxVE/actions/runs/23454616043
 ```
 
 ## Executive Summary
 
-- **Delta**: 1 resolved | 6 new | 0 regressed | 27 open
-- **API drift**: 0 breaking changes in PVE 9.x affecting current cmdlets | 42 new PVE 9.0 endpoints unimplemented
-- **API coverage**: 169 cmdlets covering ~180 of 646 endpoints (28%)
-- **Critical open**: F058 — 5 cmdlets with infinite-loop task polling (D001 violation)
-- **New high**: F073 — build.yml references net9.0 but test project targets net10.0 (workflow will fail)
-- **New medium**: F071 — ~15 cmdlets missing Uri.EscapeDataString (D003 violation)
-- **Resolved**: F040 — Broad exception catches now properly filtered
-- **All D007/D005/D008/D011/D012 decisions hold**: sealed, OutputType, Newtonsoft-only, verb constants all pass 169/169
-- **Security**: All password params use SecureString, all service URLs properly encoded, no credential logging
-- **Testing**: 100% Pester parameter validation, ~105/169 integration coverage
+- **Delta**: 0 resolved | 4 new | 0 regressed | 15 open
+- **API drift**: 0 breaking changes in implemented endpoints | 42 PVE 9.0 endpoints unimplemented (F061)
+- **CI**: Last integration run: **FAILED** | 2 test failures on PVE 9 + 1 infrastructure failure on PVE 8
+- **Code quality**: All 12 DECISIONS.md entries upheld — zero regressions detected
+- Module has 169 cmdlets, 170 markdown docs, netstandard2.0 targeting, ~800+ total tests (374 xUnit + ~400-500 Pester + 107 integration)
+- PSGallery manifest complete except IconUri (F021)
+- 77 PVE 9.0 parameter changes detected across implemented endpoints (all additive, none breaking)
 
 ---
 
@@ -31,46 +29,39 @@ New this scan:       6   Resolved this scan: 1   Regressed: 0
 
 ### Project Layout
 
-| Component | Path | Framework |
+| Item | Present | Path/Notes |
 |---|---|---|
-| PSProxmoxVE (cmdlets) | `src/PSProxmoxVE/` | netstandard2.0; net9.0; net48 |
-| PSProxmoxVE.Core (services) | `src/PSProxmoxVE.Core/` | netstandard2.0; net9.0; net48 |
-| xUnit Tests | `tests/PSProxmoxVE.Core.Tests/` | net10.0; net48 |
-| Pester Tests | `tests/PSProxmoxVE.Tests/` | PowerShell 5.1+ |
-| Integration Infra | `tests/infrastructure/` | Terraform + Docker |
-
-### CI/CD Workflows
-
-| Workflow | Trigger | Status |
-|---|---|---|
-| build.yml | push/PR to main | ⚠ References net9.0 (F073) |
-| unit-tests.yml | push/PR to main | ✓ Matrix: Win PS 5.1, Win PS 7.5, Ubuntu PS 7.5, macOS PS 7.5 |
-| integration-tests.yml | push/PR + dispatch | ✓ Self-hosted runner, nested PVE 8 + PVE 9 |
-| publish.yml | tag push `v*` | ⚠ Low smoke threshold (F074) |
-
-### Documentation
-
-| File | Present | Notes |
-|---|---|---|
-| README.md | ✓ | Comprehensive with badges, cmdlet reference |
-| CHANGELOG.md | ✓ | Keep a Changelog format |
-| CONTRIBUTING.md | ✓ | Dev setup, coding standards, PR process |
-| LICENSE | ✓ | MIT |
-| CODE_OF_CONDUCT.md | ✓ | Contributor Covenant adapted |
-| SECURITY.md | ✓ | Vulnerability disclosure + response SLA |
-| DECISIONS.md | ✓ | 12 decisions (D001–D012) |
-| .editorconfig | ✓ | 4-space C#/PS, 2-space XML/JSON |
-| .gitignore | ✓ | |
-| .gitattributes | ✓ | |
+| Solution file | Yes | PSProxmoxVE.sln |
+| Cmdlet project | Yes | src/PSProxmoxVE/ (netstandard2.0) |
+| Core library | Yes | src/PSProxmoxVE.Core/ (netstandard2.0) |
+| xUnit tests | Yes | tests/PSProxmoxVE.Core.Tests/ (net10.0;net48) |
+| Pester tests | Yes | tests/PSProxmoxVE.Tests/ |
+| Module manifest | Yes | src/PSProxmoxVE/PSProxmoxVE.psd1 |
+| MAML help | Yes | src/PSProxmoxVE/PSProxmoxVE.dll-Help.xml |
+| Format file | Yes | src/PSProxmoxVE/PSProxmoxVE.format.ps1xml |
+| README.md | Yes | With badges (Build, Unit Tests, License, PSGallery) |
+| CHANGELOG.md | Yes | Keep a Changelog format, 0.1.0-preview entry |
+| CONTRIBUTING.md | Yes | References .NET SDK 9.0+ — should be 10.0+ (F083) |
+| LICENSE | Yes | MIT |
+| CODE_OF_CONDUCT.md | Yes | Contributor Covenant |
+| SECURITY.md | Yes | Vulnerability disclosure policy |
+| DECISIONS.md | Yes | 12 active decisions (D001–D012) |
+| .editorconfig | Yes | Present |
+| .gitignore | Yes | Present |
+| .gitattributes | Yes | Line ending normalization |
+| CODEOWNERS | Yes | Present |
+| Issue templates | Yes | Bug report (YAML), feature request (YAML), config.yml |
+| PR template | Yes | .github/pull_request_template.md |
+| dependabot.yml | Yes | NuGet + GitHub Actions (weekly) |
+| CI: Build | Yes | .github/workflows/build.yml (3-matrix) |
+| CI: Unit Tests | Yes | .github/workflows/unit-tests.yml (Pester multi-platform) |
+| CI: Integration | Yes | .github/workflows/integration-tests.yml (PVE 8+9) |
+| CI: Publish | Yes | .github/workflows/publish.yml (tag-triggered, PS 5.1 smoke test) |
+| Findings DB | Yes | docs/review/findings.json (F001–F083) |
 
 ### Missing Items
 
-| Finding ID | Item | Notes |
-|---|---|---|
-| F075 | ~88 cmdlets lack markdown help docs | 81 of 169 covered |
-| F065 | No config.yml for issue templates | |
-| F066 | No CODEOWNERS file | |
-| F076 | No dependabot/renovate | |
+None — all expected files for a well-maintained open-source PowerShell module are present.
 
 ---
 
@@ -78,145 +69,191 @@ New this scan:       6   Resolved this scan: 1   Regressed: 0
 
 ### Coverage by Functional Area
 
-| Area | Total Endpoints | Covered | % | Notes |
+| Area | Total Endpoints | Cmdlets | Est. Coverage | Notes |
 |---|---|---|---|---|
-| backup | ~6 | ~6 | 100% | Full coverage |
-| tasks | ~5 | ~5 | 100% | Full coverage |
-| storage_config | ~5 | ~4 | 80% | |
-| access_domains | ~6 | ~5 | 83% | |
-| roles | ~5 | ~4 | 80% | |
-| access_groups | ~5 | ~4 | 80% | |
-| firewall | ~40 | ~30 | 75% | Cluster-level excellent |
-| networking | ~7 | ~5 | 71% | |
-| pools | ~7 | ~5 | 71% | |
-| users | ~12 | ~8 | 67% | |
-| storage | ~19 | ~12 | 63% | |
-| sdn | ~59 | ~25 | 42% | Missing fabrics (PVE 9.0) |
-| containers | ~62 | ~25 | 40% | Missing VNC/SPICE, firewall |
-| vms | ~97 | ~35 | 36% | Missing VNC/SPICE, RRD, agent sub-commands |
-| access | ~15 | ~3 | 20% | Missing TFA, OpenID |
-| nodes | ~58 | ~10 | 17% | Missing Ceph, disks, apt, services |
-| cluster | ~81 | ~3 | 4% | Only resources/status |
-| **ha** | **~21** | **0** | **0%** | F053 |
-| **ceph** | **~40** | **0** | **0%** | F054 |
-| **cluster_config** | **~10** | **0** | **0%** | F060 |
-| **disks** | **~18** | **0** | **0%** | F067 |
-| **notifications** | **~32** | **0** | **0%** | F068 |
-| **acme/certs** | **~23** | **0** | **0%** | F069 |
-| **replication** | **~5** | **0** | **0%** | |
-| **services** | **~7** | **0** | **0%** | |
-| **TOTAL** | **646** | **~180** | **28%** | |
+| VMs (qemu) | ~80 | 28 | ~35% | Core CRUD, lifecycle, guest agent, disk, config |
+| Containers (lxc) | ~45 | 20 | ~44% | Full lifecycle + snapshots + templates |
+| Storage | ~30 | 11 | ~37% | CRUD, content, upload, download, disk alloc |
+| Network | ~15 | 5 | ~33% | CRUD + apply |
+| SDN | ~45 | 19 | ~42% | Zones, VNets, subnets, IPAM, DNS, controllers, apply |
+| Firewall (cluster) | ~20 | 21 | ~100% | Rules, groups, aliases, IP sets, options, refs |
+| Access/Users | ~25 | 21 | ~84% | Users, roles, groups, domains, tokens, permissions, password |
+| Nodes | ~40 | 8 | ~20% | Status, config, DNS, start/stop VMs |
+| Tasks | ~5 | 4 | ~80% | Get, list, stop, wait |
+| Backup | ~10 | 6 | ~60% | Ad-hoc + job CRUD + compliance |
+| Templates | ~5 | 4 | ~80% | Get, create, remove, clone |
+| CloudInit | ~3 | 3 | ~100% | Get, set, regenerate |
+| Cluster | ~77 | 1 | ~1% | Only Get-PveClusterResource |
+| Snapshots | ~5 | 4 | ~80% | VM snapshots: get/new/remove/restore |
+| Pools | ~5 | 4 | ~80% | CRUD |
+| HA | ~26 | 0 | 0% | F053 |
+| Ceph | ~40 | 0 | 0% | F054 |
+| Notifications | ~32 | 0 | 0% | F068 |
+| ACME/Certificates | ~23 | 0 | 0% | F069 |
+| Disks (LVM/ZFS) | ~18 | 0 | 0% | F067 |
+| **Total** | **~646** | **169** | **~26%** | |
 
-### PVE 9.0 New Endpoints (F061)
+### PVE 9.0 New Endpoints (42 total, 0 implemented — F061)
 
-42 new endpoints in PVE 9.0 — **0 implemented**:
+Key new subsystems in PVE 9.0:
 
-- **SDN Fabrics** (~17 endpoints) — entirely new subsystem for fabric networking
-- **Cluster Bulk Actions** (~6 endpoints) — cluster-wide guest start/shutdown/suspend/migrate
-- **HA Affinity Rules** (~5 endpoints) — new HA group affinity management
-- **Miscellaneous** (~14 endpoints) — scattered across nodes, storage, access
+| Category | Endpoints | Description |
+|---|---|---|
+| HA Rules | 5 | Affinity/anti-affinity rules for HA resources |
+| Bulk Actions | 5 | Cluster-wide guest start/shutdown/suspend/migrate |
+| SDN Fabrics | 13 | Fabric management, node assignments |
+| SDN Lock/Rollback | 3 | Transactional SDN changes |
+| OCI Registry | 1 | Container image pulls from OCI registries |
+| Node SDN | 6 | Per-node SDN fabric/zone/vnet inspection |
+| Node Capabilities | 2 | CPU flags, migration capabilities |
+| VM/Container | 2 | DBus VM state, container migration preflight |
+| Access | 1 | VNC ticket creation |
 
-### API Drift
+### API Drift — PVE 9.0 Parameter Changes
 
-No breaking changes detected in PVE 9.x affecting currently implemented cmdlets. All existing cmdlets should continue to work against PVE 9.x servers.
+77 parameter changes detected across implemented endpoints. All are additive (new optional parameters) except:
 
-### High-Value Gaps
+| Risk | Endpoint | Change |
+|---|---|---|
+| Mild | POST /cluster/backup | `-notification-policy,-notification-target` (removed) |
+| Mild | PUT /cluster/backup/{id} | `-notification-policy,-notification-target` (removed) |
+| Additive | SDN zone/vnet/subnet/controller/ipam/dns | `+lock-token` parameter |
+| Additive | SDN zones/controllers | `+fabric` parameter |
+| Additive | POST /nodes/{node}/qemu | `+allow-ksm,+intel-tdx` |
+| Additive | PUT /nodes/{node}/lxc/{vmid}/config | `+entrypoint,+env` |
+| Additive | POST /storage, PUT /storage/{storage} | `+snapshot-as-volume-chain,+zfs-base-path` |
 
-1. **HA (High Availability)** — 21 endpoints, essential for production clusters
-2. **Ceph** — 40 endpoints, critical for hyperconverged infrastructure
-3. **Cluster Configuration** — 10 endpoints for cluster create/join
-4. **VNC/SPICE Console Access** — frequently requested for remote management
-5. **Cluster Notifications** — new in PVE 8.1+, essential for monitoring automation
-6. **`GET /cluster/nextid`** — critical for scripted VM creation
+The removed `notification-policy` and `notification-target` parameters on backup endpoints should be verified — if New-PveBackupJob or Set-PveBackupJob send these parameters, PVE 9.0 will reject them.
 
 ---
 
 ## Phase 3 — Code Quality & Best Practices
 
+### 3a. PowerShell Module Design
+
+| Check | Status | Evidence |
+|---|---|---|
+| Approved verbs only | Pass | All 169 cmdlets use standard PS verb classes |
+| Verb class constants | Pass | No string literals in [Cmdlet] attributes (D011) |
+| All classes sealed | Pass | 169/169 sealed (D007) |
+| OutputType on all | Pass | 169/169 have [OutputType] (D005) |
+| ShouldProcess on destructive | Pass | All Remove/Stop/Reset/Restart/Suspend/Restore/Template cmdlets |
+| ConfirmImpact.High | Pass | All destructive cmdlets (D006) |
+| VmId ValidateRange | Pass | All VmId params have [ValidateRange(100, 999999999)] (D010) |
+| Pve noun prefix | Pass | All cmdlets use Pve prefix |
+
+### 3b. C# Code Quality
+
+| Check | Status | Evidence |
+|---|---|---|
+| No inline task-polling | Pass | Only TaskService.WaitForTask and WaitPveTaskCmdlet have while(true) — both with timeout (D001) |
+| No bare catch blocks | Pass | Zero `catch { }` or unfiltered `catch (Exception)` in src/ (D004) |
+| SecureString passwords | Pass | SetPveVmGuestPassword and SetPvePassword use SecureString (D002) |
+| URL encoding | Pass | Uri.EscapeDataString on all path params across all services (D003) |
+| Newtonsoft only | Pass | No [JsonPropertyName] attributes anywhere in src/ (D008) |
+| No System.Text.Json dep | Pass | Not referenced in any .csproj |
+| Magic strings extracted | Pass | Auth header names are const fields (D012) |
+| Sync-over-async | wont_fix | .GetAwaiter().GetResult() — accepted PS binary module pattern (F048) |
+
+### 3c. General Hygiene
+
+| Check | Status | Evidence |
+|---|---|---|
+| Framework targeting | Pass | Publishable: netstandard2.0. Tests: net10.0;net48 (D009) |
+| SDK versions | Pass | All workflows use dotnet SDK 10.0.x |
+| XML doc generation | Pass | GenerateDocumentationFile=true in Core.csproj |
+
+### 3d. HttpClient Lifecycle
+
+PveHttpClient implements IPveHttpClient interface. All 14 services accept IPveHttpClient via constructor injection, enabling shared client instances per session. HttpClient is created once per PveHttpClient instance. **F045 resolved in prior scan.**
+
 ### DECISIONS.md Compliance
 
-| Decision | Rule | Status | Notes |
-|---|---|---|---|
-| D001 | TaskService.WaitForTask | ⛔ VIOLATION | F058: 5 cmdlets still use while(true) |
-| D002 | SecureString for passwords | ✓ PASS | All 7 password cmdlets |
-| D003 | Uri.EscapeDataString | ⛔ VIOLATION | F071: ~15 cmdlets bypass services |
-| D004 | No bare catch blocks | ✓ PASS | Zero instances in src/ |
-| D005 | OutputType on all cmdlets | ✓ PASS | 169/169 |
-| D006 | ConfirmImpact.High | ⚠ PARTIAL | F062, F063: container Restart/Suspend |
-| D007 | All cmdlets sealed | ✓ PASS | 169/169 |
-| D008 | Newtonsoft.Json only | ✓ PASS (source) | F072: STJ dependency in csproj |
-| D009 | netstandard2.0 for publish | ⚠ PARTIAL | F047: net9.0 still in targets |
-| D010 | VmId nullable + ValidateRange | ✓ PASS | |
-| D011 | Verb class constants | ✓ PASS | |
-| D012 | Magic strings extracted | ✓ PASS | |
-
-### Findings
-
-| Finding ID | File(s) | Severity | Status | Description |
-|---|---|---|---|---|
-| F058 | 5 container/storage cmdlets | Critical | Open | while(true) infinite loops without timeout (D001) |
-| F073 | build.yml, test .csproj | High | **New** | build.yml uses net9.0 but test project targets net10.0 |
-| F071 | ~15 cmdlet files | Medium | **New** | Missing Uri.EscapeDataString on inline URL paths (D003) |
-| F062 | RestartPveContainerCmdlet.cs | Medium | Open | Missing ConfirmImpact.High (D006) |
-| F063 | SuspendPveContainerCmdlet.cs | Medium | Open | Missing ConfirmImpact.High (D006) |
-| F047 | Both publishable .csproj | Medium | Open | net9.0 target is EOL (D009) |
-| F048 | ~216 call sites | Medium | Open | Sync-over-async — accepted PS 5.1 tradeoff |
-| F045 | ~207 new PveHttpClient | Medium | Open | Per-call HTTP client — accepted design |
-| F072 | PSProxmoxVE.Core.csproj | Low | **New** | Unnecessary System.Text.Json dependency |
-| F064 | PSProxmoxVE.csproj | Low | Open | SMA pinned to 7.4.0 |
-| F040 | PveCmdletBase, services | Medium | **Resolved** | Catches now properly filtered with `when` |
+All 12 decisions (D001–D012) verified with no regressions detected.
 
 ---
 
 ## Phase 4 — Testing Coverage Analysis
 
-### Test Inventory
+### Test Infrastructure
 
-| Type | Framework | Files | Coverage |
+| Component | Framework | Count | Notes |
 |---|---|---|---|
-| xUnit (C#) | xunit 2.7.0 + Moq | 15 test files | Models + authentication only |
-| Pester (PS) | Pester 5 | 50 test files | 169/169 cmdlet parameter validation |
-| Integration (PS) | Pester 5 | 1 file (1544 lines) | ~105/169 cmdlets |
+| xUnit tests | net10.0;net48 | 374 cases | 25 files: services (214), models (133), auth (27) |
+| Pester unit tests | PS 5.1, 7.5 | ~400-500 cases | 46 files: parameter validation, metadata, ShouldProcess |
+| Pester integration | PS 7.x | 107 cases | 1 file: live PVE 8 + PVE 9 end-to-end |
+| **Total** | | **~800+** | Three-tier: unit (xUnit) + cmdlet (Pester) + integration |
 
-### Integration Test Coverage Gaps (F046)
+### Test Quality Assessment
 
-**~64 cmdlets lack integration tests**, including:
+- **Three-tier strategy**: xUnit validates core business logic (services, models), Pester validates cmdlet surface (parameters, metadata, parameter sets), integration validates end-to-end on live PVE
+- **All 169 cmdlets have Pester tests**: Parameter validation, mandatory params, ShouldProcess support, OutputType
+- **Arrange/Act/Assert**: xUnit tests consistently structured with Moq for IPveHttpClient mocking
+- **Offline-first**: 45/46 Pester test files work without network; xUnit uses mock fixtures
+- **Edge cases**: Null parameters, empty arrays, API errors, PVE 8 + PVE 9 response formats
+- **Test isolation**: xUnit uses DI via mocked IPveHttpClient; each test is independent
 
-- **VM ops**: Move-PveVm, Move-PveVmDisk, Remove-PveVmDisk
-- **Guest agent**: Get-PveVmGuestOsInfo, Get-PveVmGuestFsInfo, Read/Write-PveVmGuestFile, Set-PveVmGuestPassword, Invoke-PveVmGuestFsTrim
-- **Storage**: Set-PveStorage, Get-PveStorageStatus, Remove/Set-PveStorageContent, New-PveStorageDisk
-- **Access**: Set-PveRole, Set-PveApiToken, Set-PvePassword, all Group/Domain CRUD
-- **SDN**: All Set-PveSdn*, Invoke-PveSdnApply, New-PveSdn{Ipam,Dns,Controller}
-- **Nodes**: Get/Set-PveNodeConfig, Get/Set-PveNodeDns, Start/Stop-PveNodeVms
-- **Pools**: All 4 pool cmdlets
-- **Cluster**: Get-PveClusterResource
-- **Containers**: Move/Suspend/Resume/Resize, Move-PveContainerVolume, New-PveContainerTemplate
-- **Firewall**: Set operations, groups, options, refs
-- **Backup**: New-PveBackup, Get-PveBackupInfo
-- **Tasks**: Get-PveTaskList, Stop-PveTask
+### Coverage Gaps (F046)
 
-### Quality Observations
+All cmdlets have Pester parameter validation tests. ~64 of 169 cmdlets lack **integration test** coverage. The integration test suite covers 107 cases:
+- Connection, nodes, users, roles, API tokens, permissions
+- VMs (CRUD, lifecycle, config, resize, clone, snapshots)
+- Containers (CRUD, lifecycle, config, snapshots)
+- Storage (CRUD, content, upload, download)
+- Network (CRUD, apply), SDN (zones, VNets, subnets, IPAM, DNS, controllers)
+- Templates (convert, clone, remove), cloud-init, tasks
+- Firewall (rules, aliases, IP sets), backup jobs, OVA import, guest agent
 
-**Strengths**: 100% Pester parameter coverage, real PVE 9 JSON fixtures in xUnit, well-structured integration tests with cleanup.
+**Untested in integration**: Guest file operations, node config/DNS, pool management, some storage operations, SDN update cmdlets.
 
-**Weaknesses**: No mock-based service unit tests, xUnit covers only models/auth (no service logic), integration test is a single monolithic file, some tests depend on sequential state.
+---
+
+## Phase 4b — CI Integration Test Results
+
+### Last Run Summary
+
+| Field | Value |
+|---|---|
+| Run ID | 23454616043 |
+| Branch | main |
+| Conclusion | **failure** |
+| Created | 2026-03-23T18:51:46Z |
+| Head SHA | 68dadbf |
+
+### PVE 9: 104 passed, 2 failed, 1 skipped
+
+| Finding ID | Test | Failure Message | Platform | PVE | Severity |
+|---|---|---|---|---|---|
+| F080 | Should restart a container | NullReferenceException — ConfirmImpact.High prompts for confirmation in non-interactive CI | ubuntu/pwsh | 9 | High |
+| F081 | Should clone a container | PveApiException: Cannot do full clones on a running container without snapshots | ubuntu/pwsh | 9 | Medium |
+
+**Root cause**: F062 fix (adding ConfirmImpact.High to Restart-PveContainer) is correct behavior, but the integration test at line 983 does not pass `-Confirm:$false`. The container remained running after the restart failed, causing the subsequent clone test to also fail.
+
+**Fix**: Add `-Confirm:$false` to the Restart-PveContainer call in the integration test.
+
+### PVE 8: Infrastructure failure
+
+| Finding ID | Test | Failure Message | Platform | PVE | Severity |
+|---|---|---|---|---|---|
+| F082 | Initialize containers | Docker image ghcr.io/goodolclint/psproxmoxve-integration:68dadbf... not found | self-hosted | 8 | Low |
+
+**Root cause**: Container image for this commit SHA was not available in GHCR. No actual test logic failures on PVE 8.
 
 ---
 
 ## Phase 5 — Security Review
 
-| Area | Status | Details |
-|---|---|---|
-| Password params use SecureString | ✓ PASS | All 7 cmdlets |
-| SecureString freed after use | ✓ PASS | try/finally with ZeroFreeGlobalAllocUnicode |
-| No credential logging | ✓ PASS | WriteVerbose never logs passwords |
-| HTTPS by default | ✓ PASS | All API calls use https:// |
-| SkipCertificateCheck opt-in | ✓ PASS | Warning emitted when used |
-| Uri.EscapeDataString in services | ✓ PASS | 100+ usages, consistent |
-| Uri.EscapeDataString in cmdlets | ⛔ FAIL | F071: ~15 cmdlets bypass services |
-| ValidateRange on VmId | ✓ PASS | 90+ instances, consistent |
-| No bare catch blocks | ✓ PASS | Zero in src/ |
-| F031: Hardcoded test password | ⚠ Accepted | Testpass123! in CI, masked, disposable VM |
+| Finding ID | Area | Severity | Status | Description |
+|---|---|---|---|---|
+| F031 | Secret scanning | Low | Open | Hardcoded test password in CI workflow — masked, disposable VM |
+| — | Credential handling | — | Pass | PSCredential, SecureString with Marshal cleanup (D002) |
+| — | TLS/HTTPS | — | Pass | Enforced by default, SkipCertificateCheck opt-in with warning |
+| — | URL encoding | — | Pass | Uri.EscapeDataString on all path params (D003) |
+| — | Dependencies | — | Pass | Newtonsoft.Json 13.0.3, SharpCompress 0.38.0 — current |
+| — | Debug scripts | — | Pass | Placeholder tokens only (F052 resolved) |
+| — | Verbose logging | — | Pass | No credentials in WriteVerbose/WriteDebug output |
+
+No new security findings. All security-related DECISIONS.md entries (D002, D003) upheld.
 
 ---
 
@@ -224,90 +261,82 @@ No breaking changes detected in PVE 9.x affecting currently implemented cmdlets.
 
 | Finding ID | Check | Pass/Fail | Notes |
 |---|---|---|---|
-| — | ModuleVersion | ✓ Pass | 0.1.0 (publish workflow overrides from tag) |
-| — | Author/Company | ✓ Pass | goodolclint / Worklab |
-| — | Description | ✓ Pass | Descriptive |
-| — | LicenseUri | ✓ Pass | Present |
-| — | ProjectUri | ✓ Pass | Present |
-| — | Tags | ✓ Pass | 8 tags including ProxmoxVE8/9 |
-| — | ReleaseNotes | ✓ Pass | Present |
-| — | CmdletsToExport | ✓ Pass | Explicit list (~169) |
-| — | CompatiblePSEditions | ✓ Pass | Desktop, Core |
-| — | PowerShellVersion | ✓ Pass | 5.1 |
-| — | Prerelease | ✓ Pass | 'preview' |
-| F021 | IconUri | ✗ Fail | Missing — PSGallery listing will lack icon |
-| F047 | netstandard2.0 only for publish | ⚠ Warn | net9.0 in csproj but publish builds netstandard2.0 only |
-| F073 | Build workflow alignment | ✗ Fail | build.yml uses net9.0, test project uses net10.0 |
-| F074 | Publish smoke test | ⚠ Warn | Threshold 60 too low for 169 cmdlets |
-| F070 | PS 5.1 smoke test | ✗ Fail | No Windows PS 5.1 validation before publish |
-| F075 | Cmdlet help documentation | ⚠ Warn | 81/169 have markdown docs |
+| — | ModuleVersion | Pass | 0.1.0 |
+| — | GUID | Pass | a3f7c2d1-84e5-4b9f-a061-3e2d8c5f1a7b |
+| — | Author | Pass | goodolclint |
+| — | Description | Pass | Descriptive |
+| — | PowerShellVersion | Pass | 5.1 |
+| — | CompatiblePSEditions | Pass | Desktop, Core |
+| — | LicenseUri | Pass | MIT license linked |
+| — | ProjectUri | Pass | GitHub repo linked |
+| — | Tags | Pass | 8 relevant tags |
+| — | ReleaseNotes | Pass | Present in PSData |
+| F021 | IconUri | Fail | Missing — cosmetic only |
+| — | Prerelease | Pass | 'preview' — appropriate for current state |
+| — | CmdletsToExport | Pass | 169 cmdlets listed |
+| — | AliasesToExport | Pass | 7 aliases |
+| — | RequiredAssemblies | Pass | PSProxmoxVE.Core.dll, Newtonsoft.Json.dll |
+| — | FormatsToProcess | Pass | PSProxmoxVE.format.ps1xml |
+| — | MAML help | Pass | PSProxmoxVE.dll-Help.xml |
+| — | Markdown docs | Pass | 170 files in docs/cmdlets/ |
+| — | Publish workflow | Pass | Tag-triggered with PS 5.1 smoke test (threshold >= 150) |
+| — | netstandard2.0 only | Pass | Both publishable projects (D009) |
 
 ---
 
-## Phase 7 — Community & Repo Maintenance
+## Phase 7 — Community & Repo Maintenance Standards
 
 | Finding ID | Check | Pass/Fail | Notes |
 |---|---|---|---|
-| — | Bug report template | ✓ Pass | YAML format, collects PVE/PS/OS versions |
-| — | Feature request template | ✓ Pass | YAML format |
-| F065 | Issue template config.yml | ✗ Fail | Missing — blank issues uncontrolled |
-| — | PR template | ✓ Pass | Comprehensive checklist |
-| — | CONTRIBUTING.md | ✓ Pass | Good quality |
-| — | CODE_OF_CONDUCT.md | ✓ Pass | Contributor Covenant adapted |
-| — | SECURITY.md | ✓ Pass | 48h response SLA |
-| — | DECISIONS.md | ✓ Pass | 12 decisions, linked from CLAUDE.md |
-| — | Commit conventions | ✓ Pass | Conventional Commits consistently used |
-| F066 | CODEOWNERS | ✗ Fail | Missing |
-| F076 | Dependency automation | ✗ Fail | No dependabot/renovate |
-| — | Branch protection | ? | Cannot verify from CLI |
+| — | README quality | Pass | Comprehensive with examples, badges, version table |
+| — | CONTRIBUTING.md | Pass | Dev setup, coding standards, PR process |
+| F083 | CONTRIBUTING.md SDK version | Fail | References .NET SDK 9.0+ (should be 10.0+) |
+| — | CODE_OF_CONDUCT.md | Pass | Contributor Covenant |
+| — | SECURITY.md | Pass | Vulnerability disclosure policy |
+| — | DECISIONS.md | Pass | 12 active decisions, linked from CLAUDE.md |
+| — | Issue templates | Pass | Bug report + feature request (YAML) + config.yml |
+| — | PR template | Pass | Present |
+| — | CODEOWNERS | Pass | Present |
+| — | .gitattributes | Pass | Line ending normalization |
+| — | .editorconfig | Pass | Present |
+| — | dependabot.yml | Pass | NuGet + GitHub Actions (weekly) |
+| — | CHANGELOG.md | Pass | Keep a Changelog format |
+| — | Commit conventions | Pass | Conventional Commits |
 
 ---
 
 ## Phase 9 — Prioritized Recommendations
 
-### 🔴 Critical
+### Critical
+
+*(None)*
+
+### High
 
 | Finding ID | What | Where | Why | Fix |
 |---|---|---|---|---|
-| F058 | Infinite loop task-polling | 5 container/storage cmdlets | Cmdlets hang forever if task stalls | Replace private WaitForTask with TaskService.WaitForTask |
+| F080 | Restart-PveContainer CI failure | Integration.Tests.ps1:983 | ConfirmImpact.High prompts in non-interactive CI | Add `-Confirm:$false` to test |
 
-### 🟠 High
-
-| Finding ID | What | Where | Why | Fix |
-|---|---|---|---|---|
-| F073 | build.yml / test project framework mismatch | build.yml, test .csproj | CI workflow will fail | Update build.yml to use net10.0 or remove net9.0 from publishable csproj |
-| F053 | HA subsystem 0% coverage | — | Essential for production clusters | Implement HA resource/group CRUD cmdlets |
-| F054 | Ceph subsystem 0% coverage | — | Critical for hyperconverged | Implement Ceph OSD/pool/mon cmdlets |
-
-### 🟡 Medium
+### Medium
 
 | Finding ID | What | Where | Why | Fix |
 |---|---|---|---|---|
-| F071 | Missing Uri.EscapeDataString | ~15 cmdlet files | D003 violation, URL injection risk | Add Uri.EscapeDataString to all inline URL paths |
-| F062 | RestartPveContainer no ConfirmImpact.High | RestartPveContainerCmdlet.cs | D006 inconsistency | Add ConfirmImpact = ConfirmImpact.High |
-| F063 | SuspendPveContainer no ConfirmImpact.High | SuspendPveContainerCmdlet.cs | D006 inconsistency | Add ConfirmImpact = ConfirmImpact.High |
-| F047 | net9.0 target framework EOL | Both publishable .csproj | .NET 9 EOL May 2025 | Remove net9.0, keep netstandard2.0 (+ optionally add net10.0) |
-| F074 | Publish smoke test threshold too low | publish.yml | Won't catch cmdlet regressions | Raise threshold to ~150 |
-| F075 | ~88 cmdlets lack help docs | docs/cmdlets/ | Poor user experience | Generate docs for missing cmdlets |
-| F046 | Integration test gaps | Integration.Tests.ps1 | 64 cmdlets untested end-to-end | Prioritize destructive/lifecycle cmdlets |
-| F059 | VM/CT-level firewall 0% | — | Per-guest firewall is common use case | Implement VM/CT firewall rule cmdlets |
-| F060 | Cluster config 0% | — | Multi-node automation | Implement cluster create/join cmdlets |
-| F061 | PVE 9.0 endpoints 0% | — | 42 new endpoints unimplemented | Prioritize bulk actions and SDN fabrics |
-| F048 | Sync-over-async | ~216 call sites | Theoretical deadlock risk | Accepted for PS 5.1 compat — no fix needed |
-| F045 | HttpClient per-call | ~207 instances | Socket exhaustion risk | Consider IHttpClientFactory long-term |
-| F070 | No PS 5.1 smoke test | publish.yml | Desktop compatibility untested | Add Windows PS 5.1 step to publish workflow |
+| F046 | Integration test coverage gaps | tests/ | ~64 cmdlets untested end-to-end | Add tests incrementally |
+| F059 | VM/CT-level firewall 0% | — | ~44 endpoints for per-VM/CT firewall | Implement VM/CT firewall cmdlets |
+| F060 | Cluster config 0% | — | 10 endpoints for cluster management | Implement cluster config cmdlets |
+| F061 | PVE 9.0 endpoints 0% | — | 42 new endpoints | Prioritize HA rules and bulk actions |
+| F081 | Copy-PveContainer CI failure | Integration.Tests.ps1:998 | Cascading from F080 | Resolves when F080 is fixed |
 
-### 🟢 Low
+### Low
 
 | Finding ID | What | Where | Why | Fix |
 |---|---|---|---|---|
-| F031 | Hardcoded test password | CI workflow, Terraform | Accepted risk for disposable VMs | — |
-| F021 | No IconUri | PSProxmoxVE.psd1 | Cosmetic PSGallery listing | Add icon to repo and reference in manifest |
-| F064 | SMA pinned to 7.4.0 | PSProxmoxVE.csproj | Review with net10.0 migration | Update when removing net9.0 |
-| F072 | Unnecessary STJ dependency | Core.csproj | D008: Newtonsoft only | Remove System.Text.Json PackageReference |
-| F065 | No issue template config.yml | .github/ISSUE_TEMPLATE/ | Blank issues uncontrolled | Add config.yml |
-| F066 | No CODEOWNERS | root | No auto-review assignment | Add CODEOWNERS |
-| F067 | Disk management 0% | — | Storage provisioning | Implement when needed |
-| F068 | Notifications 0% | — | Monitoring automation | Implement when needed |
-| F069 | ACME/Certificates 0% | — | TLS automation | Implement when needed |
-| F076 | No dependabot/renovate | .github/ | Dependency drift | Add dependabot.yml |
+| F021 | No IconUri | PSProxmoxVE.psd1 | Cosmetic PSGallery appearance | Add IconUri |
+| F031 | Hardcoded test password | integration-tests.yml | Masked, disposable VM | Move to secret (optional) |
+| F053 | HA subsystem 0% | — | 21+ HA endpoints | Implement HA cmdlets |
+| F054 | Ceph subsystem 0% | — | 40 Ceph endpoints | Implement Ceph cmdlets |
+| F067 | Disk management 0% | — | 18 disk endpoints | Implement disk cmdlets |
+| F068 | Notifications 0% | — | 32 notification endpoints | Implement notification cmdlets |
+| F069 | ACME/Certificates 0% | — | 23 ACME endpoints | Implement ACME cmdlets |
+| F082 | PVE 8 Docker image failure | integration-tests.yml | Infrastructure issue | Investigate GHCR push |
+| F083 | CONTRIBUTING.md SDK version | CONTRIBUTING.md:9 | Wrong SDK version listed | Change "9.0+" to "10.0+" |

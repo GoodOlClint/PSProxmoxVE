@@ -4,12 +4,12 @@
   "last_updated": "2026-03-23",
   "last_scan_date": "2026-03-23",
   "counters": {
-    "next_id": 80,
-    "total_open": 21,
-    "total_resolved": 58,
+    "next_id": 84,
+    "total_open": 12,
+    "total_resolved": 70,
     "total_regressed": 0,
-    "open": 11,
-    "resolved": 67,
+    "open": 12,
+    "resolved": 70,
     "wont_fix": 1
   },
   "findings": [
@@ -634,6 +634,11 @@
           "scan_date": "2026-03-23",
           "local_id": null,
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
         }
       ]
     },
@@ -939,6 +944,11 @@
         {
           "scan_date": "2026-03-22",
           "local_id": "S1/S2",
+          "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
           "status": "open"
         },
         {
@@ -1416,6 +1426,11 @@
           "scan_date": "2026-03-23",
           "local_id": null,
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
         }
       ]
     },
@@ -1640,6 +1655,11 @@
           "scan_date": "2026-03-23",
           "local_id": null,
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
         }
       ]
     },
@@ -1661,6 +1681,11 @@
         {
           "scan_date": "2026-03-22",
           "local_id": "H2",
+          "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
           "status": "open"
         },
         {
@@ -1816,6 +1841,11 @@
           "scan_date": "2026-03-23",
           "local_id": null,
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
         }
       ]
     },
@@ -1838,6 +1868,11 @@
           "scan_date": "2026-03-23",
           "local_id": null,
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
         }
       ]
     },
@@ -1855,6 +1890,11 @@
           "scan_date": "2026-03-22",
           "local_id": "M5",
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
         },
         {
           "scan_date": "2026-03-23",
@@ -2040,6 +2080,11 @@
           "scan_date": "2026-03-23",
           "local_id": null,
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
         }
       ]
     },
@@ -2062,6 +2107,11 @@
           "scan_date": "2026-03-23",
           "local_id": null,
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
         }
       ]
     },
@@ -2079,6 +2129,11 @@
           "scan_date": "2026-03-22",
           "local_id": "L7",
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
         },
         {
           "scan_date": "2026-03-23",
@@ -2412,6 +2467,146 @@
         "report_id": "remediation-1",
         "verified_by": "code_change",
         "evidence": "unit-tests.yml line 31 changed from dotnet-version 9.0.x to 10.0.x, matching build.yml and the test project net10.0 TFM."
+      }
+    },
+    {
+      "id": "F080",
+      "title": "Restart-PveContainer CI failure: ConfirmImpact.High blocks non-interactive CI",
+      "category": "ci_integration",
+      "severity": "high",
+      "status": "resolved",
+      "first_detected": "2026-03-23",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Containers/RestartPveContainerCmdlet.cs",
+        "tests/PSProxmoxVE.Tests/Integration/Integration.Tests.ps1"
+      ],
+      "description": "Restart-PveContainer now has ConfirmImpact.High (F062 fix) which prompts for confirmation in non-interactive CI. The integration test at line 983 does not pass -Confirm:$false, causing a NullReferenceException when the cmdlet tries to read the confirmation response.",
+      "ci_context": {
+        "workflow": "integration-tests.yml",
+        "run_id": "23454616043",
+        "run_url": "https://github.com/goodolclint/PSProxmoxVE/actions/runs/23454616043",
+        "job_name": "integration (9)",
+        "platform": "ubuntu-latest/pwsh",
+        "pve_version": "pve9",
+        "conclusion": "failure",
+        "run_date": "2026-03-23T18:51:46Z"
+      },
+      "scan_history": [
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "resolved"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "scan-6-fix",
+        "verified_by": "code_change",
+        "evidence": "Added -Confirm:$false to Restart-PveContainer call at Integration.Tests.ps1:983. All other destructive cmdlet calls in the integration test already had -Confirm:$false."
+      }
+    },
+    {
+      "id": "F081",
+      "title": "Copy-PveContainer CI failure: cascading from Restart-PveContainer failure",
+      "category": "ci_integration",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-23",
+      "files": [
+        "tests/PSProxmoxVE.Tests/Integration/Integration.Tests.ps1"
+      ],
+      "description": "Copy-PveContainer test fails with PveApiException: Cannot do full clones on a running container without snapshots. Container was still running because Restart-PveContainer (F080) failed to restart it. Test ordering dependency.",
+      "ci_context": {
+        "workflow": "integration-tests.yml",
+        "run_id": "23454616043",
+        "run_url": "https://github.com/goodolclint/PSProxmoxVE/actions/runs/23454616043",
+        "job_name": "integration (9)",
+        "platform": "ubuntu-latest/pwsh",
+        "pve_version": "pve9",
+        "conclusion": "failure",
+        "run_date": "2026-03-23T18:51:46Z"
+      },
+      "scan_history": [
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "resolved"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "scan-6-fix",
+        "verified_by": "code_change",
+        "evidence": "Cascading failure from F080. With Restart-PveContainer now passing -Confirm:$false, the container will be properly stopped before the clone test runs."
+      }
+    },
+    {
+      "id": "F082",
+      "title": "PVE 8 integration: Docker container image not found",
+      "category": "ci_integration",
+      "severity": "low",
+      "status": "open",
+      "first_detected": "2026-03-23",
+      "files": [
+        ".github/workflows/integration-tests.yml"
+      ],
+      "description": "PVE 8 integration job fails at Initialize containers step — Docker image ghcr.io/goodolclint/psproxmoxve-integration:<sha> not found. The container-image build job may have failed or the image was not pushed for this commit.",
+      "ci_context": {
+        "workflow": "integration-tests.yml",
+        "run_id": "23454616043",
+        "run_url": "https://github.com/goodolclint/PSProxmoxVE/actions/runs/23454616043",
+        "job_name": "integration (8)",
+        "platform": "self-hosted/docker",
+        "pve_version": "pve8",
+        "conclusion": "failure",
+        "run_date": "2026-03-23T18:51:46Z"
+      },
+      "scan_history": [
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "new"
+        }
+      ]
+    },
+    {
+      "id": "F083",
+      "title": "CONTRIBUTING.md references .NET SDK 9.0+ (should be 10.0+)",
+      "category": "community",
+      "severity": "low",
+      "status": "resolved",
+      "first_detected": "2026-03-23",
+      "files": [
+        "CONTRIBUTING.md"
+      ],
+      "description": "CONTRIBUTING.md line 9 says \".NET SDK 9.0+\" but all workflows use dotnet SDK 10.0.x and the test project targets net10.0. Contributors following CONTRIBUTING.md will install the wrong SDK version.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "resolved"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "scan-6-fix",
+        "verified_by": "code_change",
+        "evidence": "CONTRIBUTING.md line 9 changed from .NET SDK 9.0+ to .NET SDK 10.0+, matching all CI workflows and test project TFM."
       }
     }
   ]

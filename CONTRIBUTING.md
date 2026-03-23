@@ -6,7 +6,7 @@ Thank you for your interest in contributing! This document provides guidelines a
 
 ### Prerequisites
 
-- [.NET SDK 9.0+](https://dotnet.microsoft.com/download)
+- [.NET SDK 10.0+](https://dotnet.microsoft.com/download)
 - [PowerShell 7.2+](https://github.com/PowerShell/PowerShell) (for running Pester tests)
 - [Pester 5](https://pester.dev/) (`Install-Module Pester -MinimumVersion 5.0 -Force`)
 - An IDE with C# support (Visual Studio, VS Code with C# Dev Kit, Rider)
