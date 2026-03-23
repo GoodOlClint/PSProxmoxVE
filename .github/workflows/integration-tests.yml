@@ -227,11 +227,6 @@ jobs:
             }
           }
           TFVARS
-          echo "=== tfvars ==="
-          cat /tmp/instances.tfvars.json
-          echo "=== RUNNER_TEMP=${RUNNER_TEMP} ==="
-          ls -la "${RUNNER_TEMP}/"*.iso 2>/dev/null || echo "No ISOs in RUNNER_TEMP"
-          ls -la "${CACHE_DIR}/"*.iso 2>/dev/null || echo "No ISOs in CACHE_DIR"
           terraform apply -auto-approve -input=false -var-file=/tmp/instances.tfvars.json
 
       # ── Wait for both PVE instances and create API tokens ────────────
@@ -247,7 +242,6 @@ jobs:
             99909 "${PVE_PASSWORD}" 900)
           VM_IP=$(echo "$OUTPUT" | grep "^IP=" | cut -d= -f2)
           VM_TOKEN=$(echo "$OUTPUT" | grep "^TOKEN=" | cut -d= -f2-)
-          echo "::add-mask::${VM_IP}"
           echo "::add-mask::${VM_TOKEN}"
           echo "host=${VM_IP}" >> "$GITHUB_OUTPUT"
           echo "token=${VM_TOKEN}" >> "$GITHUB_OUTPUT"
@@ -263,7 +257,6 @@ jobs:
             99908 "${PVE_PASSWORD}" 900)
           VM_IP=$(echo "$OUTPUT" | grep "^IP=" | cut -d= -f2)
           VM_TOKEN=$(echo "$OUTPUT" | grep "^TOKEN=" | cut -d= -f2-)
-          echo "::add-mask::${VM_IP}"
           echo "::add-mask::${VM_TOKEN}"
           echo "host=${VM_IP}" >> "$GITHUB_OUTPUT"
           echo "token=${VM_TOKEN}" >> "$GITHUB_OUTPUT"
