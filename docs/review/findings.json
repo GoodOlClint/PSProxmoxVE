@@ -1,0 +1,2075 @@
+{
+  "_schema_version": "1.0",
+  "_description": "PSProxmoxVE stable findings ledger. IDs are permanent (F001, F002...). Resolved findings are never deleted \u2014 they are marked resolved with evidence. If a finding reappears, it is marked regressed and retains its original ID.",
+  "last_updated": "2026-03-22T20:00:00Z",
+  "last_scan_date": "2026-03-22",
+  "counters": {
+    "next_id": 77,
+    "total_open": 27,
+    "total_resolved": 49,
+    "total_regressed": 0
+  },
+  "findings": [
+    {
+      "id": "F001",
+      "title": "No PSGallery publish workflow",
+      "category": "psgallery",
+      "severity": "critical",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        ".github/workflows/"
+      ],
+      "description": "No CI/CD workflow for publishing to PSGallery. Cannot automate releases.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "C1",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "publish.yml workflow added, triggered on tag push with Publish-Module and GitHub Release creation",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F002",
+      "title": "README says 'not PSGallery'",
+      "category": "psgallery",
+      "severity": "critical",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "README.md"
+      ],
+      "description": "README installation section says module is not on PSGallery, contradicting publication goal.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "C2",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "README updated with Install-Module PSProxmoxVE instructions",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F003",
+      "title": "No ReleaseNotes in manifest PSData",
+      "category": "psgallery",
+      "severity": "critical",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "src/PSProxmoxVE/PSProxmoxVE.psd1"
+      ],
+      "description": "PSGallery strongly recommends ReleaseNotes in module manifest PSData section.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "C3",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "ReleaseNotes added to PSData section of manifest",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F004",
+      "title": "No HelpMessage on any cmdlet parameter",
+      "category": "code_quality",
+      "severity": "high",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/"
+      ],
+      "description": "Get-Help shows no parameter descriptions because HelpMessage attribute is missing on all [Parameter] attributes.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "H1",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "HelpMessage present on virtually all parameters across all 83 cmdlets",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F005",
+      "title": "No WriteVerbose in cmdlets except Connection",
+      "category": "code_quality",
+      "severity": "high",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/"
+      ],
+      "description": "Users cannot see which API calls are being made. Only Connection cmdlets use WriteVerbose.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "H2",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "WriteVerbose used extensively throughout all cmdlets",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F006",
+      "title": "Missing CONTRIBUTING.md",
+      "category": "community",
+      "severity": "high",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "CONTRIBUTING.md"
+      ],
+      "description": "No contributor guide with dev setup, coding standards, test instructions, or PR process.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "H3",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "CONTRIBUTING.md created with prerequisites, building, tests, coding standards, PR process",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F007",
+      "title": "Missing SECURITY.md",
+      "category": "community",
+      "severity": "high",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "SECURITY.md"
+      ],
+      "description": "No vulnerability disclosure policy.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "H4",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "SECURITY.md created with vulnerability disclosure policy and 48h response SLA",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F008",
+      "title": "No WriteWarning on -SkipCertificateCheck",
+      "category": "security",
+      "severity": "high",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Connection/ConnectPveServerCmdlet.cs"
+      ],
+      "description": "Users may not realize they are disabling TLS certificate verification.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "H5",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "WriteWarning emitted with man-in-the-middle advisory when SkipCertificateCheck is used",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F009",
+      "title": "Reset-PveVm uses hardcoded verb string literal",
+      "category": "code_quality",
+      "severity": "high",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Vms/ResetPveVmCmdlet.cs"
+      ],
+      "description": "Reset-PveVm uses [Cmdlet(\"Reset\", ...)] instead of VerbsCommon.Reset, inconsistent with all other cmdlets.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "H6",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "Now uses VerbsCommon.Reset constant",
+        "verified_by": "scan"
+      },
+      "decisions_ref": "D012"
+    },
+    {
+      "id": "F010",
+      "title": "Missing GitHub issue and PR templates",
+      "category": "community",
+      "severity": "high",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        ".github/ISSUE_TEMPLATE/",
+        ".github/pull_request_template.md"
+      ],
+      "description": "No structured issue reporting or PR process templates.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "H8",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "Bug report (YAML), feature request (YAML), and PR template added",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F011",
+      "title": "Stop-PveVm and Reset-PveVm lack ConfirmImpact.High",
+      "category": "code_quality",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Vms/StopPveVmCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Vms/ResetPveVmCmdlet.cs"
+      ],
+      "description": "Stopping or resetting VMs can cause data loss but these cmdlets don't prompt for confirmation by default.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "M1",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "ConfirmImpact.High added to both Stop-PveVm and Reset-PveVm",
+        "verified_by": "scan"
+      },
+      "decisions_ref": "D007"
+    },
+    {
+      "id": "F012",
+      "title": "No ValidateRange on VmId parameters",
+      "category": "code_quality",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/"
+      ],
+      "description": "PVE requires VMID 100-999999999 but no ValidateRange attribute enforces this.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "M2",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "ValidateRange(100, 999999999) added to all VmId parameters",
+        "verified_by": "scan"
+      },
+      "decisions_ref": "D011"
+    },
+    {
+      "id": "F013",
+      "title": "Container snapshots not supported",
+      "category": "api_coverage",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Containers/"
+      ],
+      "description": "Snapshots are only implemented for VMs, not LXC containers, despite PVE supporting both.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "M3",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "4 container snapshot cmdlets added: Get/New/Remove/Restore-PveContainerSnapshot",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F014",
+      "title": "No integration tests for network modifications",
+      "category": "testing",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "tests/PSProxmoxVE.Tests/Integration/"
+      ],
+      "description": "Network CRUD (create/modify/delete/apply) is tested only at Pester level, not end-to-end.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "M4",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "Integration tests added for network create/modify/delete/apply with revert",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F015",
+      "title": "No CODE_OF_CONDUCT.md",
+      "category": "community",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "CODE_OF_CONDUCT.md"
+      ],
+      "description": "Expected for open-source projects to establish community standards.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "M5",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "Contributor Covenant v2.1 adopted",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F016",
+      "title": "No .gitattributes file",
+      "category": "community",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        ".gitattributes"
+      ],
+      "description": "Line ending consistency across platforms not enforced.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "M6",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": ".gitattributes added with line ending normalization, csharp diff, binary markers",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F017",
+      "title": "CS1591 suppressed in Core project",
+      "category": "code_quality",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "src/PSProxmoxVE.Core/PSProxmoxVE.Core.csproj"
+      ],
+      "description": "Public API lacks XML documentation because CS1591 warning is suppressed.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "M7",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "CS1591 no longer suppressed, XML doc comments added to all public types",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F018",
+      "title": "No badges in README",
+      "category": "psgallery",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "README.md"
+      ],
+      "description": "No build status, PSGallery version, or license badges to improve discoverability and trust.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "M8",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "Build, Unit Tests, License badges added to README",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F019",
+      "title": "CHANGELOG has only [Unreleased] section",
+      "category": "psgallery",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "CHANGELOG.md"
+      ],
+      "description": "No versioned release entries in CHANGELOG, no release history.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "M9",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "0.1.0-preview versioned entry added to CHANGELOG",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F020",
+      "title": "Invoke-PveVmGuestExec lacks ShouldProcess",
+      "category": "code_quality",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Vms/InvokePveVmGuestExecCmdlet.cs"
+      ],
+      "description": "Executes commands inside a VM (a mutating operation) but does not implement SupportsShouldProcess.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "M10",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "SupportsShouldProcess added; all destructive/mutating cmdlets now implement it",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F021",
+      "title": "No IconUri in manifest PSData",
+      "category": "psgallery",
+      "severity": "low",
+      "status": "open",
+      "first_detected": "2026-03-19",
+      "files": [
+        "src/PSProxmoxVE/PSProxmoxVE.psd1"
+      ],
+      "description": "Improves PSGallery listing appearance. Cosmetic only.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "L1",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "L1",
+          "status": "open"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "L1",
+          "status": "open"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "L1",
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "id": "F022",
+      "title": "No online help (MAML/platyPS)",
+      "category": "psgallery",
+      "severity": "low",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "src/PSProxmoxVE/"
+      ],
+      "description": "Get-Help -Online does not work. No MAML help file for cmdlet documentation.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "L2",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "MAML help file (PSProxmoxVE.dll-Help.xml) present with 75 cmdlet documentation files in docs/cmdlets/",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F023",
+      "title": "No firewall cmdlets",
+      "category": "api_coverage",
+      "severity": "low",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Firewall/"
+      ],
+      "description": "No cmdlets for creating/managing firewall rules at cluster, node, or VM level. Critical gap for security automation.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "L3",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "H1",
+          "status": "open"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "21 cluster-level firewall cmdlets added covering rules, groups, aliases, IP sets, options, and refs",
+        "verified_by": "self-reported"
+      }
+    },
+    {
+      "id": "F024",
+      "title": "No backup/vzdump cmdlets",
+      "category": "api_coverage",
+      "severity": "low",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Backup/"
+      ],
+      "description": "Essential for DR automation. No cmdlets for creating backups, managing schedules, or restoring.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "L4",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "H2",
+          "status": "open"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "6 backup cmdlets added: New-PveBackup, Get/New/Set/Remove-PveBackupJob, Get-PveBackupInfo",
+        "verified_by": "self-reported"
+      }
+    },
+    {
+      "id": "F025",
+      "title": "No pool management cmdlets",
+      "category": "api_coverage",
+      "severity": "low",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Pools/"
+      ],
+      "description": "Required for multi-tenant environments. No cmdlets for creating/managing resource pools.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "L5",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "M2",
+          "status": "open"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "4 pool cmdlets added: Get/New/Set/Remove-PvePool",
+        "verified_by": "self-reported"
+      }
+    },
+    {
+      "id": "F026",
+      "title": "new Random() used for multipart boundary generation",
+      "category": "code_quality",
+      "severity": "low",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "src/PSProxmoxVE.Core/Client/PveHttpClient.cs"
+      ],
+      "description": "Not cryptographically secure. Low risk for multipart boundaries but could use RandomNumberGenerator.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "L6",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "RandomNumberGenerator now used for boundary generation",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F027",
+      "title": "No alias support in module",
+      "category": "psgallery",
+      "severity": "low",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "src/PSProxmoxVE/PSProxmoxVE.psd1"
+      ],
+      "description": "Some users prefer short aliases for frequently used cmdlets.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "L7",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "7 aliases defined in module manifest AliasesToExport",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F028",
+      "title": "No tagged releases or GitHub Releases",
+      "category": "psgallery",
+      "severity": "low",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        ".github/workflows/publish.yml"
+      ],
+      "description": "No GitHub Releases configured, no release workflow, no tagged releases in git history.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "L8",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "publish.yml creates GitHub Releases via softprops/action-gh-release on tag push",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F029",
+      "title": "No container migration cmdlet",
+      "category": "api_coverage",
+      "severity": "low",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Containers/"
+      ],
+      "description": "VMs have Move-PveVm for migration but containers have no equivalent.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "L9",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "Move-PveContainer cmdlet added for container migration",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F030",
+      "title": "No SDN subnet management cmdlets",
+      "category": "api_coverage",
+      "severity": "low",
+      "status": "resolved",
+      "first_detected": "2026-03-19",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Network/"
+      ],
+      "description": "SDN zones and VNets exist but subnets are missing.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": "L10",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-21",
+        "evidence": "3 SDN subnet cmdlets added: Get/New/Remove-PveSdnSubnet",
+        "verified_by": "scan"
+      }
+    },
+    {
+      "id": "F031",
+      "title": "Hardcoded test password in CI workflow and Terraform",
+      "category": "security",
+      "severity": "low",
+      "status": "open",
+      "first_detected": "2026-03-19",
+      "files": [
+        ".github/workflows/integration-tests.yml",
+        "tests/infrastructure/variables.tf"
+      ],
+      "description": "PVE_PASSWORD: 'Testpass123!' in integration-tests.yml and variables.tf. Masked via ::add-mask::. Disposable nested test VM. Accepted risk.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-19",
+          "local_id": null,
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-21",
+          "local_id": null,
+          "status": "open"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "S1/S2",
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "id": "F032",
+      "title": "Infinite loop task-polling in VM snapshot and network cmdlets",
+      "category": "code_quality",
+      "severity": "critical",
+      "status": "resolved",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Network/InvokePveNetworkApplyCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Snapshots/NewPveSnapshotCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Snapshots/RestorePveSnapshotCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Snapshots/RemovePveSnapshotCmdlet.cs"
+      ],
+      "description": "while(true) with no timeout in InvokePveNetworkApply, NewPveSnapshot, RestorePveSnapshot, RemovePveSnapshot private WaitForTask methods. Cmdlets hang forever if task stalls.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "CQ1-CQ4",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "All four cmdlets now use TaskService.WaitForTask with timeout enforcement, failure detection, and WriteProgress support",
+        "verified_by": "self-reported"
+      },
+      "decisions_ref": "D001"
+    },
+    {
+      "id": "F033",
+      "title": "Infinite poll loop in InvokePveVmGuestExec",
+      "category": "code_quality",
+      "severity": "critical",
+      "status": "resolved",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Vms/InvokePveVmGuestExecCmdlet.cs"
+      ],
+      "description": "while(true) polling exec-status with no timeout. Cmdlet hangs forever if guest exec never completes.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "CQ5",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "Added Timeout parameter with Stopwatch + TimeoutException",
+        "verified_by": "self-reported"
+      },
+      "decisions_ref": "D001"
+    },
+    {
+      "id": "F034",
+      "title": "RemovePveRoleCmdlet missing ConfirmImpact.High",
+      "category": "code_quality",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Users/RemovePveRoleCmdlet.cs"
+      ],
+      "description": "Deleting roles is a significant, potentially disruptive operation but does not prompt for confirmation.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "CQ17/M1",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "ConfirmImpact = ConfirmImpact.High added",
+        "verified_by": "self-reported"
+      },
+      "decisions_ref": "D007"
+    },
+    {
+      "id": "F035",
+      "title": "Pool/CephPool parameter conflict in NewPveStorageCmdlet",
+      "category": "code_quality",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Storage/NewPveStorageCmdlet.cs"
+      ],
+      "description": "New-PveStorage allows specifying both Pool and CephPool parameters simultaneously, which is invalid.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "CQ6",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "Runtime validation added with ThrowTerminatingError if both Pool and CephPool specified",
+        "verified_by": "self-reported"
+      }
+    },
+    {
+      "id": "F036",
+      "title": "Duplicated WaitForTask methods across cmdlets",
+      "category": "code_quality",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/"
+      ],
+      "description": "4 VM/network cmdlets had copy-pasted private WaitForTask implementations instead of using the shared TaskService.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "CQ7",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "All cmdlets now use TaskService.WaitForTask",
+        "verified_by": "self-reported"
+      },
+      "decisions_ref": "D001"
+    },
+    {
+      "id": "F037",
+      "title": "~54 cmdlets missing OutputType attribute",
+      "category": "code_quality",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/"
+      ],
+      "description": "Approximately 54 cmdlets lack [OutputType] attribute, degrading IntelliSense and pipeline type inference.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "CQ9",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "All 169 cmdlets now have [OutputType] attributes",
+        "verified_by": "self-reported"
+      },
+      "decisions_ref": "D006"
+    },
+    {
+      "id": "F038",
+      "title": "Firewall VmId defaults to 0 instead of nullable",
+      "category": "code_quality",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Firewall/"
+      ],
+      "description": "Firewall cmdlet VmId parameter uses int with default 0 instead of nullable int, making it impossible to distinguish unset from VM 0.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "CQ10",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "VmId changed to nullable int pattern",
+        "verified_by": "self-reported"
+      },
+      "decisions_ref": "D011"
+    },
+    {
+      "id": "F039",
+      "title": "Bare catch blocks in PveHttpClient, PveCmdletBase, VmService, ContainerService, GetPveVmCmdlet",
+      "category": "code_quality",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE.Core/Client/PveHttpClient.cs",
+        "src/PSProxmoxVE/Cmdlets/PveCmdletBase.cs",
+        "src/PSProxmoxVE.Core/Services/VmService.cs",
+        "src/PSProxmoxVE.Core/Services/ContainerService.cs"
+      ],
+      "description": "Multiple bare catch {} blocks swallow exceptions silently, hiding errors and making debugging difficult.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "CQ11-CQ14",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "All bare catches replaced with filtered catch (Exception ex) when (...) clauses that exclude OOM/SOE and are specific to PveApiException/HttpRequestException where appropriate",
+        "verified_by": "self-reported"
+      },
+      "decisions_ref": "D005"
+    },
+    {
+      "id": "F040",
+      "title": "Broad exception catches in status polling",
+      "category": "code_quality",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/PveCmdletBase.cs",
+        "src/PSProxmoxVE.Core/Services/VmService.cs",
+        "src/PSProxmoxVE.Core/Services/ContainerService.cs"
+      ],
+      "description": "Filtered catch(Exception ex) when(...) clauses are better than bare catches but still catch broadly. Could be more specific exception types.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "CQ8",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "CQ8/M6",
+          "status": "open"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "report_id": "scan-4",
+        "verified_by": "scan",
+        "evidence": "PveCmdletBase.cs:149 uses 'when (ex is not OutOfMemoryException and not StackOverflowException)'. ContainerService.cs:44 and VmService.cs:48 filter to 'PveApiException or HttpRequestException'. All catch(Exception) blocks in cmdlets call ThrowTerminatingError (correct PS pattern). No bare catches found anywhere in src/."
+      }
+    },
+    {
+      "id": "F041",
+      "title": "~95 cmdlets not sealed",
+      "category": "code_quality",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/"
+      ],
+      "description": "Approximately 95 cmdlet classes are not sealed, allowing unintended inheritance.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "CQ18",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "All 169 cmdlets are now sealed",
+        "verified_by": "self-reported"
+      },
+      "decisions_ref": "D008"
+    },
+    {
+      "id": "F042",
+      "title": "SuspendPveVmCmdlet missing ConfirmImpact.High",
+      "category": "code_quality",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Vms/SuspendPveVmCmdlet.cs"
+      ],
+      "description": "Suspending a VM can cause issues but does not prompt for confirmation.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "CQ19",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "ConfirmImpact.High added to SuspendPveVmCmdlet",
+        "verified_by": "self-reported"
+      },
+      "decisions_ref": "D007"
+    },
+    {
+      "id": "F043",
+      "title": "RestartPveVmCmdlet missing ConfirmImpact declaration",
+      "category": "code_quality",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Vms/RestartPveVmCmdlet.cs"
+      ],
+      "description": "Restarting a VM is disruptive but does not set ConfirmImpact.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "CQ20",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "ConfirmImpact.High added to RestartPveVmCmdlet",
+        "verified_by": "self-reported"
+      },
+      "decisions_ref": "D007"
+    },
+    {
+      "id": "F044",
+      "title": "Dual JSON serialization attributes (JsonProperty + JsonPropertyName)",
+      "category": "code_quality",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE.Core/Models/"
+      ],
+      "description": "Model classes have both Newtonsoft [JsonProperty] and System.Text.Json [JsonPropertyName] attributes. Only Newtonsoft is used at runtime.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "CQ21",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "[JsonPropertyName] attributes removed, only [JsonProperty] (Newtonsoft) remains",
+        "verified_by": "self-reported"
+      },
+      "decisions_ref": "D009"
+    },
+    {
+      "id": "F045",
+      "title": "HttpClient per-call pattern bypasses connection pooling",
+      "category": "code_quality",
+      "severity": "medium",
+      "status": "open",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/"
+      ],
+      "description": "38 cmdlets create new PveHttpClient per operation instead of going through services, bypassing connection pooling.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "CQ11",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "CQ11/M1",
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "id": "F046",
+      "title": "Significant integration test coverage gaps",
+      "category": "testing",
+      "severity": "medium",
+      "status": "open",
+      "first_detected": "2026-03-21",
+      "files": [
+        "tests/PSProxmoxVE.Tests/Integration/"
+      ],
+      "description": "Many cmdlets lack end-to-end integration tests. 64 of 169 cmdlets untested in integration as of latest scan.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "M3/M4",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "M2",
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "id": "F047",
+      "title": "net9.0 target framework is EOL",
+      "category": "code_quality",
+      "severity": "medium",
+      "status": "open",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE/PSProxmoxVE.csproj",
+        "src/PSProxmoxVE.Core/PSProxmoxVE.Core.csproj"
+      ],
+      "description": ".NET 9.0 reached end of life in May 2025. Should upgrade to net10.0 (LTS).",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "CQ6",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "CQ6/H3",
+          "status": "open"
+        }
+      ],
+      "decisions_ref": "D010"
+    },
+    {
+      "id": "F048",
+      "title": "Sync-over-async via GetAwaiter().GetResult()",
+      "category": "code_quality",
+      "severity": "medium",
+      "status": "open",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE.Core/"
+      ],
+      "description": "~216 call sites use .GetAwaiter().GetResult(). Standard for PS binary modules but carries theoretical deadlock risk. Accepted tradeoff for PS 5.1 compatibility.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "CQ7",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "CQ7",
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "id": "F049",
+      "title": "Auth header names are magic strings",
+      "category": "code_quality",
+      "severity": "low",
+      "status": "resolved",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE.Core/Client/PveHttpClient.cs"
+      ],
+      "description": "Auth header names (PVEAPIToken=, CSRFPreventionToken) are inline string literals instead of named constants.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "CQ2/CQ22",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "Extracted to const string ApiTokenPrefix and CsrfHeaderName fields",
+        "verified_by": "self-reported"
+      },
+      "decisions_ref": "D013"
+    },
+    {
+      "id": "F050",
+      "title": "URL-encode snapshot/node names in API paths",
+      "category": "security",
+      "severity": "low",
+      "status": "resolved",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE.Core/Services/SnapshotService.cs",
+        "src/PSProxmoxVE.Core/Services/ContainerService.cs"
+      ],
+      "description": "Snapshot names and node names in URL paths are not URL-encoded. Low risk as values come from validated/system sources, but defense-in-depth recommends encoding.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "S1/M5",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "Uri.EscapeDataString() now used consistently across all services",
+        "verified_by": "self-reported"
+      },
+      "decisions_ref": "D003"
+    },
+    {
+      "id": "F051",
+      "title": "SetPveVmGuestPassword uses plain string not SecureString",
+      "category": "security",
+      "severity": "low",
+      "status": "resolved",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Vms/SetPveVmGuestPasswordCmdlet.cs"
+      ],
+      "description": "Guest password parameter is a plain string instead of SecureString, inconsistent with Connect-PveServer's credential handling.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "S1",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "Now uses SecureString with Marshal.SecureStringToGlobalAllocUnicode + ZeroFreeGlobalAllocUnicode in try/finally",
+        "verified_by": "self-reported"
+      },
+      "decisions_ref": "D002"
+    },
+    {
+      "id": "F052",
+      "title": "Debug script contains hardcoded API token and IP",
+      "category": "security",
+      "severity": "low",
+      "status": "resolved",
+      "first_detected": "2026-03-21",
+      "files": [
+        "debug/Capture-UploadDiff.ps1"
+      ],
+      "description": "debug/Capture-UploadDiff.ps1 contained a hardcoded API token and PVE host IP.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "S2",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "Replaced with placeholder tokens: <PVE_HOST>, <USER>@<REALM>!<TOKENID>=<TOKEN_UUID>",
+        "verified_by": "self-reported"
+      }
+    },
+    {
+      "id": "F053",
+      "title": "HA subsystem 0% coverage",
+      "category": "api_coverage",
+      "severity": "low",
+      "status": "open",
+      "first_detected": "2026-03-21",
+      "files": [],
+      "description": "21 HA endpoints + 5 new PVE 9.0 endpoints. Essential for production clusters. Resources, groups, status, and rules.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "L3",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "H1",
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "id": "F054",
+      "title": "Ceph subsystem 0% coverage",
+      "category": "api_coverage",
+      "severity": "low",
+      "status": "open",
+      "first_detected": "2026-03-21",
+      "files": [],
+      "description": "40 endpoints for OSD, MON, pool, status operations. Critical for hyperconverged infrastructure.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "L3",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "H2",
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "id": "F055",
+      "title": "Access groups and domains cmdlets missing",
+      "category": "api_coverage",
+      "severity": "low",
+      "status": "resolved",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Users/"
+      ],
+      "description": "No cmdlets for /access/groups or /access/domains CRUD. Useful for LDAP/AD integration.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "L4",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "8 cmdlets added: Get/New/Set/Remove-PveGroup and Get/New/Set/Remove-PveDomain plus Set-PvePassword",
+        "verified_by": "self-reported"
+      }
+    },
+    {
+      "id": "F056",
+      "title": "PSGallery version badge missing",
+      "category": "psgallery",
+      "severity": "low",
+      "status": "resolved",
+      "first_detected": "2026-03-21",
+      "files": [
+        "README.md"
+      ],
+      "description": "README should show PSGallery version badge after first publish.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "L5",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "PSGallery badge present in README badges",
+        "verified_by": "self-reported"
+      }
+    },
+    {
+      "id": "F057",
+      "title": "SDN IPAM/DNS/Controller cmdlets missing",
+      "category": "api_coverage",
+      "severity": "low",
+      "status": "resolved",
+      "first_detected": "2026-03-21",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Network/"
+      ],
+      "description": "SDN zones/VNets/subnets covered but IPAM, DNS, and controller management missing.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-21",
+          "local_id": "L6",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-22",
+        "evidence": "12 cmdlets added: Get/New/Remove/Set for SdnIpam, SdnDns, SdnController plus Invoke-PveSdnApply",
+        "verified_by": "self-reported"
+      }
+    },
+    {
+      "id": "F058",
+      "title": "Infinite loop task-polling in container snapshot and storage cmdlets",
+      "category": "code_quality",
+      "severity": "critical",
+      "status": "open",
+      "first_detected": "2026-03-22",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Containers/NewPveContainerSnapshotCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Containers/RemovePveContainerSnapshotCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Containers/RestorePveContainerSnapshotCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Storage/InvokePveStorageDownloadCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Storage/SendPveFileCmdlet.cs"
+      ],
+      "description": "while(true) with no timeout in NewPveContainerSnapshot, RemovePveContainerSnapshot, RestorePveContainerSnapshot, InvokePveStorageDownload, and SendPveFile. Same anti-pattern that was fixed in VM snapshot cmdlets. Cmdlets hang forever if task stalls.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "CQ1-CQ5/C1",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "C1",
+          "status": "open"
+        }
+      ],
+      "decisions_ref": "D001"
+    },
+    {
+      "id": "F059",
+      "title": "VM/CT-level firewall 0% coverage",
+      "category": "api_coverage",
+      "severity": "medium",
+      "status": "open",
+      "first_detected": "2026-03-22",
+      "files": [],
+      "description": "~44 combined endpoints for per-VM and per-CT firewall rules. Cluster-level is covered (21 cmdlets) but VM/CT-level is not.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "M3",
+          "status": "new"
+        }
+      ]
+    },
+    {
+      "id": "F060",
+      "title": "Cluster config 0% coverage",
+      "category": "api_coverage",
+      "severity": "medium",
+      "status": "open",
+      "first_detected": "2026-03-22",
+      "files": [],
+      "description": "10 endpoints for cluster create/join/node management. Fundamental for multi-node cluster automation.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "M4",
+          "status": "new"
+        }
+      ]
+    },
+    {
+      "id": "F061",
+      "title": "PVE 9.0 endpoints 0% coverage",
+      "category": "api_drift",
+      "severity": "medium",
+      "status": "open",
+      "first_detected": "2026-03-22",
+      "files": [],
+      "description": "42 new PVE 9.0 endpoints available (HA rules, SDN fabrics, bulk actions, OCI registry). None implemented.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "M5",
+          "status": "new"
+        }
+      ]
+    },
+    {
+      "id": "F062",
+      "title": "RestartPveContainerCmdlet missing ConfirmImpact.High",
+      "category": "code_quality",
+      "severity": "medium",
+      "status": "open",
+      "first_detected": "2026-03-22",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Containers/RestartPveContainerCmdlet.cs"
+      ],
+      "description": "RestartPveVmCmdlet has ConfirmImpact.High but the container counterpart does not. Inconsistent.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "CQ9",
+          "status": "new"
+        }
+      ],
+      "decisions_ref": "D007"
+    },
+    {
+      "id": "F063",
+      "title": "SuspendPveContainerCmdlet missing ConfirmImpact.High",
+      "category": "code_quality",
+      "severity": "medium",
+      "status": "open",
+      "first_detected": "2026-03-22",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Containers/SuspendPveContainerCmdlet.cs"
+      ],
+      "description": "SuspendPveVmCmdlet has ConfirmImpact.High but the container counterpart does not. Inconsistent.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "CQ10",
+          "status": "new"
+        }
+      ],
+      "decisions_ref": "D007"
+    },
+    {
+      "id": "F064",
+      "title": "System.Management.Automation pinned to 7.4.0",
+      "category": "code_quality",
+      "severity": "low",
+      "status": "open",
+      "first_detected": "2026-03-22",
+      "files": [
+        "src/PSProxmoxVE/PSProxmoxVE.csproj"
+      ],
+      "description": "Consider updating when migrating to .NET 10 target framework.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "CQ12/L2",
+          "status": "new"
+        }
+      ],
+      "decisions_ref": "D010"
+    },
+    {
+      "id": "F065",
+      "title": "No config.yml for issue templates",
+      "category": "community",
+      "severity": "low",
+      "status": "open",
+      "first_detected": "2026-03-22",
+      "files": [
+        ".github/ISSUE_TEMPLATE/"
+      ],
+      "description": "No .github/ISSUE_TEMPLATE/config.yml to control blank issue creation.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "L3",
+          "status": "new"
+        }
+      ]
+    },
+    {
+      "id": "F066",
+      "title": "No CODEOWNERS file",
+      "category": "community",
+      "severity": "low",
+      "status": "open",
+      "first_detected": "2026-03-22",
+      "files": [
+        "CODEOWNERS"
+      ],
+      "description": "Documents ownership for PR auto-assignment. Low priority for single-maintainer project.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "L4",
+          "status": "new"
+        }
+      ]
+    },
+    {
+      "id": "F067",
+      "title": "Disk management 0% coverage",
+      "category": "api_coverage",
+      "severity": "low",
+      "status": "open",
+      "first_detected": "2026-03-22",
+      "files": [],
+      "description": "18 endpoints for LVM, ZFS, SMART, wipe operations. Needed for storage provisioning.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "L5",
+          "status": "new"
+        }
+      ]
+    },
+    {
+      "id": "F068",
+      "title": "Notifications subsystem 0% coverage",
+      "category": "api_coverage",
+      "severity": "low",
+      "status": "open",
+      "first_detected": "2026-03-22",
+      "files": [],
+      "description": "32 cluster notification endpoints. New in PVE 8.1+, essential for monitoring/alerting automation.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "L6",
+          "status": "new"
+        }
+      ]
+    },
+    {
+      "id": "F069",
+      "title": "ACME/Certificates 0% coverage",
+      "category": "api_coverage",
+      "severity": "low",
+      "status": "open",
+      "first_detected": "2026-03-22",
+      "files": [],
+      "description": "23 combined endpoints for TLS certificate management and ACME.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "L7",
+          "status": "new"
+        }
+      ]
+    },
+    {
+      "id": "F070",
+      "title": "Verify netstandard2.0 loads on Windows PowerShell 5.1",
+      "category": "psgallery",
+      "severity": "low",
+      "status": "open",
+      "first_detected": "2026-03-22",
+      "files": [
+        ".github/workflows/publish.yml"
+      ],
+      "description": "Publish workflow builds only netstandard2.0 but manifest declares Desktop compatible with DotNetFrameworkVersion 4.8. Should add PS 5.1 smoke test.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "L8",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "L8",
+          "status": "open"
+        }
+      ]
+    },
+    {
+      "id": "F071",
+      "title": "Missing Uri.EscapeDataString in cmdlet URL constructions",
+      "category": "security",
+      "severity": "medium",
+      "status": "open",
+      "first_detected": "2026-03-22",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Containers/RestorePveContainerSnapshotCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Containers/NewPveContainerSnapshotCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Containers/RemovePveContainerSnapshotCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Snapshots/NewPveSnapshotCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Snapshots/RestorePveSnapshotCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Snapshots/RemovePveSnapshotCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Storage/SendPveFileCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Storage/InvokePveStorageDownloadCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/CloudInit/GetPveCloudInitConfigCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Network/GetPveNetworkCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Network/SetPveNetworkCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Network/InvokePveNetworkApplyCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Network/NewPveNetworkCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Network/RemovePveNetworkCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/PveCmdletBase.cs"
+      ],
+      "description": "~15 cmdlets that bypass services and construct API URLs inline do not use Uri.EscapeDataString() on Node, Name, Storage, Iface path segments. Violates D003. Service layer is consistent but these cmdlets are not.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "CQ-NEW1",
+          "status": "new"
+        }
+      ],
+      "decisions_ref": "D003"
+    },
+    {
+      "id": "F072",
+      "title": "Unnecessary System.Text.Json dependency in Core.csproj",
+      "category": "code_quality",
+      "severity": "low",
+      "status": "open",
+      "first_detected": "2026-03-22",
+      "files": [
+        "src/PSProxmoxVE.Core/PSProxmoxVE.Core.csproj"
+      ],
+      "description": "System.Text.Json 8.0.5 referenced for netstandard2.0/net48 targets despite D008 Newtonsoft-only policy. No [JsonPropertyName] attributes or System.Text.Json namespaces in source. Dependency appears unused and adds to assembly surface area.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "CQ-NEW2",
+          "status": "new"
+        }
+      ],
+      "decisions_ref": "D008"
+    },
+    {
+      "id": "F073",
+      "title": "build.yml references net9.0 but test project targets net10.0",
+      "category": "code_quality",
+      "severity": "high",
+      "status": "open",
+      "first_detected": "2026-03-22",
+      "files": [
+        ".github/workflows/build.yml",
+        "tests/PSProxmoxVE.Core.Tests/PSProxmoxVE.Core.Tests.csproj"
+      ],
+      "description": "build.yml workflow builds and tests with --framework net9.0 but the test project now targets net10.0;net48. The workflow will fail because the test csproj no longer has a net9.0 target.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "PG-NEW1",
+          "status": "new"
+        }
+      ],
+      "decisions_ref": "D009"
+    },
+    {
+      "id": "F074",
+      "title": "Publish workflow smoke test threshold too low",
+      "category": "psgallery",
+      "severity": "medium",
+      "status": "open",
+      "first_detected": "2026-03-22",
+      "files": [
+        ".github/workflows/publish.yml"
+      ],
+      "description": "Publish workflow checks module has >= 60 commands but module exports ~169 cmdlets. Threshold should be ~150 to catch regressions that drop significant cmdlets.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "PG-NEW2",
+          "status": "new"
+        }
+      ]
+    },
+    {
+      "id": "F075",
+      "title": "~88 cmdlets lack markdown help documentation",
+      "category": "psgallery",
+      "severity": "medium",
+      "status": "open",
+      "first_detected": "2026-03-22",
+      "files": [
+        "docs/cmdlets/"
+      ],
+      "description": "Only 81 of ~169 exported cmdlets have markdown help docs in docs/cmdlets/. Newer cmdlets added since initial documentation pass are missing.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "PG-NEW3",
+          "status": "new"
+        }
+      ]
+    },
+    {
+      "id": "F076",
+      "title": "No dependabot or renovate for dependency updates",
+      "category": "community",
+      "severity": "low",
+      "status": "open",
+      "first_detected": "2026-03-22",
+      "files": [
+        ".github/"
+      ],
+      "description": "No .github/dependabot.yml or renovate.json for automated dependency update PRs. NuGet and GitHub Actions versions will drift without manual monitoring.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-22",
+          "local_id": "CM-NEW1",
+          "status": "new"
+        }
+      ]
+    }
+  ]
+}
