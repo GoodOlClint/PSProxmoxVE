@@ -86,7 +86,7 @@ namespace PSProxmoxVE.Core.Models.Vms
         private static string? ExtractOvfFromTar(string tarPath)
         {
             using var stream = File.OpenRead(tarPath);
-            using var reader = SharpCompress.Readers.ReaderFactory.Open(stream);
+            using var reader = SharpCompress.Readers.ReaderFactory.OpenReader(stream, new SharpCompress.Readers.ReaderOptions());
 
             while (reader.MoveToNextEntry())
             {
