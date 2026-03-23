@@ -1,13 +1,16 @@
 {
   "_schema_version": "1.0",
-  "_description": "PSProxmoxVE stable findings ledger. IDs are permanent (F001, F002...). Resolved findings are never deleted \u2014 they are marked resolved with evidence. If a finding reappears, it is marked regressed and retains its original ID.",
-  "last_updated": "2026-03-22T20:00:00Z",
-  "last_scan_date": "2026-03-22",
+  "_description": "PSProxmoxVE stable findings ledger. IDs are permanent (F001, F002...). Resolved findings are never deleted — they are marked resolved with evidence. If a finding reappears, it is marked regressed and retains its original ID.",
+  "last_updated": "2026-03-23",
+  "last_scan_date": "2026-03-23",
   "counters": {
-    "next_id": 77,
-    "total_open": 27,
-    "total_resolved": 49,
-    "total_regressed": 0
+    "next_id": 80,
+    "total_open": 21,
+    "total_resolved": 58,
+    "total_regressed": 0,
+    "open": 11,
+    "resolved": 67,
+    "wont_fix": 1
   },
   "findings": [
     {
@@ -626,6 +629,11 @@
           "scan_date": "2026-03-22",
           "local_id": "L1",
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
         }
       ]
     },
@@ -931,6 +939,11 @@
         {
           "scan_date": "2026-03-22",
           "local_id": "S1/S2",
+          "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
           "status": "open"
         }
       ]
@@ -1342,7 +1355,7 @@
       "title": "HttpClient per-call pattern bypasses connection pooling",
       "category": "code_quality",
       "severity": "medium",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-21",
       "files": [
         "src/PSProxmoxVE/Cmdlets/"
@@ -1358,8 +1371,24 @@
           "scan_date": "2026-03-22",
           "local_id": "CQ11/M1",
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "resolved"
         }
-      ]
+      ],
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "remediation-1",
+        "verified_by": "code_change",
+        "evidence": "IPveHttpClient interface extracted to Client/IPveHttpClient.cs. All 14 services now accept IPveHttpClient via constructor injection, enabling shared client instances. PveHttpClient implements IPveHttpClient."
+      }
     },
     {
       "id": "F046",
@@ -1382,21 +1411,26 @@
           "scan_date": "2026-03-22",
           "local_id": "M2",
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
         }
       ]
     },
     {
       "id": "F047",
-      "title": "net9.0 target framework is EOL",
+      "title": "Publishable projects multi-target beyond netstandard2.0",
       "category": "code_quality",
       "severity": "medium",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-21",
       "files": [
         "src/PSProxmoxVE/PSProxmoxVE.csproj",
         "src/PSProxmoxVE.Core/PSProxmoxVE.Core.csproj"
       ],
-      "description": ".NET 9.0 reached end of life in May 2025. Should upgrade to net10.0 (LTS).",
+      "description": "Both publishable projects (PSProxmoxVE.csproj, PSProxmoxVE.Core.csproj) target netstandard2.0;net10.0;net48 but D009 requires publishable projects to target only netstandard2.0. Multi-targeting inflates the published module and may ship framework-specific assemblies unnecessarily.",
       "scan_history": [
         {
           "scan_date": "2026-03-21",
@@ -1407,21 +1441,38 @@
           "scan_date": "2026-03-22",
           "local_id": "CQ6/H3",
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "resolved"
         }
       ],
-      "decisions_ref": "D010"
+      "decisions_ref": "D010",
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "remediation-1",
+        "verified_by": "code_change",
+        "evidence": "PSProxmoxVE.csproj and PSProxmoxVE.Core.csproj now target <TargetFramework>netstandard2.0</TargetFramework> only. All #if NET48/NETSTANDARD2_0 conditionals removed from PveHttpClient.cs. build.yml restructured. Test project retains net10.0+net48."
+      }
     },
     {
       "id": "F048",
       "title": "Sync-over-async via GetAwaiter().GetResult()",
       "category": "code_quality",
       "severity": "medium",
-      "status": "open",
+      "status": "wont_fix",
       "first_detected": "2026-03-21",
       "files": [
         "src/PSProxmoxVE.Core/"
       ],
       "description": "~216 call sites use .GetAwaiter().GetResult(). Standard for PS binary modules but carries theoretical deadlock risk. Accepted tradeoff for PS 5.1 compatibility.",
+      "notes": "Accepted tradeoff: PowerShell binary modules targeting netstandard2.0 for PS 5.1 Desktop compatibility have no async pipeline. .GetAwaiter().GetResult() is the standard pattern used by all major PS binary modules. No deadlock risk in practice because PveHttpClient uses ConfigureAwait(false).",
       "scan_history": [
         {
           "scan_date": "2026-03-21",
@@ -1432,6 +1483,16 @@
           "scan_date": "2026-03-22",
           "local_id": "CQ7",
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "wont_fix"
         }
       ]
     },
@@ -1574,6 +1635,11 @@
           "scan_date": "2026-03-22",
           "local_id": "H1",
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
         }
       ]
     },
@@ -1595,6 +1661,11 @@
         {
           "scan_date": "2026-03-22",
           "local_id": "H2",
+          "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
           "status": "open"
         }
       ]
@@ -1691,7 +1762,7 @@
       "title": "Infinite loop task-polling in container snapshot and storage cmdlets",
       "category": "code_quality",
       "severity": "critical",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-22",
       "files": [
         "src/PSProxmoxVE/Cmdlets/Containers/NewPveContainerSnapshotCmdlet.cs",
@@ -1711,9 +1782,20 @@
           "scan_date": "2026-03-22",
           "local_id": "C1",
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "fixed"
         }
       ],
-      "decisions_ref": "D001"
+      "decisions_ref": "D001",
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "scan-5",
+        "verified_by": "scan",
+        "evidence": "All 5 cmdlets now use TaskService.WaitForTask (NewPveContainerSnapshotCmdlet.cs:67, RemovePveContainerSnapshotCmdlet.cs:59, RestorePveContainerSnapshotCmdlet.cs:62, InvokePveStorageDownloadCmdlet.cs:74, SendPveFileCmdlet.cs:134). No while(true) task-polling loops remain in any of these files."
+      }
     },
     {
       "id": "F059",
@@ -1729,6 +1811,11 @@
           "scan_date": "2026-03-22",
           "local_id": "M3",
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
         }
       ]
     },
@@ -1746,6 +1833,11 @@
           "scan_date": "2026-03-22",
           "local_id": "M4",
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
         }
       ]
     },
@@ -1763,6 +1855,11 @@
           "scan_date": "2026-03-22",
           "local_id": "M5",
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
         }
       ]
     },
@@ -1771,7 +1868,7 @@
       "title": "RestartPveContainerCmdlet missing ConfirmImpact.High",
       "category": "code_quality",
       "severity": "medium",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-22",
       "files": [
         "src/PSProxmoxVE/Cmdlets/Containers/RestartPveContainerCmdlet.cs"
@@ -1782,16 +1879,27 @@
           "scan_date": "2026-03-22",
           "local_id": "CQ9",
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "fixed"
         }
       ],
-      "decisions_ref": "D007"
+      "decisions_ref": "D007",
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "scan-5",
+        "verified_by": "scan",
+        "evidence": "RestartPveContainerCmdlet.cs:15 now has ConfirmImpact = ConfirmImpact.High, matching RestartPveVmCmdlet."
+      }
     },
     {
       "id": "F063",
       "title": "SuspendPveContainerCmdlet missing ConfirmImpact.High",
       "category": "code_quality",
       "severity": "medium",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-22",
       "files": [
         "src/PSProxmoxVE/Cmdlets/Containers/SuspendPveContainerCmdlet.cs"
@@ -1802,16 +1910,27 @@
           "scan_date": "2026-03-22",
           "local_id": "CQ10",
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "fixed"
         }
       ],
-      "decisions_ref": "D007"
+      "decisions_ref": "D007",
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "scan-5",
+        "verified_by": "scan",
+        "evidence": "SuspendPveContainerCmdlet.cs:14 now has ConfirmImpact = ConfirmImpact.High, matching SuspendPveVmCmdlet."
+      }
     },
     {
       "id": "F064",
       "title": "System.Management.Automation pinned to 7.4.0",
       "category": "code_quality",
       "severity": "low",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-22",
       "files": [
         "src/PSProxmoxVE/PSProxmoxVE.csproj"
@@ -1822,16 +1941,32 @@
           "scan_date": "2026-03-22",
           "local_id": "CQ12/L2",
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "resolved"
         }
       ],
-      "decisions_ref": "D010"
+      "decisions_ref": "D010",
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "remediation-1",
+        "verified_by": "code_change",
+        "evidence": "net10.0 ItemGroup with System.Management.Automation 7.5.0 removed from PSProxmoxVE.csproj as part of F047 netstandard2.0-only migration. Publishable project now uses PowerShellStandard.Library 5.1.1 unconditionally."
+      }
     },
     {
       "id": "F065",
       "title": "No config.yml for issue templates",
       "category": "community",
       "severity": "low",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-22",
       "files": [
         ".github/ISSUE_TEMPLATE/"
@@ -1842,15 +1977,26 @@
           "scan_date": "2026-03-22",
           "local_id": "L3",
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "scan-5",
+        "verified_by": "scan",
+        "evidence": ".github/ISSUE_TEMPLATE/config.yml exists with blank_issues_enabled: false and contact_links to Discussions."
+      }
     },
     {
       "id": "F066",
       "title": "No CODEOWNERS file",
       "category": "community",
       "severity": "low",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-22",
       "files": [
         "CODEOWNERS"
@@ -1861,8 +2007,19 @@
           "scan_date": "2026-03-22",
           "local_id": "L4",
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "scan-5",
+        "verified_by": "scan",
+        "evidence": "CODEOWNERS file exists (15 bytes) in repo root."
+      }
     },
     {
       "id": "F067",
@@ -1878,6 +2035,11 @@
           "scan_date": "2026-03-22",
           "local_id": "L5",
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
         }
       ]
     },
@@ -1895,6 +2057,11 @@
           "scan_date": "2026-03-22",
           "local_id": "L6",
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
         }
       ]
     },
@@ -1912,6 +2079,11 @@
           "scan_date": "2026-03-22",
           "local_id": "L7",
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
         }
       ]
     },
@@ -1920,7 +2092,7 @@
       "title": "Verify netstandard2.0 loads on Windows PowerShell 5.1",
       "category": "psgallery",
       "severity": "low",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-22",
       "files": [
         ".github/workflows/publish.yml"
@@ -1936,49 +2108,68 @@
           "scan_date": "2026-03-22",
           "local_id": "L8",
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "resolved"
         }
-      ]
+      ],
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "remediation-1",
+        "verified_by": "code_change",
+        "evidence": "publish.yml now includes smoke-test-ps51 job on windows-latest that imports the netstandard2.0 module in Windows PowerShell 5.1 (shell: powershell) and verifies command count >= 150. Publish job depends on smoke test passing."
+      }
     },
     {
       "id": "F071",
       "title": "Missing Uri.EscapeDataString in cmdlet URL constructions",
       "category": "security",
       "severity": "medium",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-22",
       "files": [
-        "src/PSProxmoxVE/Cmdlets/Containers/RestorePveContainerSnapshotCmdlet.cs",
-        "src/PSProxmoxVE/Cmdlets/Containers/NewPveContainerSnapshotCmdlet.cs",
-        "src/PSProxmoxVE/Cmdlets/Containers/RemovePveContainerSnapshotCmdlet.cs",
-        "src/PSProxmoxVE/Cmdlets/Snapshots/NewPveSnapshotCmdlet.cs",
-        "src/PSProxmoxVE/Cmdlets/Snapshots/RestorePveSnapshotCmdlet.cs",
-        "src/PSProxmoxVE/Cmdlets/Snapshots/RemovePveSnapshotCmdlet.cs",
-        "src/PSProxmoxVE/Cmdlets/Storage/SendPveFileCmdlet.cs",
-        "src/PSProxmoxVE/Cmdlets/Storage/InvokePveStorageDownloadCmdlet.cs",
-        "src/PSProxmoxVE/Cmdlets/CloudInit/GetPveCloudInitConfigCmdlet.cs",
-        "src/PSProxmoxVE/Cmdlets/Network/GetPveNetworkCmdlet.cs",
-        "src/PSProxmoxVE/Cmdlets/Network/SetPveNetworkCmdlet.cs",
-        "src/PSProxmoxVE/Cmdlets/Network/InvokePveNetworkApplyCmdlet.cs",
-        "src/PSProxmoxVE/Cmdlets/Network/NewPveNetworkCmdlet.cs",
-        "src/PSProxmoxVE/Cmdlets/Network/RemovePveNetworkCmdlet.cs",
-        "src/PSProxmoxVE/Cmdlets/PveCmdletBase.cs"
+        "src/PSProxmoxVE/Cmdlets/Templates/GetPveTemplateCmdlet.cs"
       ],
-      "description": "~15 cmdlets that bypass services and construct API URLs inline do not use Uri.EscapeDataString() on Node, Name, Storage, Iface path segments. Violates D003. Service layer is consistent but these cmdlets are not.",
+      "description": "GetPveTemplateCmdlet.cs:52 uses nodes/{node}/qemu without Uri.EscapeDataString on the node variable. All other previously cited cmdlets (~14) have been fixed. 1 instance remains.",
       "scan_history": [
         {
           "scan_date": "2026-03-22",
           "local_id": "CQ-NEW1",
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "resolved"
         }
       ],
-      "decisions_ref": "D003"
+      "decisions_ref": "D003",
+      "notes": "Reduced from ~15 files to 1 in scan-5. All network, snapshot, container snapshot, storage, and CloudInit cmdlets now use EscapeDataString.",
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "remediation-1",
+        "verified_by": "code_change",
+        "evidence": "GetPveTemplateCmdlet.cs:53 now uses Uri.EscapeDataString(node) in the API path. Added using System; directive."
+      }
     },
     {
       "id": "F072",
       "title": "Unnecessary System.Text.Json dependency in Core.csproj",
       "category": "code_quality",
       "severity": "low",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-22",
       "files": [
         "src/PSProxmoxVE.Core/PSProxmoxVE.Core.csproj"
@@ -1989,16 +2180,27 @@
           "scan_date": "2026-03-22",
           "local_id": "CQ-NEW2",
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "fixed"
         }
       ],
-      "decisions_ref": "D008"
+      "decisions_ref": "D008",
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "scan-5",
+        "verified_by": "scan",
+        "evidence": "System.Text.Json no longer referenced in PSProxmoxVE.Core.csproj. grep -c System.Text.Json returns 0."
+      }
     },
     {
       "id": "F073",
       "title": "build.yml references net9.0 but test project targets net10.0",
       "category": "code_quality",
       "severity": "high",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-22",
       "files": [
         ".github/workflows/build.yml",
@@ -2010,16 +2212,27 @@
           "scan_date": "2026-03-22",
           "local_id": "PG-NEW1",
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "fixed"
         }
       ],
-      "decisions_ref": "D009"
+      "decisions_ref": "D009",
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "scan-5",
+        "verified_by": "scan",
+        "evidence": "build.yml now references --framework net10.0 at lines 51-53. No net9.0 references remain in build.yml."
+      }
     },
     {
       "id": "F074",
       "title": "Publish workflow smoke test threshold too low",
       "category": "psgallery",
       "severity": "medium",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-22",
       "files": [
         ".github/workflows/publish.yml"
@@ -2030,15 +2243,26 @@
           "scan_date": "2026-03-22",
           "local_id": "PG-NEW2",
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "scan-5",
+        "verified_by": "scan",
+        "evidence": "publish.yml:58 checks commands.Count -lt 150 (was 60). With 169 exported cmdlets, threshold of 150 catches regressions while allowing minor variance."
+      }
     },
     {
       "id": "F075",
       "title": "~88 cmdlets lack markdown help documentation",
       "category": "psgallery",
       "severity": "medium",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-22",
       "files": [
         "docs/cmdlets/"
@@ -2049,15 +2273,26 @@
           "scan_date": "2026-03-22",
           "local_id": "PG-NEW3",
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "scan-5",
+        "verified_by": "scan",
+        "evidence": "170 markdown help docs in docs/cmdlets/ for 169 exported cmdlets. All cmdlets now have documentation."
+      }
     },
     {
       "id": "F076",
       "title": "No dependabot or renovate for dependency updates",
       "category": "community",
       "severity": "low",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-22",
       "files": [
         ".github/"
@@ -2068,8 +2303,116 @@
           "scan_date": "2026-03-22",
           "local_id": "CM-NEW1",
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "resolved"
         }
-      ]
+      ],
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "remediation-1",
+        "verified_by": "code_change",
+        "evidence": ".github/dependabot.yml created with nuget (weekly) and github-actions (weekly) ecosystems targeting main branch."
+      }
+    },
+    {
+      "id": "F077",
+      "title": "GetPveTaskListCmdlet VmId parameter missing ValidateRange",
+      "category": "code_quality",
+      "severity": "low",
+      "status": "resolved",
+      "first_detected": "2026-03-23",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Tasks/GetPveTaskListCmdlet.cs"
+      ],
+      "description": "Optional VmId parameter (int?, line 29) lacks [ValidateRange(100, 999999999)] attribute. Per D010, all VmId parameters must have ValidateRange regardless of whether mandatory or optional.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "resolved"
+        }
+      ],
+      "decisions_ref": "D010",
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "remediation-1",
+        "verified_by": "code_change",
+        "evidence": "GetPveTaskListCmdlet.cs:29 now has [ValidateRange(100, 999999999)] on the VmId parameter, matching D010 convention."
+      }
+    },
+    {
+      "id": "F078",
+      "title": "No service-layer or PveHttpClient unit tests",
+      "category": "testing",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-03-23",
+      "files": [
+        "tests/PSProxmoxVE.Core.Tests/"
+      ],
+      "description": "Zero xUnit tests for any of the 14 service classes (VmService, ContainerService, StorageService, etc.) or PveHttpClient. Model deserialization tests exist but no tests for API call construction, error handling, or business logic in services.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "resolved"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "remediation-1",
+        "verified_by": "code_change",
+        "evidence": "196 new service unit tests across 10 test files in tests/PSProxmoxVE.Core.Tests/Services/. All 14 services now have IPveHttpClient constructor injection enabling Moq-based testing. Total test count: 382 (was 186)."
+      }
+    },
+    {
+      "id": "F079",
+      "title": "unit-tests.yml uses dotnet SDK 9.0.x, inconsistent with build.yml 10.0.x",
+      "category": "code_quality",
+      "severity": "low",
+      "status": "resolved",
+      "first_detected": "2026-03-23",
+      "files": [
+        ".github/workflows/unit-tests.yml"
+      ],
+      "description": "unit-tests.yml:31 installs dotnet-version 9.0.x while build.yml uses 10.0.x. The unit-tests workflow only builds netstandard2.0 and net48 so this works functionally, but the SDK versions should be consistent across workflows.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "resolved"
+        }
+      ],
+      "decisions_ref": "D009",
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "remediation-1",
+        "verified_by": "code_change",
+        "evidence": "unit-tests.yml line 31 changed from dotnet-version 9.0.x to 10.0.x, matching build.yml and the test project net10.0 TFM."
+      }
     }
   ]
 }

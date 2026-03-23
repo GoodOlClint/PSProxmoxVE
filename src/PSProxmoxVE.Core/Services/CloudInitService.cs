@@ -14,6 +14,8 @@ namespace PSProxmoxVE.Core.Services
     /// </summary>
     public class CloudInitService
     {
+        private readonly IPveHttpClient? _injectedClient;
+
         // Cloud-Init field names as used in the PVE API
         private static readonly string[] CloudInitFields =
         {
@@ -21,6 +23,20 @@ namespace PSProxmoxVE.Core.Services
             "ipconfig0", "ipconfig1", "ipconfig2", "ipconfig3",
             "nameserver", "searchdomain", "cicustom"
         };
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CloudInitService"/> class.
+        /// </summary>
+        public CloudInitService() { }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CloudInitService"/> class with an injected HTTP client.
+        /// </summary>
+        /// <param name="client">The HTTP client to use for API calls. The caller owns its lifetime.</param>
+        public CloudInitService(IPveHttpClient client)
+        {
+            _injectedClient = client ?? throw new ArgumentNullException(nameof(client));
+        }
 
         /// <summary>
         /// Retrieves the Cloud-Init specific configuration fields for a VM.
@@ -31,21 +47,28 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            using var client = new PveHttpClient(session);
-            var response = client.GetAsync($"nodes/{node}/qemu/{vmid}/config")
-                .GetAwaiter().GetResult();
-            var data = JObject.Parse(response)["data"];
-            if (data == null) return new PveCloudInitConfig();
-
-            // Extract only the Cloud-Init fields into a reduced JObject for deserialization
-            var ciObj = new JObject();
-            foreach (var field in CloudInitFields)
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
             {
-                if (data[field] != null)
-                    ciObj[field] = data[field];
-            }
+                var response = client.GetAsync($"nodes/{node}/qemu/{vmid}/config")
+                    .GetAwaiter().GetResult();
+                var data = JObject.Parse(response)["data"];
+                if (data == null) return new PveCloudInitConfig();
 
-            return ciObj.ToObject<PveCloudInitConfig>() ?? new PveCloudInitConfig();
+                // Extract only the Cloud-Init fields into a reduced JObject for deserialization
+                var ciObj = new JObject();
+                foreach (var field in CloudInitFields)
+                {
+                    if (data[field] != null)
+                        ciObj[field] = data[field];
+                }
+
+                return ciObj.ToObject<PveCloudInitConfig>() ?? new PveCloudInitConfig();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>
@@ -66,12 +89,19 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
             if (config == null) throw new ArgumentNullException(nameof(config));
 
-            using var client = new PveHttpClient(session);
-            var formData = config.ToDictionary(
-                kvp => kvp.Key,
-                kvp => kvp.Value?.ToString() ?? string.Empty);
-            client.PutAsync($"nodes/{node}/qemu/{vmid}/config", formData)
-                .GetAwaiter().GetResult();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                var formData = config.ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value?.ToString() ?? string.Empty);
+                client.PutAsync($"nodes/{node}/qemu/{vmid}/config", formData)
+                    .GetAwaiter().GetResult();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>
@@ -87,13 +117,19 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            using var client = new PveHttpClient(session);
-
-            // Request a Cloud-Init dump (user-data section) — this causes PVE to rebuild the image
-            var dumpResponse = client.GetAsync($"nodes/{node}/qemu/{vmid}/cloudinit/dump?type=user")
-                .GetAwaiter().GetResult();
-            var data = JObject.Parse(dumpResponse)["data"];
-            return data?.ToString() ?? string.Empty;
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                // Request a Cloud-Init dump (user-data section) — this causes PVE to rebuild the image
+                var dumpResponse = client.GetAsync($"nodes/{node}/qemu/{vmid}/cloudinit/dump?type=user")
+                    .GetAwaiter().GetResult();
+                var data = JObject.Parse(dumpResponse)["data"];
+                return data?.ToString() ?? string.Empty;
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
     }
 }

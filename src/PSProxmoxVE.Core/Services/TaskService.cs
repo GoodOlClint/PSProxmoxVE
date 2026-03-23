@@ -14,9 +14,21 @@ namespace PSProxmoxVE.Core.Services
     /// </summary>
     public class TaskService
     {
+        private readonly IPveHttpClient? _injectedClient;
+
         private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(10);
         private static readonly TimeSpan DefaultPollInterval = TimeSpan.FromSeconds(2);
         private static readonly TimeSpan MinPollInterval = TimeSpan.FromSeconds(1);
+
+        /// <summary>Initializes a new instance that creates its own HTTP clients.</summary>
+        public TaskService() { }
+
+        /// <summary>Initializes a new instance that uses the supplied HTTP client for all requests.</summary>
+        /// <param name="client">The HTTP client to use. The caller owns its lifetime.</param>
+        public TaskService(IPveHttpClient client)
+        {
+            _injectedClient = client ?? throw new ArgumentNullException(nameof(client));
+        }
 
         /// <summary>
         /// Returns the current status of a task identified by its UPID.
@@ -27,14 +39,21 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
             if (string.IsNullOrWhiteSpace(upid)) throw new ArgumentNullException(nameof(upid));
 
-            using var client = new PveHttpClient(session);
-            var encodedUpid = Uri.EscapeDataString(upid);
-            var response = client.GetAsync($"nodes/{node}/tasks/{encodedUpid}/status")
-                .GetAwaiter().GetResult();
-            var data = JObject.Parse(response)["data"];
-            var task = data?.ToObject<PveTask>() ?? new PveTask { Upid = upid };
-            task.Node = node;
-            return task;
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                var encodedUpid = Uri.EscapeDataString(upid);
+                var response = client.GetAsync($"nodes/{node}/tasks/{encodedUpid}/status")
+                    .GetAwaiter().GetResult();
+                var data = JObject.Parse(response)["data"];
+                var task = data?.ToObject<PveTask>() ?? new PveTask { Upid = upid };
+                task.Node = node;
+                return task;
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>
@@ -46,12 +65,19 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
             if (string.IsNullOrWhiteSpace(upid)) throw new ArgumentNullException(nameof(upid));
 
-            using var client = new PveHttpClient(session);
-            var encodedUpid = Uri.EscapeDataString(upid);
-            var response = client.GetAsync($"nodes/{node}/tasks/{encodedUpid}/log")
-                .GetAwaiter().GetResult();
-            var data = JObject.Parse(response)["data"];
-            return data?.ToObject<PveTaskLog[]>() ?? Array.Empty<PveTaskLog>();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                var encodedUpid = Uri.EscapeDataString(upid);
+                var response = client.GetAsync($"nodes/{node}/tasks/{encodedUpid}/log")
+                    .GetAwaiter().GetResult();
+                var data = JObject.Parse(response)["data"];
+                return data?.ToObject<PveTaskLog[]>() ?? Array.Empty<PveTaskLog>();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>
@@ -119,23 +145,30 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            using var client = new PveHttpClient(session);
-            var queryParts = new List<string> { $"limit={limit}" };
-            if (vmid.HasValue)
-                queryParts.Add($"vmid={vmid.Value}");
-            if (!string.IsNullOrEmpty(source))
-                queryParts.Add($"source={Uri.EscapeDataString(source!)}");
-            if (!string.IsNullOrEmpty(typeFilter))
-                queryParts.Add($"typefilter={Uri.EscapeDataString(typeFilter!)}");
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                var queryParts = new List<string> { $"limit={limit}" };
+                if (vmid.HasValue)
+                    queryParts.Add($"vmid={vmid.Value}");
+                if (!string.IsNullOrEmpty(source))
+                    queryParts.Add($"source={Uri.EscapeDataString(source!)}");
+                if (!string.IsNullOrEmpty(typeFilter))
+                    queryParts.Add($"typefilter={Uri.EscapeDataString(typeFilter!)}");
 
-            var query = string.Join("&", queryParts);
-            var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/tasks?{query}")
-                .GetAwaiter().GetResult();
-            var data = JObject.Parse(response)["data"];
-            var tasks = data?.ToObject<PveTask[]>() ?? Array.Empty<PveTask>();
-            foreach (var t in tasks)
-                t.Node ??= node;
-            return tasks;
+                var query = string.Join("&", queryParts);
+                var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/tasks?{query}")
+                    .GetAwaiter().GetResult();
+                var data = JObject.Parse(response)["data"];
+                var tasks = data?.ToObject<PveTask[]>() ?? Array.Empty<PveTask>();
+                foreach (var t in tasks)
+                    t.Node ??= node;
+                return tasks;
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>
@@ -150,10 +183,17 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
             if (string.IsNullOrWhiteSpace(upid)) throw new ArgumentNullException(nameof(upid));
 
-            using var client = new PveHttpClient(session);
-            var encodedUpid = Uri.EscapeDataString(upid);
-            client.DeleteAsync($"nodes/{Uri.EscapeDataString(node)}/tasks/{encodedUpid}")
-                .GetAwaiter().GetResult();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                var encodedUpid = Uri.EscapeDataString(upid);
+                client.DeleteAsync($"nodes/{Uri.EscapeDataString(node)}/tasks/{encodedUpid}")
+                    .GetAwaiter().GetResult();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
     }
 }

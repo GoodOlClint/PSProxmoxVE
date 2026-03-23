@@ -26,6 +26,7 @@ namespace PSProxmoxVE.Cmdlets.Tasks
         /// <para type="description">Filter tasks by VM ID.</para>
         /// </summary>
         [Parameter(Mandatory = false, HelpMessage = "Filter tasks by VM ID.")]
+        [ValidateRange(100, 999999999)]
         public int? VmId { get; set; }
 
         /// <summary>

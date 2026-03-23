@@ -13,7 +13,22 @@ namespace PSProxmoxVE.Core.Services
     /// </summary>
     public class TemplateService
     {
+        private readonly IPveHttpClient? _injectedClient;
         private readonly VmService _vmService = new VmService();
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TemplateService"/> class.
+        /// </summary>
+        public TemplateService() { }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TemplateService"/> class with an injected HTTP client.
+        /// </summary>
+        /// <param name="client">The HTTP client to use for API calls. The caller owns its lifetime.</param>
+        public TemplateService(IPveHttpClient client)
+        {
+            _injectedClient = client ?? throw new ArgumentNullException(nameof(client));
+        }
 
         /// <summary>
         /// Returns all VM templates. If <paramref name="node"/> is null, searches all cluster nodes.
@@ -43,10 +58,17 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            using var client = new PveHttpClient(session);
-            var response = client.PostAsync($"nodes/{node}/qemu/{vmid}/template")
-                .GetAwaiter().GetResult();
-            return ParseTask(response, node);
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                var response = client.PostAsync($"nodes/{node}/qemu/{vmid}/template")
+                    .GetAwaiter().GetResult();
+                return ParseTask(response, node);
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>

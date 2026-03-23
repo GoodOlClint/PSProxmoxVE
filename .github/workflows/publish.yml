@@ -9,9 +9,9 @@ permissions:
   contents: write
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v5
@@ -21,15 +21,60 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Extract version from tag
-        id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-
       - name: Build module
-        run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework netstandard2.0 --output ./publish/netstandard2.0
+        run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --output ./publish/netstandard2.0
 
       - name: Clean publish output
         run: rm -f ./publish/netstandard2.0/*.deps.json ./publish/netstandard2.0/*.runtimeconfig.json
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: module-netstandard2.0
+          path: ./publish/netstandard2.0/
+
+  smoke-test-ps51:
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Download module artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: module-netstandard2.0
+          path: ./publish/netstandard2.0/
+
+      - name: Import module on Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $modulePath = "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\PSProxmoxVE"
+          New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
+          Copy-Item -Path .\publish\netstandard2.0\* -Destination $modulePath -Recurse -Force
+          Import-Module PSProxmoxVE -Force -ErrorAction Stop
+          $commands = Get-Command -Module PSProxmoxVE
+          Write-Host "PS 5.1 smoke test: module loaded with $($commands.Count) commands"
+          if ($commands.Count -lt 150) {
+            throw "Expected at least 150 commands, got $($commands.Count)"
+          }
+
+  publish:
+    needs: [build, smoke-test-ps51]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download module artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: module-netstandard2.0
+          path: ./publish/netstandard2.0/
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Update module version in manifest
         shell: pwsh
@@ -42,11 +87,7 @@ jobs:
           $content = $content -replace "ModuleVersion\s*=\s*'[^']*'", "ModuleVersion     = '$moduleVersion'"
           Set-Content $manifestPath $content
 
-      - name: Install PowerShell and Pester
-        shell: pwsh
-        run: Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser
-
-      - name: Test module loads
+      - name: Test module loads on PS 7.x
         shell: pwsh
         run: |
           $modulePath = "$HOME/.local/share/powershell/Modules/PSProxmoxVE"

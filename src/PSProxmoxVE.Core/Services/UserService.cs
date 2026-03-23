@@ -13,6 +13,24 @@ namespace PSProxmoxVE.Core.Services
     /// </summary>
     public class UserService
     {
+        private readonly IPveHttpClient? _injectedClient;
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="UserService"/> with no injected client.
+        /// Each method will create and dispose its own <see cref="PveHttpClient"/>.
+        /// </summary>
+        public UserService() { }
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="UserService"/> with an injected HTTP client.
+        /// The caller owns the client's lifetime; this service will not dispose it.
+        /// </summary>
+        /// <param name="client">The HTTP client to use for all requests.</param>
+        public UserService(IPveHttpClient client)
+        {
+            _injectedClient = client ?? throw new ArgumentNullException(nameof(client));
+        }
+
         // -------------------------------------------------------------------------
         // Users
         // -------------------------------------------------------------------------
@@ -23,10 +41,17 @@ namespace PSProxmoxVE.Core.Services
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
 
-            using var client = new PveHttpClient(session);
-            var response = client.GetAsync("access/users").GetAwaiter().GetResult();
-            var data = JObject.Parse(response)["data"];
-            return data?.ToObject<PveUser[]>() ?? Array.Empty<PveUser>();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                var response = client.GetAsync("access/users").GetAwaiter().GetResult();
+                var data = JObject.Parse(response)["data"];
+                return data?.ToObject<PveUser[]>() ?? Array.Empty<PveUser>();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>Returns a single user by their user ID (e.g. "admin@pam").</summary>
@@ -37,15 +62,22 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentNullException(nameof(userId));
 
-            using var client = new PveHttpClient(session);
-            var encodedId = Uri.EscapeDataString(userId);
-            var response = client.GetAsync($"access/users/{encodedId}").GetAwaiter().GetResult();
-            var data = JObject.Parse(response)["data"];
-            var user = data?.ToObject<PveUser>() ?? new PveUser();
-            // The single-user endpoint may not echo back the userid
-            if (string.IsNullOrEmpty(user.UserId))
-                user.UserId = userId;
-            return user;
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                var encodedId = Uri.EscapeDataString(userId);
+                var response = client.GetAsync($"access/users/{encodedId}").GetAwaiter().GetResult();
+                var data = JObject.Parse(response)["data"];
+                var user = data?.ToObject<PveUser>() ?? new PveUser();
+                // The single-user endpoint may not echo back the userid
+                if (string.IsNullOrEmpty(user.UserId))
+                    user.UserId = userId;
+                return user;
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>
@@ -69,8 +101,15 @@ namespace PSProxmoxVE.Core.Services
                     formData[kvp.Key] = kvp.Value?.ToString() ?? string.Empty;
             }
 
-            using var client = new PveHttpClient(session);
-            client.PostAsync("access/users", formData).GetAwaiter().GetResult();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                client.PostAsync("access/users", formData).GetAwaiter().GetResult();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>Removes a user account.</summary>
@@ -81,9 +120,16 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentNullException(nameof(userId));
 
-            using var client = new PveHttpClient(session);
-            var encodedId = Uri.EscapeDataString(userId);
-            client.DeleteAsync($"access/users/{encodedId}").GetAwaiter().GetResult();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                var encodedId = Uri.EscapeDataString(userId);
+                client.DeleteAsync($"access/users/{encodedId}").GetAwaiter().GetResult();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>Updates one or more properties of an existing user.</summary>
@@ -99,12 +145,19 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentNullException(nameof(userId));
             if (config == null) throw new ArgumentNullException(nameof(config));
 
-            using var client = new PveHttpClient(session);
-            var encodedId = Uri.EscapeDataString(userId);
-            var formData = config.ToDictionary(
-                kvp => kvp.Key,
-                kvp => kvp.Value?.ToString() ?? string.Empty);
-            client.PutAsync($"access/users/{encodedId}", formData).GetAwaiter().GetResult();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                var encodedId = Uri.EscapeDataString(userId);
+                var formData = config.ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value?.ToString() ?? string.Empty);
+                client.PutAsync($"access/users/{encodedId}", formData).GetAwaiter().GetResult();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         // -------------------------------------------------------------------------
@@ -119,14 +172,21 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentNullException(nameof(userId));
 
-            using var client = new PveHttpClient(session);
-            var encodedId = Uri.EscapeDataString(userId);
-            var response = client.GetAsync($"access/users/{encodedId}/token").GetAwaiter().GetResult();
-            var data = JObject.Parse(response)["data"];
-            var tokens = data?.ToObject<PveApiToken[]>() ?? Array.Empty<PveApiToken>();
-            foreach (var t in tokens)
-                t.UserId = userId;
-            return tokens;
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                var encodedId = Uri.EscapeDataString(userId);
+                var response = client.GetAsync($"access/users/{encodedId}/token").GetAwaiter().GetResult();
+                var data = JObject.Parse(response)["data"];
+                var tokens = data?.ToObject<PveApiToken[]>() ?? Array.Empty<PveApiToken>();
+                foreach (var t in tokens)
+                    t.UserId = userId;
+                return tokens;
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>
@@ -158,18 +218,25 @@ namespace PSProxmoxVE.Core.Services
             if (expire.HasValue)                   formData["expire"]   = expire.Value.ToString();
             if (privilegeSeparation.HasValue)      formData["privsep"]  = privilegeSeparation.Value ? "1" : "0";
 
-            using var client = new PveHttpClient(session);
-            var encodedUser  = Uri.EscapeDataString(userId);
-            var encodedToken = Uri.EscapeDataString(tokenId);
-            var response = client.PostAsync(
-                $"access/users/{encodedUser}/token/{encodedToken}", formData)
-                .GetAwaiter().GetResult();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                var encodedUser  = Uri.EscapeDataString(userId);
+                var encodedToken = Uri.EscapeDataString(tokenId);
+                var response = client.PostAsync(
+                    $"access/users/{encodedUser}/token/{encodedToken}", formData)
+                    .GetAwaiter().GetResult();
 
-            var data = JObject.Parse(response)["data"];
-            var token = data?.ToObject<PveApiToken>() ?? new PveApiToken();
-            token.UserId  = userId;
-            token.TokenId = tokenId;
-            return token;
+                var data = JObject.Parse(response)["data"];
+                var token = data?.ToObject<PveApiToken>() ?? new PveApiToken();
+                token.UserId  = userId;
+                token.TokenId = tokenId;
+                return token;
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>Removes an API token.</summary>
@@ -182,11 +249,18 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(userId))  throw new ArgumentNullException(nameof(userId));
             if (string.IsNullOrWhiteSpace(tokenId)) throw new ArgumentNullException(nameof(tokenId));
 
-            using var client = new PveHttpClient(session);
-            var encodedUser  = Uri.EscapeDataString(userId);
-            var encodedToken = Uri.EscapeDataString(tokenId);
-            client.DeleteAsync($"access/users/{encodedUser}/token/{encodedToken}")
-                .GetAwaiter().GetResult();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                var encodedUser  = Uri.EscapeDataString(userId);
+                var encodedToken = Uri.EscapeDataString(tokenId);
+                client.DeleteAsync($"access/users/{encodedUser}/token/{encodedToken}")
+                    .GetAwaiter().GetResult();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>
@@ -199,11 +273,18 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(tokenId)) throw new ArgumentNullException(nameof(tokenId));
             if (config == null) throw new ArgumentNullException(nameof(config));
 
-            using var client = new PveHttpClient(session);
-            var encodedUser = Uri.EscapeDataString(userId);
-            var encodedToken = Uri.EscapeDataString(tokenId);
-            client.PutAsync($"access/users/{encodedUser}/token/{encodedToken}", config)
-                .GetAwaiter().GetResult();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                var encodedUser = Uri.EscapeDataString(userId);
+                var encodedToken = Uri.EscapeDataString(tokenId);
+                client.PutAsync($"access/users/{encodedUser}/token/{encodedToken}", config)
+                    .GetAwaiter().GetResult();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         // -------------------------------------------------------------------------
@@ -216,10 +297,17 @@ namespace PSProxmoxVE.Core.Services
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
 
-            using var client = new PveHttpClient(session);
-            var response = client.GetAsync("access/roles").GetAwaiter().GetResult();
-            var data = JObject.Parse(response)["data"];
-            return data?.ToObject<PveRole[]>() ?? Array.Empty<PveRole>();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                var response = client.GetAsync("access/roles").GetAwaiter().GetResult();
+                var data = JObject.Parse(response)["data"];
+                return data?.ToObject<PveRole[]>() ?? Array.Empty<PveRole>();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>Creates a new role.</summary>
@@ -235,8 +323,15 @@ namespace PSProxmoxVE.Core.Services
             if (!string.IsNullOrEmpty(privileges))
                 formData["privs"] = privileges!;
 
-            using var client = new PveHttpClient(session);
-            client.PostAsync("access/roles", formData).GetAwaiter().GetResult();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                client.PostAsync("access/roles", formData).GetAwaiter().GetResult();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>Removes a role.</summary>
@@ -247,9 +342,16 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(roleId)) throw new ArgumentNullException(nameof(roleId));
 
-            using var client = new PveHttpClient(session);
-            client.DeleteAsync($"access/roles/{Uri.EscapeDataString(roleId)}")
-                .GetAwaiter().GetResult();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                client.DeleteAsync($"access/roles/{Uri.EscapeDataString(roleId)}")
+                    .GetAwaiter().GetResult();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>
@@ -265,9 +367,16 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(privileges)) throw new ArgumentNullException(nameof(privileges));
 
             var formData = new Dictionary<string, string> { ["privs"] = privileges };
-            using var client = new PveHttpClient(session);
-            client.PutAsync($"access/roles/{Uri.EscapeDataString(roleId)}", formData)
-                .GetAwaiter().GetResult();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                client.PutAsync($"access/roles/{Uri.EscapeDataString(roleId)}", formData)
+                    .GetAwaiter().GetResult();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         // -------------------------------------------------------------------------
@@ -280,10 +389,17 @@ namespace PSProxmoxVE.Core.Services
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
 
-            using var client = new PveHttpClient(session);
-            var response = client.GetAsync("access/groups").GetAwaiter().GetResult();
-            var data = JObject.Parse(response)["data"];
-            return data?.ToObject<PveGroup[]>() ?? Array.Empty<PveGroup>();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                var response = client.GetAsync("access/groups").GetAwaiter().GetResult();
+                var data = JObject.Parse(response)["data"];
+                return data?.ToObject<PveGroup[]>() ?? Array.Empty<PveGroup>();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>Creates a new group.</summary>
@@ -299,8 +415,15 @@ namespace PSProxmoxVE.Core.Services
             if (!string.IsNullOrEmpty(comment))
                 formData["comment"] = comment!;
 
-            using var client = new PveHttpClient(session);
-            client.PostAsync("access/groups", formData).GetAwaiter().GetResult();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                client.PostAsync("access/groups", formData).GetAwaiter().GetResult();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>Updates a group's properties.</summary>
@@ -313,9 +436,16 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(groupId)) throw new ArgumentNullException(nameof(groupId));
             if (config == null) throw new ArgumentNullException(nameof(config));
 
-            using var client = new PveHttpClient(session);
-            client.PutAsync($"access/groups/{Uri.EscapeDataString(groupId)}", config)
-                .GetAwaiter().GetResult();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                client.PutAsync($"access/groups/{Uri.EscapeDataString(groupId)}", config)
+                    .GetAwaiter().GetResult();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>Removes a group.</summary>
@@ -326,9 +456,16 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(groupId)) throw new ArgumentNullException(nameof(groupId));
 
-            using var client = new PveHttpClient(session);
-            client.DeleteAsync($"access/groups/{Uri.EscapeDataString(groupId)}")
-                .GetAwaiter().GetResult();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                client.DeleteAsync($"access/groups/{Uri.EscapeDataString(groupId)}")
+                    .GetAwaiter().GetResult();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         // -------------------------------------------------------------------------
@@ -341,10 +478,17 @@ namespace PSProxmoxVE.Core.Services
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
 
-            using var client = new PveHttpClient(session);
-            var response = client.GetAsync("access/domains").GetAwaiter().GetResult();
-            var data = JObject.Parse(response)["data"];
-            return data?.ToObject<PveDomain[]>() ?? Array.Empty<PveDomain>();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                var response = client.GetAsync("access/domains").GetAwaiter().GetResult();
+                var data = JObject.Parse(response)["data"];
+                return data?.ToObject<PveDomain[]>() ?? Array.Empty<PveDomain>();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>Creates a new authentication domain/realm.</summary>
@@ -355,8 +499,15 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (config == null) throw new ArgumentNullException(nameof(config));
 
-            using var client = new PveHttpClient(session);
-            client.PostAsync("access/domains", config).GetAwaiter().GetResult();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                client.PostAsync("access/domains", config).GetAwaiter().GetResult();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>Updates an authentication domain/realm.</summary>
@@ -369,9 +520,16 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(realm)) throw new ArgumentNullException(nameof(realm));
             if (config == null) throw new ArgumentNullException(nameof(config));
 
-            using var client = new PveHttpClient(session);
-            client.PutAsync($"access/domains/{Uri.EscapeDataString(realm)}", config)
-                .GetAwaiter().GetResult();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                client.PutAsync($"access/domains/{Uri.EscapeDataString(realm)}", config)
+                    .GetAwaiter().GetResult();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>Removes an authentication domain/realm.</summary>
@@ -382,9 +540,16 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(realm)) throw new ArgumentNullException(nameof(realm));
 
-            using var client = new PveHttpClient(session);
-            client.DeleteAsync($"access/domains/{Uri.EscapeDataString(realm)}")
-                .GetAwaiter().GetResult();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                client.DeleteAsync($"access/domains/{Uri.EscapeDataString(realm)}")
+                    .GetAwaiter().GetResult();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         // -------------------------------------------------------------------------
@@ -407,8 +572,15 @@ namespace PSProxmoxVE.Core.Services
                 ["password"] = password
             };
 
-            using var client = new PveHttpClient(session);
-            client.PutAsync("access/password", formData).GetAwaiter().GetResult();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                client.PutAsync("access/password", formData).GetAwaiter().GetResult();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         // -------------------------------------------------------------------------
@@ -437,22 +609,29 @@ namespace PSProxmoxVE.Core.Services
             if (queryParts.Count > 0)
                 resource += "?" + string.Join("&", queryParts);
 
-            using var client = new PveHttpClient(session);
-            var response = client.GetAsync(resource).GetAwaiter().GetResult();
-            var data = JObject.Parse(response)["data"];
-            // /access/permissions returns an object keyed by path, not an array
-            if (data == null) return Array.Empty<PvePermission>();
-            if (data.Type == JTokenType.Array)
-                return data.ToObject<PvePermission[]>() ?? Array.Empty<PvePermission>();
-
-            // Unwrap path-keyed object into flat list
-            var result = new List<PvePermission>();
-            foreach (var prop in ((JObject)data).Properties())
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
             {
-                var perm = new PvePermission { Path = prop.Name };
-                result.Add(perm);
+                var response = client.GetAsync(resource).GetAwaiter().GetResult();
+                var data = JObject.Parse(response)["data"];
+                // /access/permissions returns an object keyed by path, not an array
+                if (data == null) return Array.Empty<PvePermission>();
+                if (data.Type == JTokenType.Array)
+                    return data.ToObject<PvePermission[]>() ?? Array.Empty<PvePermission>();
+
+                // Unwrap path-keyed object into flat list
+                var result = new List<PvePermission>();
+                foreach (var prop in ((JObject)data).Properties())
+                {
+                    var perm = new PvePermission { Path = prop.Name };
+                    result.Add(perm);
+                }
+                return result.ToArray();
             }
-            return result.ToArray();
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
 
         /// <summary>
@@ -488,8 +667,15 @@ namespace PSProxmoxVE.Core.Services
             if (!string.IsNullOrEmpty(users)) formData["users"] = users!;
             if (!string.IsNullOrEmpty(groups)) formData["groups"] = groups!;
 
-            using var client = new PveHttpClient(session);
-            client.PutAsync("access/acl", formData).GetAwaiter().GetResult();
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                client.PutAsync("access/acl", formData).GetAwaiter().GetResult();
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
         }
     }
 }

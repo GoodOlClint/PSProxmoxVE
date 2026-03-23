@@ -11,10 +11,8 @@ using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Exceptions;
 
-#if NET48 || NETSTANDARD2_0
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
-#endif
 
 namespace PSProxmoxVE.Core.Client
 {
@@ -22,7 +20,7 @@ namespace PSProxmoxVE.Core.Client
     /// Low-level HTTP client for communicating with the Proxmox VE API.
     /// Handles authentication headers, error parsing, and the ISO upload workaround.
     /// </summary>
-    public class PveHttpClient : IDisposable
+    public class PveHttpClient : IPveHttpClient
     {
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type
         private readonly PveSession? _session;
@@ -44,7 +42,6 @@ namespace PSProxmoxVE.Core.Client
             _session = session ?? throw new ArgumentNullException(nameof(session));
             _baseUrl = session.BaseUrl;
 
-#if NET48 || NETSTANDARD2_0
             var handler = new HttpClientHandler();
             if (session.SkipCertificateCheck)
             {
@@ -52,21 +49,6 @@ namespace PSProxmoxVE.Core.Client
                     (HttpRequestMessage _, X509Certificate2 _, X509Chain _, SslPolicyErrors _) => true;
             }
             _httpClient = new HttpClient(handler);
-#else
-            if (session.SkipCertificateCheck)
-            {
-                var handler = new HttpClientHandler
-                {
-                    ServerCertificateCustomValidationCallback =
-                        (_, _, _, _) => true
-                };
-                _httpClient = new HttpClient(handler);
-            }
-            else
-            {
-                _httpClient = new HttpClient();
-            }
-#endif
 
             _httpClient.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json"));
@@ -84,7 +66,6 @@ namespace PSProxmoxVE.Core.Client
             _session = null;
             _baseUrl = $"https://{hostname}:{port}";
 
-#if NET48 || NETSTANDARD2_0
             var handler = new HttpClientHandler();
             if (skipCertificateCheck)
             {
@@ -92,21 +73,6 @@ namespace PSProxmoxVE.Core.Client
                     (HttpRequestMessage _, X509Certificate2 _, X509Chain _, SslPolicyErrors _) => true;
             }
             _httpClient = new HttpClient(handler);
-#else
-            if (skipCertificateCheck)
-            {
-                var handler = new HttpClientHandler
-                {
-                    ServerCertificateCustomValidationCallback =
-                        (_, _, _, _) => true
-                };
-                _httpClient = new HttpClient(handler);
-            }
-            else
-            {
-                _httpClient = new HttpClient();
-            }
-#endif
 
             _httpClient.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json"));
@@ -295,11 +261,7 @@ namespace PSProxmoxVE.Core.Client
             }
             finally
             {
-#if NET48 || NETSTANDARD2_0
                 fileStream.Dispose();
-#else
-                await fileStream.DisposeAsync().ConfigureAwait(false);
-#endif
             }
         }
 
@@ -397,12 +359,8 @@ namespace PSProxmoxVE.Core.Client
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
             var bytes = new byte[32];
-#if NET48 || NETSTANDARD2_0
             using (var rng = RandomNumberGenerator.Create())
                 rng.GetBytes(bytes);
-#else
-            RandomNumberGenerator.Fill(bytes);
-#endif
             var sb = new StringBuilder(32);
             for (int i = 0; i < 32; i++)
                 sb.Append(chars[bytes[i] % chars.Length]);

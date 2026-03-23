@@ -1,3 +1,4 @@
+using System;
 using System.Management.Automation;
 using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Client;
@@ -49,7 +50,7 @@ namespace PSProxmoxVE.Cmdlets.Templates
             {
                 if (string.IsNullOrEmpty(node)) continue;
 
-                var json = client.GetAsync($"nodes/{node}/qemu").GetAwaiter().GetResult();
+                var json = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/qemu").GetAwaiter().GetResult();
                 var root = JObject.Parse(json);
                 var data = root["data"] as JArray ?? new JArray();
 
