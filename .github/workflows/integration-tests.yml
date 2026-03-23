@@ -109,13 +109,9 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
       volumes:
         - /opt/pve-isos:/opt/pve-isos
-    outputs:
-      pve9_host: ${{ steps.wait_pve9.outputs.host }}
-      pve9_token: ${{ steps.wait_pve9.outputs.token }}
-      pve8_host: ${{ steps.wait_pve8.outputs.host }}
-      pve8_token: ${{ steps.wait_pve8.outputs.token }}
-      cloud_image_path: ${{ steps.cloud_images.outputs.cloud_image_path }}
-      ova_path: ${{ steps.cloud_images.outputs.ova_path }}
+    # Connection details are written to /opt/pve-isos/test-config.json
+    # instead of job outputs, because GitHub Actions redacts masked/secret
+    # values in outputs making them empty in downstream jobs.
 
     steps:
       - name: Mask test password
@@ -240,14 +236,12 @@ jobs:
           OUTPUT=$(bash ${SCRIPTS_DIR}/create-api-token.sh \
             "${{ secrets.PVE_ENDPOINT }}" "${PVE_API_TOKEN}" \
             99909 "${PVE_PASSWORD}" 900)
-          VM_IP=$(echo "$OUTPUT" | grep "^IP=" | cut -d= -f2)
-          VM_TOKEN=$(echo "$OUTPUT" | grep "^TOKEN=" | cut -d= -f2-)
-          echo "::add-mask::${VM_TOKEN}"
-          echo "host=${VM_IP}" >> "$GITHUB_OUTPUT"
-          echo "token=${VM_TOKEN}" >> "$GITHUB_OUTPUT"
+          PVE9_IP=$(echo "$OUTPUT" | grep "^IP=" | cut -d= -f2)
+          PVE9_TOKEN=$(echo "$OUTPUT" | grep "^TOKEN=" | cut -d= -f2-)
+          echo "PVE 9 ready at ${PVE9_IP}"
+          echo "{\"host\":\"${PVE9_IP}\",\"token\":\"${PVE9_TOKEN}\"}" > /tmp/pve9.json
 
       - name: Wait for PVE 8 and create API token
-        id: wait_pve8
         shell: bash
         env:
           PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
@@ -255,37 +249,41 @@ jobs:
           OUTPUT=$(bash ${SCRIPTS_DIR}/create-api-token.sh \
             "${{ secrets.PVE_ENDPOINT }}" "${PVE_API_TOKEN}" \
             99908 "${PVE_PASSWORD}" 900)
-          VM_IP=$(echo "$OUTPUT" | grep "^IP=" | cut -d= -f2)
-          VM_TOKEN=$(echo "$OUTPUT" | grep "^TOKEN=" | cut -d= -f2-)
-          echo "::add-mask::${VM_TOKEN}"
-          echo "host=${VM_IP}" >> "$GITHUB_OUTPUT"
-          echo "token=${VM_TOKEN}" >> "$GITHUB_OUTPUT"
+          PVE8_IP=$(echo "$OUTPUT" | grep "^IP=" | cut -d= -f2)
+          PVE8_TOKEN=$(echo "$OUTPUT" | grep "^TOKEN=" | cut -d= -f2-)
+          echo "PVE 8 ready at ${PVE8_IP}"
+          echo "{\"host\":\"${PVE8_IP}\",\"token\":\"${PVE8_TOKEN}\"}" > /tmp/pve8.json
 
       # ── Prepare test environments on both nested PVEs ────────────────
 
       - name: Prepare PVE 9 test environment
         shell: bash
         run: |
-          bash ${SCRIPTS_DIR}/prepare-test-environment.sh \
-            "${{ steps.wait_pve9.outputs.host }}" "${PVE_PASSWORD}"
+          PVE9_IP=$(jq -r .host /tmp/pve9.json)
+          bash ${SCRIPTS_DIR}/prepare-test-environment.sh "${PVE9_IP}" "${PVE_PASSWORD}"
 
       - name: Prepare PVE 8 test environment
         shell: bash
         run: |
-          bash ${SCRIPTS_DIR}/prepare-test-environment.sh \
-            "${{ steps.wait_pve8.outputs.host }}" "${PVE_PASSWORD}"
+          PVE8_IP=$(jq -r .host /tmp/pve8.json)
+          bash ${SCRIPTS_DIR}/prepare-test-environment.sh "${PVE8_IP}" "${PVE_PASSWORD}"
 
-      # ── Upload Terraform state for cleanup job ───────────────────────
+      # ── Write test config to shared volume ───────────────────────────
 
-      - name: Upload Terraform state
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: terraform-state
-          path: |
-            ${{ env.INFRA_DIR }}/terraform.tfstate
-            ${{ env.INFRA_DIR }}/.terraform/
-          retention-days: 1
+      - name: Write test config to shared volume
+        shell: bash
+        run: |
+          CLOUD_IMG="${CACHE_DIR}/noble-server-cloudimg-amd64.qcow2"
+          OVA="${CACHE_DIR}/ubuntu-24.04-server-cloudimg-amd64.ova"
+          jq -n \
+            --argjson pve9 "$(cat /tmp/pve9.json)" \
+            --argjson pve8 "$(cat /tmp/pve8.json)" \
+            --arg cloud_image "$CLOUD_IMG" \
+            --arg ova "$OVA" \
+            '{pve9: $pve9, pve8: $pve8, cloud_image_path: $cloud_image, ova_path: $ova}' \
+            > "${CACHE_DIR}/test-config.json"
+          echo "Test config written:"
+          jq . "${CACHE_DIR}/test-config.json"
 
   # ── Integration tests (self-hosted, per PVE version) ────────────────
   test:
@@ -317,30 +315,30 @@ jobs:
           name: module-integration
           path: ./publish/netstandard2.0/
 
-      # ── Resolve test target ──────────────────────────────────────────
+      # ── Load test config from shared volume ──────────────────────────
 
-      - name: Set test target
+      - name: Load test config
         id: target
         shell: bash
         run: |
+          CONFIG="${CACHE_DIR}/test-config.json"
           if [ "${{ inputs.skip_provision }}" = "true" ]; then
             echo "host=${{ secrets.PVETEST_HOST }}" >> "$GITHUB_OUTPUT"
             echo "port=${{ secrets.PVETEST_PORT || '8006' }}" >> "$GITHUB_OUTPUT"
             echo "token=${{ secrets.PVETEST_APITOKEN }}" >> "$GITHUB_OUTPUT"
             echo "node=${{ secrets.PVETEST_NODE || 'pve' }}" >> "$GITHUB_OUTPUT"
             echo "storage=${{ secrets.PVETEST_STORAGE || 'local' }}" >> "$GITHUB_OUTPUT"
-          elif [ "${{ matrix.pve_version }}" = "9" ]; then
-            echo "host=${{ needs.provision.outputs.pve9_host }}" >> "$GITHUB_OUTPUT"
-            echo "port=8006" >> "$GITHUB_OUTPUT"
-            echo "token=${{ needs.provision.outputs.pve9_token }}" >> "$GITHUB_OUTPUT"
-            echo "node=pve" >> "$GITHUB_OUTPUT"
-            echo "storage=local" >> "$GITHUB_OUTPUT"
+            echo "cloud_image_path=" >> "$GITHUB_OUTPUT"
+            echo "ova_path=" >> "$GITHUB_OUTPUT"
           else
-            echo "host=${{ needs.provision.outputs.pve8_host }}" >> "$GITHUB_OUTPUT"
+            PVE_KEY="pve${{ matrix.pve_version }}"
+            echo "host=$(jq -r ".${PVE_KEY}.host" "$CONFIG")" >> "$GITHUB_OUTPUT"
             echo "port=8006" >> "$GITHUB_OUTPUT"
-            echo "token=${{ needs.provision.outputs.pve8_token }}" >> "$GITHUB_OUTPUT"
+            echo "token=$(jq -r ".${PVE_KEY}.token" "$CONFIG")" >> "$GITHUB_OUTPUT"
             echo "node=pve" >> "$GITHUB_OUTPUT"
             echo "storage=local" >> "$GITHUB_OUTPUT"
+            echo "cloud_image_path=$(jq -r '.cloud_image_path' "$CONFIG")" >> "$GITHUB_OUTPUT"
+            echo "ova_path=$(jq -r '.ova_path' "$CONFIG")" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Verify PVE API reachable
@@ -384,8 +382,8 @@ jobs:
           PVETEST_STORAGE: ${{ steps.target.outputs.storage }}
           PVETEST_PVE_VERSION: ${{ matrix.pve_version }}
           PVETEST_PASSWORD: ${{ env.PVE_PASSWORD }}
-          PVETEST_CLOUD_IMAGE_PATH: ${{ needs.provision.outputs.cloud_image_path }}
-          PVETEST_OVA_PATH: ${{ needs.provision.outputs.ova_path }}
+          PVETEST_CLOUD_IMAGE_PATH: ${{ steps.target.outputs.cloud_image_path }}
+          PVETEST_OVA_PATH: ${{ steps.target.outputs.ova_path }}
         run: |
           $env:PVETEST_ISO_PATH = Join-Path $env:RUNNER_TEMP "pvetest.iso"
           Import-Module Pester -MinimumVersion 5.0
