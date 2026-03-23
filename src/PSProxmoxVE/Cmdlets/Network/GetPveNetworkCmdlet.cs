@@ -40,7 +40,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             using var client = new PveHttpClient(session);
 
             WriteVerbose($"Getting network interfaces on node '{Node}'...");
-            var resource = $"nodes/{Node}/network";
+            var resource = $"nodes/{Uri.EscapeDataString(Node)}/network";
             if (!string.IsNullOrEmpty(Type))
                 resource += $"?type={Uri.EscapeDataString(Type)}";
 

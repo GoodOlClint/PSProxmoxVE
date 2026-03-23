@@ -30,10 +30,10 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $moduleRoot = Join-Path $repoRoot 'src/PSProxmoxVE'
 
 if ($PSVersionTable.PSEdition -eq 'Core') {
-    $frameworks = @('netstandard2.0', 'net9.0', 'net48')
+    $frameworks = @('netstandard2.0', 'net10.0', 'net48')
 }
 else {
-    $frameworks = @('net48', 'netstandard2.0', 'net9.0')
+    $frameworks = @('net48', 'netstandard2.0', 'net10.0')
 }
 
 $searchPaths = foreach ($fw in $frameworks) {

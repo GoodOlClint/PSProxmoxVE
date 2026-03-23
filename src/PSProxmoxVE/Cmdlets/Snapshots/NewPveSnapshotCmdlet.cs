@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Management.Automation;
 using Newtonsoft.Json.Linq;
@@ -59,7 +60,7 @@ namespace PSProxmoxVE.Cmdlets.Snapshots
             if (!string.IsNullOrEmpty(Description)) data["description"] = Description!;
             if (IncludeVmState.IsPresent)            data["vmstate"]     = "1";
 
-            var json = client.PostAsync($"nodes/{Node}/qemu/{VmId}/snapshot", data).GetAwaiter().GetResult();
+            var json = client.PostAsync($"nodes/{Uri.EscapeDataString(Node)}/qemu/{VmId}/snapshot", data).GetAwaiter().GetResult();
             var root = JObject.Parse(json);
             var upid = root["data"]?.ToString() ?? string.Empty;
 

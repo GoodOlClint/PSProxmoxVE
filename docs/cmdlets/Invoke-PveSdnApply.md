@@ -1,0 +1,105 @@
+---
+external help file: PSProxmoxVE.dll-Help.xml
+Module Name: PSProxmoxVE
+online version:
+schema: 2.0.0
+---
+
+# Invoke-PveSdnApply
+
+## SYNOPSIS
+Applies pending SDN configuration changes in Proxmox VE.
+
+## SYNTAX
+
+```
+Invoke-PveSdnApply [-Session <PveSession>] [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm]
+ [<CommonParameters>]
+```
+
+## DESCRIPTION
+Applies all pending Software-Defined Networking configuration changes cluster-wide. Run this after making changes with Set-PveSdnZone, Set-PveSdnVnet, etc.
+
+## EXAMPLES
+
+### Example 1
+```powershell
+PS C:\> Invoke-PveSdnApply
+```
+
+Applies all pending SDN configuration changes.
+
+## PARAMETERS
+
+### -Session
+{{ Fill Session Description }}
+
+```yaml
+Type: PveSession
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -WhatIf
+Shows what would happen if the cmdlet runs. The cmdlet is not run.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases: wi
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Confirm
+Prompts you for confirmation before running the cmdlet.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases: cf
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -ProgressAction
+{{ Fill ProgressAction Description }}
+
+```yaml
+Type: ActionPreference
+Parameter Sets: (All)
+Aliases: proga
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### CommonParameters
+This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
+
+## INPUTS
+
+### None
+## OUTPUTS
+
+### System.Void
+## NOTES
+
+## RELATED LINKS

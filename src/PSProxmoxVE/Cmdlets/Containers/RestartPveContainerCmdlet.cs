@@ -12,7 +12,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
     /// Use -Wait to block until both tasks complete.
     /// </para>
     /// </summary>
-    [Cmdlet(VerbsLifecycle.Restart, "PveContainer", SupportsShouldProcess = true)]
+    [Cmdlet(VerbsLifecycle.Restart, "PveContainer", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
     [OutputType(typeof(PveTask))]
     public sealed class RestartPveContainerCmdlet : PveCmdletBase
     {

@@ -1,3 +1,4 @@
+using System;
 using System.Management.Automation;
 using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Client;
@@ -35,7 +36,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             using var client = new PveHttpClient(session);
 
             WriteVerbose($"Applying network configuration on node '{Node}'...");
-            var json = client.PutAsync($"nodes/{Node}/network").GetAwaiter().GetResult();
+            var json = client.PutAsync($"nodes/{Uri.EscapeDataString(Node)}/network").GetAwaiter().GetResult();
             var root = JObject.Parse(json);
             var upid = root["data"]?.ToString() ?? string.Empty;
 

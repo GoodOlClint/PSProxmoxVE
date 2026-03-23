@@ -3,6 +3,7 @@ using System.Management.Automation;
 using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Vms;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Containers
 {
@@ -46,7 +47,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
             WriteVerbose($"Removing snapshot '{Name}' from container {VmId}...");
             using var client = new PveHttpClient(session);
 
-            var json = client.DeleteAsync($"nodes/{Node}/lxc/{VmId}/snapshot/{Name}").GetAwaiter().GetResult();
+            var json = client.DeleteAsync($"nodes/{Uri.EscapeDataString(Node)}/lxc/{VmId}/snapshot/{Uri.EscapeDataString(Name)}").GetAwaiter().GetResult();
             var root = JObject.Parse(json);
             var upid = root["data"]?.ToString() ?? string.Empty;
 
@@ -54,25 +55,11 @@ namespace PSProxmoxVE.Cmdlets.Containers
 
             if (Wait.IsPresent && !string.IsNullOrEmpty(upid))
             {
-                task = WaitForTask(client, Node, upid);
+                var taskService = new TaskService();
+                task = taskService.WaitForTask(session, Node, upid);
             }
 
             WriteObject(task);
-        }
-
-        private static PveTask WaitForTask(PveHttpClient client, string node, string upid)
-        {
-            var encodedUpid = Uri.EscapeDataString(upid);
-            var statusResource = $"nodes/{node}/tasks/{encodedUpid}/status";
-            while (true)
-            {
-                System.Threading.Thread.Sleep(2000);
-                var statusJson = client.GetAsync(statusResource).GetAwaiter().GetResult();
-                var statusRoot = JObject.Parse(statusJson);
-                var d = statusRoot["data"];
-                if (d?["status"]?.ToString() == "stopped")
-                    return new PveTask { Upid = upid, Node = node, Status = "stopped", ExitStatus = d["exitstatus"]?.ToString() };
-            }
         }
     }
 }

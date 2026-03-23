@@ -1,3 +1,4 @@
+using System;
 using System.Management.Automation;
 using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Client;
@@ -46,7 +47,7 @@ namespace PSProxmoxVE.Cmdlets.Snapshots
             WriteVerbose($"Removing snapshot '{Name}' from VM {VmId}...");
             using var client = new PveHttpClient(session);
 
-            var json = client.DeleteAsync($"nodes/{Node}/qemu/{VmId}/snapshot/{Name}").GetAwaiter().GetResult();
+            var json = client.DeleteAsync($"nodes/{Uri.EscapeDataString(Node)}/qemu/{VmId}/snapshot/{Uri.EscapeDataString(Name)}").GetAwaiter().GetResult();
             var root = JObject.Parse(json);
             var upid = root["data"]?.ToString() ?? string.Empty;
 

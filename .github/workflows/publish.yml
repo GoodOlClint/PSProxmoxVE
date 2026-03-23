@@ -19,7 +19,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Extract version from tag
         id: version
@@ -55,8 +55,8 @@ jobs:
           Import-Module PSProxmoxVE -Force -ErrorAction Stop
           $commands = Get-Command -Module PSProxmoxVE
           Write-Host "Module loaded with $($commands.Count) commands"
-          if ($commands.Count -lt 60) {
-            throw "Expected at least 60 commands, got $($commands.Count)"
+          if ($commands.Count -lt 150) {
+            throw "Expected at least 150 commands, got $($commands.Count)"
           }
 
       - name: Publish to PSGallery

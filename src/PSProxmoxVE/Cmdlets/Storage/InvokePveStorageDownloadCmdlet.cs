@@ -4,6 +4,7 @@ using System.Management.Automation;
 using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Vms;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Storage
 {
@@ -53,7 +54,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
             using var client = new PveHttpClient(session);
 
             WriteVerbose($"Downloading '{Url}' to {Node}/{Storage}...");
-            var resource = $"nodes/{Node}/storage/{Storage}/download-url";
+            var resource = $"nodes/{Uri.EscapeDataString(Node)}/storage/{Uri.EscapeDataString(Storage)}/download-url";
             var data = new Dictionary<string, string>
             {
                 ["url"]      = Url,
@@ -69,37 +70,11 @@ namespace PSProxmoxVE.Cmdlets.Storage
 
             if (Wait.IsPresent && !string.IsNullOrEmpty(upid))
             {
-                task = WaitForTask(client, Node, upid);
+                var taskService = new TaskService();
+                task = taskService.WaitForTask(session, Node, upid);
             }
 
             WriteObject(task);
-        }
-
-        private static PveTask WaitForTask(PveHttpClient client, string node, string upid)
-        {
-            var encodedUpid = Uri.EscapeDataString(upid);
-            var statusResource = $"nodes/{node}/tasks/{encodedUpid}/status";
-
-            while (true)
-            {
-                System.Threading.Thread.Sleep(2000);
-                var statusJson = client.GetAsync(statusResource).GetAwaiter().GetResult();
-                var statusRoot = JObject.Parse(statusJson);
-                var data = statusRoot["data"];
-                var status = data?["status"]?.ToString();
-                var exitStatus = data?["exitstatus"]?.ToString();
-
-                if (status == "stopped")
-                {
-                    return new PveTask
-                    {
-                        Upid       = upid,
-                        Node       = node,
-                        Status     = status,
-                        ExitStatus = exitStatus
-                    };
-                }
-            }
         }
     }
 }

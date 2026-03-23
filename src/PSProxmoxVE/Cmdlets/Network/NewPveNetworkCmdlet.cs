@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Management.Automation;
 using PSProxmoxVE.Core.Client;
@@ -90,7 +91,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             if (Autostart.IsPresent)                data["autostart"]    = "1";
             if (!string.IsNullOrEmpty(Comments))    data["comments"]     = Comments!;
 
-            client.PostAsync($"nodes/{Node}/network", data).GetAwaiter().GetResult();
+            client.PostAsync($"nodes/{Uri.EscapeDataString(Node)}/network", data).GetAwaiter().GetResult();
         }
     }
 }

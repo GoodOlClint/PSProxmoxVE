@@ -1,3 +1,4 @@
+using System;
 using System.Management.Automation;
 using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Client;
@@ -33,7 +34,7 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
             using var client = new PveHttpClient(session);
 
             WriteVerbose($"Getting cloud-init config for VM {VmId}...");
-            var json = client.GetAsync($"nodes/{Node}/qemu/{VmId}/config").GetAwaiter().GetResult();
+            var json = client.GetAsync($"nodes/{Uri.EscapeDataString(Node)}/qemu/{VmId}/config").GetAwaiter().GetResult();
             var root = JObject.Parse(json);
             var data = root["data"];
 

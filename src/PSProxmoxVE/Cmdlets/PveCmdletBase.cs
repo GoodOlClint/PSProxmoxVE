@@ -126,8 +126,8 @@ namespace PSProxmoxVE.Cmdlets
             // because it returns qmpstatus (needed for paused state detection — PVE reports
             // status=running but qmpstatus=paused for suspended VMs).
             var statusResource = isContainer
-                ? $"nodes/{node}/lxc/{vmid}/status/current"
-                : $"nodes/{node}/qemu/{vmid}/status/current";
+                ? $"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/status/current"
+                : $"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/status/current";
 
             var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
             using var pollClient = new PveHttpClient(session);

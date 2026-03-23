@@ -1,3 +1,4 @@
+using System;
 using System.Management.Automation;
 using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Client;
@@ -49,7 +50,7 @@ namespace PSProxmoxVE.Cmdlets.Snapshots
             WriteVerbose($"Restoring snapshot '{Name}' on VM {VmId}...");
             using var client = new PveHttpClient(session);
 
-            var json = client.PostAsync($"nodes/{Node}/qemu/{VmId}/snapshot/{Name}/rollback").GetAwaiter().GetResult();
+            var json = client.PostAsync($"nodes/{Uri.EscapeDataString(Node)}/qemu/{VmId}/snapshot/{Uri.EscapeDataString(Name)}/rollback").GetAwaiter().GetResult();
             var root = JObject.Parse(json);
             var upid = root["data"]?.ToString() ?? string.Empty;
 
