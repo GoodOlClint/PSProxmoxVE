@@ -71,6 +71,7 @@ jobs:
 
   # ── Build test container image (GitHub-hosted) ───────────────────────
   container-image:
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -94,7 +95,7 @@ jobs:
   # ── Clean up old container images from GHCR ──────────────────────────
   cleanup-images:
     needs: integration
-    if: always()
+    if: always() && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
