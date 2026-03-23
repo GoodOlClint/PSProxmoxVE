@@ -5,7 +5,10 @@ name: Integration Tests
 # Architecture:
 #   build           → GitHub-hosted, dotnet publish → upload artifact
 #   container-image → GitHub-hosted, build+push Docker image to GHCR
-#   integration     → self-hosted runner in Docker container
+#   provision       → self-hosted, provisions ALL nested PVE VMs in parallel via Terraform
+#   test            → self-hosted, runs Pester tests against pre-provisioned VMs
+#   cleanup         → self-hosted, tears down all VMs (always runs)
+#   cleanup-images  → GitHub-hosted, prunes old GHCR container images
 #
 # Required repository secrets (for provisioning):
 #   PVE_ENDPOINT       - Parent PVE API URL (e.g. https://pve.example.com:8006)
@@ -42,6 +45,7 @@ env:
   SCRIPTS_DIR: tests/infrastructure/scripts
   PVE_PASSWORD: "Testpass123!"
   TEST_IMAGE: ghcr.io/goodolclint/psproxmoxve-integration
+  CACHE_DIR: /opt/pve-isos
 
 jobs:
   # ── Build module artifact (GitHub-hosted) ────────────────────────────
@@ -92,29 +96,204 @@ jobs:
           push: true
           tags: ${{ env.TEST_IMAGE }}:${{ github.sha }},${{ env.TEST_IMAGE }}:latest
 
-  # ── Clean up old container images from GHCR ──────────────────────────
-  cleanup-images:
-    needs: integration
-    if: always() && github.actor != 'dependabot[bot]'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-    steps:
-      - name: Delete old container image versions
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: psproxmoxve-integration
-          package-type: container
-          min-versions-to-keep: 1
-          delete-only-untagged-versions: false
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-  # ── Integration tests (self-hosted runner in Docker container) ───────
-  integration:
+  # ── Provision all nested PVE VMs (self-hosted) ──────────────────────
+  provision:
+    if: inputs.skip_provision != true
     needs: [build, container-image]
     runs-on: [self-hosted, proxmox, integration]
-    timeout-minutes: 45
+    timeout-minutes: 30
+    container:
+      image: ghcr.io/goodolclint/psproxmoxve-integration:${{ github.sha }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      volumes:
+        - /opt/pve-isos:/opt/pve-isos
+    outputs:
+      pve9_host: ${{ steps.wait_pve9.outputs.host }}
+      pve9_token: ${{ steps.wait_pve9.outputs.token }}
+      pve8_host: ${{ steps.wait_pve8.outputs.host }}
+      pve8_token: ${{ steps.wait_pve8.outputs.token }}
+      cloud_image_path: ${{ steps.cloud_images.outputs.cloud_image_path }}
+      ova_path: ${{ steps.cloud_images.outputs.ova_path }}
+
+    steps:
+      - name: Mask test password
+        run: echo "::add-mask::${PVE_PASSWORD}"
+
+      - uses: actions/checkout@v6
+
+      # ── Cache: ensure base ISOs ──────────────────────────────────────
+
+      - name: Ensure PVE 9 base ISO
+        shell: bash
+        run: bash ${SCRIPTS_DIR}/ensure-base-iso.sh "proxmox-ve_9.1-1.iso" "${CACHE_DIR}"
+
+      - name: Ensure PVE 8 base ISO
+        shell: bash
+        run: bash ${SCRIPTS_DIR}/ensure-base-iso.sh "proxmox-ve_8.4-1.iso" "${CACHE_DIR}"
+
+      # ── Cache: ensure cloud images ───────────────────────────────────
+
+      - name: Ensure cloud images cached
+        id: cloud_images
+        shell: bash
+        run: |
+          OUTPUT=$(bash ${SCRIPTS_DIR}/ensure-cloud-images.sh "${CACHE_DIR}")
+          CLOUD_IMAGE_PATH=$(echo "$OUTPUT" | grep "^CLOUD_IMAGE_PATH=" | cut -d= -f2)
+          OVA_PATH=$(echo "$OUTPUT" | grep "^OVA_PATH=" | cut -d= -f2)
+          echo "cloud_image_path=${CLOUD_IMAGE_PATH}" >> "$GITHUB_OUTPUT"
+          echo "ova_path=${OVA_PATH}" >> "$GITHUB_OUTPUT"
+
+      # ── Pre-flight cleanup for ALL VMs ───────────────────────────────
+
+      - name: Pre-flight cleanup (PVE 9)
+        shell: bash
+        env:
+          PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
+        run: |
+          bash ${SCRIPTS_DIR}/preflight-cleanup.sh \
+            "${{ secrets.PVE_ENDPOINT }}" "${PVE_API_TOKEN}" \
+            99909 "proxmox-ve_9.1-1-auto.iso" "${INFRA_DIR}"
+
+      - name: Pre-flight cleanup (PVE 8)
+        shell: bash
+        env:
+          PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
+        run: |
+          bash ${SCRIPTS_DIR}/preflight-cleanup.sh \
+            "${{ secrets.PVE_ENDPOINT }}" "${PVE_API_TOKEN}" \
+            99908 "proxmox-ve_8.4-1-auto.iso" "${INFRA_DIR}"
+
+      # ── Generate answer files ────────────────────────────────────────
+
+      - name: Generate answer file
+        shell: bash
+        run: |
+          sed "s/\${root_password}/${PVE_PASSWORD}/" \
+            ${INFRA_DIR}/answer.toml.tftpl > ${RUNNER_TEMP}/answer.toml
+
+      # ── Prepare auto-install ISOs (cached) ───────────────────────────
+
+      - name: Prepare PVE 9 auto-install ISO
+        shell: bash
+        run: |
+          bash ${SCRIPTS_DIR}/prepare-auto-iso.sh \
+            "${CACHE_DIR}/proxmox-ve_9.1-1.iso" \
+            ${RUNNER_TEMP}/answer.toml \
+            ${SCRIPTS_DIR}/first-boot.sh \
+            "${RUNNER_TEMP}/proxmox-ve_9.1-1-auto.iso" \
+            --cache-dir "${CACHE_DIR}"
+
+      - name: Prepare PVE 8 auto-install ISO
+        shell: bash
+        run: |
+          bash ${SCRIPTS_DIR}/prepare-auto-iso.sh \
+            "${CACHE_DIR}/proxmox-ve_8.4-1.iso" \
+            ${RUNNER_TEMP}/answer.toml \
+            ${SCRIPTS_DIR}/first-boot.sh \
+            "${RUNNER_TEMP}/proxmox-ve_8.4-1-auto.iso" \
+            --cache-dir "${CACHE_DIR}"
+
+      # ── Terraform: provision both VMs in parallel ────────────────────
+
+      - name: Terraform init
+        shell: bash
+        working-directory: ${{ env.INFRA_DIR }}
+        run: terraform init -input=false
+
+      - name: Terraform apply (both VMs)
+        shell: bash
+        working-directory: ${{ env.INFRA_DIR }}
+        env:
+          TF_VAR_proxmox_endpoint: ${{ secrets.PVE_ENDPOINT }}
+          TF_VAR_proxmox_api_token: ${{ secrets.PVE_API_TOKEN }}
+          TF_VAR_target_node: ${{ secrets.PVE_TARGET_NODE }}
+          TF_VAR_test_vm_password: ${{ env.PVE_PASSWORD }}
+        run: |
+          cat > /tmp/instances.tfvars.json <<'TFVARS'
+          {
+            "pve_instances": {
+              "pve9": {
+                "iso_local_path": "${{ runner.temp }}/proxmox-ve_9.1-1-auto.iso",
+                "vm_id": 99909,
+                "vm_name": "pve-test-pve9"
+              },
+              "pve8": {
+                "iso_local_path": "${{ runner.temp }}/proxmox-ve_8.4-1-auto.iso",
+                "vm_id": 99908,
+                "vm_name": "pve-test-pve8"
+              }
+            }
+          }
+          TFVARS
+          terraform apply -auto-approve -input=false -var-file=/tmp/instances.tfvars.json
+
+      # ── Wait for both PVE instances and create API tokens ────────────
+
+      - name: Wait for PVE 9 and create API token
+        id: wait_pve9
+        shell: bash
+        env:
+          PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
+        run: |
+          OUTPUT=$(bash ${SCRIPTS_DIR}/create-api-token.sh \
+            "${{ secrets.PVE_ENDPOINT }}" "${PVE_API_TOKEN}" \
+            99909 "${PVE_PASSWORD}" 900)
+          VM_IP=$(echo "$OUTPUT" | grep "^IP=" | cut -d= -f2)
+          VM_TOKEN=$(echo "$OUTPUT" | grep "^TOKEN=" | cut -d= -f2-)
+          echo "::add-mask::${VM_IP}"
+          echo "::add-mask::${VM_TOKEN}"
+          echo "host=${VM_IP}" >> "$GITHUB_OUTPUT"
+          echo "token=${VM_TOKEN}" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for PVE 8 and create API token
+        id: wait_pve8
+        shell: bash
+        env:
+          PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
+        run: |
+          OUTPUT=$(bash ${SCRIPTS_DIR}/create-api-token.sh \
+            "${{ secrets.PVE_ENDPOINT }}" "${PVE_API_TOKEN}" \
+            99908 "${PVE_PASSWORD}" 900)
+          VM_IP=$(echo "$OUTPUT" | grep "^IP=" | cut -d= -f2)
+          VM_TOKEN=$(echo "$OUTPUT" | grep "^TOKEN=" | cut -d= -f2-)
+          echo "::add-mask::${VM_IP}"
+          echo "::add-mask::${VM_TOKEN}"
+          echo "host=${VM_IP}" >> "$GITHUB_OUTPUT"
+          echo "token=${VM_TOKEN}" >> "$GITHUB_OUTPUT"
+
+      # ── Prepare test environments on both nested PVEs ────────────────
+
+      - name: Prepare PVE 9 test environment
+        shell: bash
+        run: |
+          bash ${SCRIPTS_DIR}/prepare-test-environment.sh \
+            "${{ steps.wait_pve9.outputs.host }}" "${PVE_PASSWORD}"
+
+      - name: Prepare PVE 8 test environment
+        shell: bash
+        run: |
+          bash ${SCRIPTS_DIR}/prepare-test-environment.sh \
+            "${{ steps.wait_pve8.outputs.host }}" "${PVE_PASSWORD}"
+
+      # ── Upload Terraform state for cleanup job ───────────────────────
+
+      - name: Upload Terraform state
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: terraform-state
+          path: |
+            ${{ env.INFRA_DIR }}/terraform.tfstate
+            ${{ env.INFRA_DIR }}/.terraform/
+          retention-days: 1
+
+  # ── Integration tests (self-hosted, per PVE version) ────────────────
+  test:
+    needs: [build, provision]
+    runs-on: [self-hosted, proxmox, integration]
+    timeout-minutes: 20
     container:
       image: ghcr.io/goodolclint/psproxmoxve-integration:${{ github.sha }}
       credentials:
@@ -127,17 +306,6 @@ jobs:
       max-parallel: 1
       matrix:
         pve_version: ['9', '8']
-        include:
-          - pve_version: '9'
-            iso_base: /opt/pve-isos/proxmox-ve_9.1-1.iso
-            iso_filename: proxmox-ve_9.1-1-auto.iso
-            vm_id: 99909
-            vm_name: pve-test-pve9
-          - pve_version: '8'
-            iso_base: /opt/pve-isos/proxmox-ve_8.4-1.iso
-            iso_filename: proxmox-ve_8.4-1-auto.iso
-            vm_id: 99908
-            vm_name: pve-test-pve8
 
     steps:
       - name: Mask test password
@@ -151,86 +319,6 @@ jobs:
           name: module-integration
           path: ./publish/netstandard2.0/
 
-      # ── Pre-flight cleanup ───────────────────────────────────────────
-
-      - name: Pre-flight cleanup
-        if: inputs.skip_provision != true
-        shell: bash
-        env:
-          PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
-        run: |
-          bash ${SCRIPTS_DIR}/preflight-cleanup.sh \
-            "${{ secrets.PVE_ENDPOINT }}" \
-            "${PVE_API_TOKEN}" \
-            ${{ matrix.vm_id }} \
-            "${{ matrix.iso_filename }}" \
-            "${INFRA_DIR}"
-
-      # ── Provision nested PVE ─────────────────────────────────────────
-
-      - name: Generate answer file
-        if: inputs.skip_provision != true
-        shell: bash
-        run: |
-          sed "s/\${root_password}/${PVE_PASSWORD}/" \
-            ${INFRA_DIR}/answer.toml.tftpl > ${RUNNER_TEMP}/answer.toml
-          echo "Generated answer file:"
-          cat ${RUNNER_TEMP}/answer.toml
-
-      - name: Prepare auto-install ISO
-        if: inputs.skip_provision != true
-        shell: bash
-        run: |
-          bash ${SCRIPTS_DIR}/prepare-auto-iso.sh \
-            "${{ matrix.iso_base }}" \
-            ${RUNNER_TEMP}/answer.toml \
-            ${SCRIPTS_DIR}/first-boot.sh \
-            "${RUNNER_TEMP}/${{ matrix.iso_filename }}"
-
-      - name: Terraform init
-        if: inputs.skip_provision != true
-        shell: bash
-        working-directory: ${{ env.INFRA_DIR }}
-        run: terraform init -input=false
-
-      - name: Terraform apply
-        if: inputs.skip_provision != true
-        id: terraform
-        shell: bash
-        working-directory: ${{ env.INFRA_DIR }}
-        env:
-          TF_VAR_proxmox_endpoint: ${{ secrets.PVE_ENDPOINT }}
-          TF_VAR_proxmox_api_token: ${{ secrets.PVE_API_TOKEN }}
-          TF_VAR_target_node: ${{ secrets.PVE_TARGET_NODE }}
-          TF_VAR_test_vm_password: ${{ env.PVE_PASSWORD }}
-          TF_VAR_vm_id: ${{ matrix.vm_id }}
-          TF_VAR_vm_name: ${{ matrix.vm_name }}
-        run: |
-          export TF_VAR_iso_local_path="${RUNNER_TEMP}/${{ matrix.iso_filename }}"
-          terraform apply -auto-approve -input=false
-          echo "vm_id=$(terraform output -raw pve_test_vm_id)" >> "$GITHUB_OUTPUT"
-
-      - name: Wait for install and create API token
-        if: inputs.skip_provision != true
-        id: provision
-        shell: bash
-        env:
-          PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
-        run: |
-          OUTPUT=$(bash ${SCRIPTS_DIR}/create-api-token.sh \
-            "${{ secrets.PVE_ENDPOINT }}" \
-            "${PVE_API_TOKEN}" \
-            "${{ steps.terraform.outputs.vm_id }}" \
-            "${PVE_PASSWORD}" \
-            900)
-          VM_IP=$(echo "$OUTPUT" | grep "^IP=" | cut -d= -f2)
-          VM_TOKEN=$(echo "$OUTPUT" | grep "^TOKEN=" | cut -d= -f2-)
-          echo "::add-mask::${VM_IP}"
-          echo "::add-mask::${VM_TOKEN}"
-          echo "Nested PVE ${{ matrix.pve_version }} ready at ${VM_IP}"
-          echo "host=${VM_IP}" >> "$GITHUB_OUTPUT"
-          echo "token=${VM_TOKEN}" >> "$GITHUB_OUTPUT"
-
       # ── Resolve test target ──────────────────────────────────────────
 
       - name: Set test target
@@ -243,10 +331,16 @@ jobs:
             echo "token=${{ secrets.PVETEST_APITOKEN }}" >> "$GITHUB_OUTPUT"
             echo "node=${{ secrets.PVETEST_NODE || 'pve' }}" >> "$GITHUB_OUTPUT"
             echo "storage=${{ secrets.PVETEST_STORAGE || 'local' }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "host=${{ steps.provision.outputs.host }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ matrix.pve_version }}" = "9" ]; then
+            echo "host=${{ needs.provision.outputs.pve9_host }}" >> "$GITHUB_OUTPUT"
             echo "port=8006" >> "$GITHUB_OUTPUT"
-            echo "token=${{ steps.provision.outputs.token }}" >> "$GITHUB_OUTPUT"
+            echo "token=${{ needs.provision.outputs.pve9_token }}" >> "$GITHUB_OUTPUT"
+            echo "node=pve" >> "$GITHUB_OUTPUT"
+            echo "storage=local" >> "$GITHUB_OUTPUT"
+          else
+            echo "host=${{ needs.provision.outputs.pve8_host }}" >> "$GITHUB_OUTPUT"
+            echo "port=8006" >> "$GITHUB_OUTPUT"
+            echo "token=${{ needs.provision.outputs.pve8_token }}" >> "$GITHUB_OUTPUT"
             echo "node=pve" >> "$GITHUB_OUTPUT"
             echo "storage=local" >> "$GITHUB_OUTPUT"
           fi
@@ -276,22 +370,6 @@ jobs:
           New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
           Copy-Item -Path ./publish/netstandard2.0/* -Destination $modulePath -Recurse -Force
 
-      # ── Prepare test Linux VM ────────────────────────────────────────
-
-      - name: Prepare test environment on nested PVE
-        if: inputs.skip_provision != true
-        id: test_env
-        shell: bash
-        run: |
-          OUTPUT=$(bash ${SCRIPTS_DIR}/prepare-test-environment.sh \
-            "${{ steps.provision.outputs.host }}" \
-            "${PVE_PASSWORD}" \
-            "${RUNNER_TEMP}")
-          CLOUD_IMAGE_PATH=$(echo "$OUTPUT" | grep "^CLOUD_IMAGE_PATH=" | cut -d= -f2)
-          OVA_PATH=$(echo "$OUTPUT" | grep "^OVA_PATH=" | cut -d= -f2)
-          echo "cloud_image_path=${CLOUD_IMAGE_PATH}" >> "$GITHUB_OUTPUT"
-          echo "ova_path=${OVA_PATH}" >> "$GITHUB_OUTPUT"
-
       # ── Run tests ─────────────────────────────────────────────────────
 
       - name: Create test ISO
@@ -308,8 +386,8 @@ jobs:
           PVETEST_STORAGE: ${{ steps.target.outputs.storage }}
           PVETEST_PVE_VERSION: ${{ matrix.pve_version }}
           PVETEST_PASSWORD: ${{ env.PVE_PASSWORD }}
-          PVETEST_CLOUD_IMAGE_PATH: ${{ steps.test_env.outputs.cloud_image_path }}
-          PVETEST_OVA_PATH: ${{ steps.test_env.outputs.ova_path }}
+          PVETEST_CLOUD_IMAGE_PATH: ${{ needs.provision.outputs.cloud_image_path }}
+          PVETEST_OVA_PATH: ${{ needs.provision.outputs.ova_path }}
         run: |
           $env:PVETEST_ISO_PATH = Join-Path $env:RUNNER_TEMP "pvetest.iso"
           Import-Module Pester -MinimumVersion 5.0
@@ -329,34 +407,55 @@ jobs:
           name: integration-test-results-pve${{ matrix.pve_version }}
           path: TestResults/
 
-      # ── Teardown ─────────────────────────────────────────────────────
+  # ── Cleanup: destroy all VMs (always runs) ──────────────────────────
+  cleanup:
+    needs: [provision, test]
+    if: always() && needs.provision.result != 'skipped' && github.actor != 'dependabot[bot]'
+    runs-on: [self-hosted, proxmox, integration]
+    timeout-minutes: 15
+    container:
+      image: ghcr.io/goodolclint/psproxmoxve-integration:${{ github.sha }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      volumes:
+        - /opt/pve-isos:/opt/pve-isos
 
-      - name: Terraform destroy
-        if: always() && inputs.skip_provision != true
-        shell: bash
-        working-directory: ${{ env.INFRA_DIR }}
-        env:
-          TF_VAR_proxmox_endpoint: ${{ secrets.PVE_ENDPOINT }}
-          TF_VAR_proxmox_api_token: ${{ secrets.PVE_API_TOKEN }}
-          TF_VAR_target_node: ${{ secrets.PVE_TARGET_NODE }}
-          TF_VAR_test_vm_password: ${{ env.PVE_PASSWORD }}
-          TF_VAR_vm_id: ${{ matrix.vm_id }}
-          TF_VAR_vm_name: ${{ matrix.vm_name }}
-        run: |
-          export TF_VAR_iso_local_path="${RUNNER_TEMP}/${{ matrix.iso_filename }}"
-          terraform init -input=false
-          terraform destroy -auto-approve -input=false || true
-          rm -f terraform.tfstate terraform.tfstate.backup .terraform.tfstate.lock.info
+    steps:
+      - uses: actions/checkout@v6
 
-      - name: Final cleanup
-        if: always() && inputs.skip_provision != true
+      - name: API-based cleanup (PVE 9)
         shell: bash
         env:
           PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
         run: |
           bash ${SCRIPTS_DIR}/preflight-cleanup.sh \
-            "${{ secrets.PVE_ENDPOINT }}" \
-            "${PVE_API_TOKEN}" \
-            ${{ matrix.vm_id }} \
-            "${{ matrix.iso_filename }}" \
-            "${INFRA_DIR}" || true
+            "${{ secrets.PVE_ENDPOINT }}" "${PVE_API_TOKEN}" \
+            99909 "proxmox-ve_9.1-1-auto.iso" "${INFRA_DIR}" || true
+
+      - name: API-based cleanup (PVE 8)
+        shell: bash
+        env:
+          PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
+        run: |
+          bash ${SCRIPTS_DIR}/preflight-cleanup.sh \
+            "${{ secrets.PVE_ENDPOINT }}" "${PVE_API_TOKEN}" \
+            99908 "proxmox-ve_8.4-1-auto.iso" "${INFRA_DIR}" || true
+
+  # ── Clean up old container images from GHCR ──────────────────────────
+  cleanup-images:
+    needs: test
+    if: always() && github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - name: Delete old container image versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: psproxmoxve-integration
+          package-type: container
+          min-versions-to-keep: 3
+          delete-only-untagged-versions: false
+          token: ${{ secrets.GITHUB_TOKEN }}

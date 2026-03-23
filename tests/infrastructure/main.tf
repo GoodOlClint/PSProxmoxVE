@@ -15,19 +15,21 @@ provider "proxmox" {
 }
 
 resource "proxmox_virtual_environment_file" "auto_iso" {
+  for_each     = var.pve_instances
   content_type = "iso"
   datastore_id = var.iso_storage
   node_name    = var.target_node
 
   source_file {
-    path = var.iso_local_path
+    path = each.value.iso_local_path
   }
 }
 
 resource "proxmox_virtual_environment_vm" "nested_pve" {
-  name      = var.vm_name
+  for_each  = var.pve_instances
+  name      = each.value.vm_name
   node_name = var.target_node
-  vm_id     = var.vm_id
+  vm_id     = each.value.vm_id
 
   machine    = "q35"
   bios       = "ovmf"
@@ -56,7 +58,7 @@ resource "proxmox_virtual_environment_vm" "nested_pve" {
   }
 
   cdrom {
-    file_id   = proxmox_virtual_environment_file.auto_iso.id
+    file_id   = proxmox_virtual_environment_file.auto_iso[each.key].id
     interface = "ide2"
   }
 

@@ -16,36 +16,33 @@ variable "proxmox_insecure" {
 }
 
 variable "target_node" {
-  description = "Name of the Proxmox node where the nested PVE VM will be created"
+  description = "Name of the Proxmox node where the nested PVE VMs will be created"
   type        = string
 }
 
-variable "vm_id" {
-  description = "VMID to assign to the nested PVE virtual machine"
-  type        = number
-  default     = 99900
-}
-
-variable "vm_name" {
-  description = "Name for the nested PVE virtual machine"
-  type        = string
-  default     = "pve-test-nested"
+variable "pve_instances" {
+  description = "Map of PVE instances to provision. Key is a label (e.g. 'pve9'), value defines the VM."
+  type = map(object({
+    iso_local_path = string
+    vm_id          = number
+    vm_name        = string
+  }))
 }
 
 variable "cores" {
-  description = "Number of CPU cores to allocate to the nested PVE VM"
+  description = "Number of CPU cores to allocate to each nested PVE VM"
   type        = number
   default     = 4
 }
 
 variable "memory" {
-  description = "Amount of memory in MB to allocate to the nested PVE VM"
+  description = "Amount of memory in MB to allocate to each nested PVE VM"
   type        = number
   default     = 8192
 }
 
 variable "disk_size" {
-  description = "Size of the primary disk in GB for the nested PVE VM"
+  description = "Size of the primary disk in GB for each nested PVE VM"
   type        = number
   default     = 64
 }
@@ -56,11 +53,6 @@ variable "disk_storage" {
   default     = "nas-iSCSI-lvm"
 }
 
-variable "iso_local_path" {
-  description = "Local path to the prepared auto-install PVE ISO on the runner"
-  type        = string
-}
-
 variable "iso_storage" {
   description = "Proxmox storage pool for uploading the ISO (must accept ISO content type)"
   type        = string
@@ -68,13 +60,13 @@ variable "iso_storage" {
 }
 
 variable "network_bridge" {
-  description = "Network bridge on the host to attach the nested PVE VM to"
+  description = "Network bridge on the host to attach the nested PVE VMs to"
   type        = string
   default     = "Core"
 }
 
 variable "test_vm_password" {
-  description = "Root password for the nested PVE instance"
+  description = "Root password for the nested PVE instances"
   type        = string
   sensitive   = true
   default     = "Testpass123!"
