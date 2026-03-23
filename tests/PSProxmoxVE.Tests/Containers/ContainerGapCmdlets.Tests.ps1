@@ -70,7 +70,7 @@ Describe 'Suspend-PveContainer' -Tag 'Unit' {
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'Suspend-PveContainer'
-            { Suspend-PveContainer -Node 'pve' -VmId 100 -ErrorAction Stop } |
+            { Suspend-PveContainer -Node 'pve' -VmId 100 -Confirm:$false -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
