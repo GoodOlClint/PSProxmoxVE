@@ -211,22 +211,27 @@ jobs:
           TF_VAR_target_node: ${{ secrets.PVE_TARGET_NODE }}
           TF_VAR_test_vm_password: ${{ env.PVE_PASSWORD }}
         run: |
-          cat > /tmp/instances.tfvars.json <<'TFVARS'
+          cat > /tmp/instances.tfvars.json <<TFVARS
           {
             "pve_instances": {
               "pve9": {
-                "iso_local_path": "${{ runner.temp }}/proxmox-ve_9.1-1-auto.iso",
+                "iso_local_path": "${RUNNER_TEMP}/proxmox-ve_9.1-1-auto.iso",
                 "vm_id": 99909,
                 "vm_name": "pve-test-pve9"
               },
               "pve8": {
-                "iso_local_path": "${{ runner.temp }}/proxmox-ve_8.4-1-auto.iso",
+                "iso_local_path": "${RUNNER_TEMP}/proxmox-ve_8.4-1-auto.iso",
                 "vm_id": 99908,
                 "vm_name": "pve-test-pve8"
               }
             }
           }
           TFVARS
+          echo "=== tfvars ==="
+          cat /tmp/instances.tfvars.json
+          echo "=== RUNNER_TEMP=${RUNNER_TEMP} ==="
+          ls -la "${RUNNER_TEMP}/"*.iso 2>/dev/null || echo "No ISOs in RUNNER_TEMP"
+          ls -la "${CACHE_DIR}/"*.iso 2>/dev/null || echo "No ISOs in CACHE_DIR"
           terraform apply -auto-approve -input=false -var-file=/tmp/instances.tfvars.json
 
       # ── Wait for both PVE instances and create API tokens ────────────
