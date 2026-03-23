@@ -45,7 +45,7 @@ This repo uses a structured review system to track findings and prevent regressi
 ### Key files
 - `docs/review/findings.json` — stable findings database. IDs are permanent (F001, F002...).
   Never renumber. Read this before any coding session to understand open issues.
-- `docs/review/REVIEW_REPORT.md` — latest full review report (scan-6, 2026-03-23)
+- `docs/review/REVIEW_REPORT.md` — latest full review report (scan-7, 2026-03-23)
 - `DECISIONS.md` — architectural decisions and anti-patterns. **Read this before writing
   any new code.** It documents patterns that were deliberately chosen or changed and must
   not be reintroduced.

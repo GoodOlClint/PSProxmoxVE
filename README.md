@@ -271,6 +271,7 @@ SDN management requires Proxmox VE 8.0 or later. Connected server is version 7.4
 | `Send-PveFile` | Upload a file (ISO, disk image, template) to storage |
 | `Invoke-PveStorageDownload` | Download a URL to storage (server-side) |
 | `New-PveStorage` | Create a storage pool |
+| `Set-PveStorage` | Update a storage pool configuration |
 | `Remove-PveStorage` | Remove a storage pool |
 
 ### Snapshots
@@ -466,9 +467,8 @@ SDN management requires Proxmox VE 8.0 or later. Connected server is version 7.4
 | `Set-PveDomain` | Update an authentication realm |
 | `Remove-PveDomain` | Delete an authentication realm |
 | `Set-PvePassword` | Change a user's password |
-| `Set-PveRole` | Update a role's privileges |
-| `Set-PveStorage` | Update a storage definition |
 | `Set-PveApiToken` | Update an API token |
+| `Set-PveRole` | Update a role's privileges |
 
 ## Known Limitations
 

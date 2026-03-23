@@ -32,14 +32,20 @@ Instead, please email the maintainer directly or use [GitHub's private vulnerabi
 ### Credential Handling
 
 - PSProxmoxVE accepts credentials via `PSCredential` objects and API tokens.
-- Credentials are not written to disk or included in verbose/debug output.
+- All password parameters use `SecureString` with secure memory cleanup (`Marshal.ZeroFreeGlobalAllocUnicode`).
+- Credentials are never written to disk or included in verbose/debug output.
 - Ticket-based sessions expire after 2 hours. The module detects and reports expiry.
 
 ### TLS/HTTPS
 
-- All API communication uses HTTPS.
-- The `-SkipCertificateCheck` parameter disables TLS certificate validation. Use only in trusted networks or test environments.
+- All API communication uses HTTPS. There is no HTTP fallback.
+- The `-SkipCertificateCheck` parameter disables TLS certificate validation and emits a warning when used. Use only in trusted networks or test environments.
+
+### Input Validation
+
+- All VM ID parameters are validated with `[ValidateRange(100, 999999999)]` to match PVE constraints.
+- All dynamic values in API URL paths are encoded with `Uri.EscapeDataString()` to prevent injection.
 
 ### Dependencies
 
-All NuGet dependencies are pinned to specific versions. We monitor for known vulnerabilities and update promptly.
+NuGet dependencies are pinned to specific versions and monitored for vulnerabilities via Dependabot.

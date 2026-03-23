@@ -30,11 +30,27 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 - Access management (9): Get/New/Set/Remove-PveGroup, Get/New/Set/Remove-PveDomain, Set-PvePassword
 - Two-tier version gating: introduced vs default version with clear user messaging
 
+### Changed
+
+- All cmdlet classes sealed for design clarity and JIT optimization
+- `[OutputType]` attribute added to all 169 cmdlets for IntelliSense and pipeline support
+- Publishable projects retargeted to `netstandard2.0` for PS 5.1 + PS 7.x compatibility
+- `System.Text.Json` attributes removed — module uses `Newtonsoft.Json` exclusively
+- Inline task-polling loops replaced with `TaskService.WaitForTask` (timeout + progress support)
+- Password parameters changed from `string` to `SecureString` with secure memory handling
+- `ValidateRange(100, 999999999)` added to all `VmId` parameters
+- `Uri.EscapeDataString()` applied to all dynamic URL path segments
+- Hardcoded verb strings replaced with verb class constants (`VerbsCommon.Get`, etc.)
+- Auth header magic strings extracted to named constants in PveHttpClient
+- Bare `catch` blocks replaced with specific or filtered exception handling
+- MAML help (dll-Help.xml) and 170 markdown cmdlet docs generated
+- PSGallery publish workflow with PS 5.1 smoke testing
+
 ### Fixed
 
-- `Remove-PveRole` now has `ConfirmImpact.High` for safety
-- URL-encode snapshot names in API paths for defense-in-depth
-- Extract auth header magic strings to named constants in PveHttpClient
+- `ConfirmImpact.High` added to all destructive cmdlets (Stop, Reset, Restart, Suspend, Remove, Restore, New-PveTemplate)
+- Hardcoded test password moved from CI workflow to GitHub Actions secret
+- Terraform variable default password removed (requires env var)
 
 ## [0.1.0-preview] - 2026-03-19
 

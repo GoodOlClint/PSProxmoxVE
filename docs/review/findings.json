@@ -5,11 +5,12 @@
   "last_scan_date": "2026-03-23",
   "counters": {
     "next_id": 84,
-    "total_open": 12,
-    "total_resolved": 70,
+    "total_open": 10,
+    "total_resolved": 72,
     "total_regressed": 0,
-    "open": 12,
-    "resolved": 70,
+    "open": 10,
+    "resolved": 72,
+    "regressed": 0,
     "wont_fix": 1
   },
   "findings": [
@@ -923,13 +924,13 @@
       "title": "Hardcoded test password in CI workflow and Terraform",
       "category": "security",
       "severity": "low",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-19",
       "files": [
         ".github/workflows/integration-tests.yml",
         "tests/infrastructure/variables.tf"
       ],
-      "description": "PVE_PASSWORD: 'Testpass123!' in integration-tests.yml and variables.tf. Masked via ::add-mask::. Disposable nested test VM. Accepted risk.",
+      "description": "Hardcoded test password in integration-tests.yml env var and variables.tf default. Password moved to GitHub Actions secret (PVE_TEST_PASSWORD) and Terraform default removed. Integration README examples updated to use placeholders.",
       "scan_history": [
         {
           "scan_date": "2026-03-19",
@@ -955,8 +956,19 @@
           "scan_date": "2026-03-23",
           "local_id": null,
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "scan-7",
+        "verified_by": "scan",
+        "evidence": "integration-tests.yml now uses ${{ secrets.PVE_TEST_PASSWORD }}. variables.tf default removed (requires TF_VAR_test_vm_password env var). README examples use <your-test-password> placeholder. No hardcoded passwords remain in tracked files."
+      }
     },
     {
       "id": "F032",
@@ -1545,14 +1557,17 @@
       "id": "F050",
       "title": "URL-encode snapshot/node names in API paths",
       "category": "security",
-      "severity": "low",
+      "severity": "medium",
       "status": "resolved",
       "first_detected": "2026-03-21",
       "files": [
-        "src/PSProxmoxVE.Core/Services/SnapshotService.cs",
-        "src/PSProxmoxVE.Core/Services/ContainerService.cs"
+        "src/PSProxmoxVE.Core/Services/NodeService.cs",
+        "src/PSProxmoxVE.Core/Services/NetworkService.cs",
+        "src/PSProxmoxVE.Core/Services/CloudInitService.cs",
+        "src/PSProxmoxVE.Core/Services/TaskService.cs",
+        "src/PSProxmoxVE.Core/Services/TemplateService.cs"
       ],
-      "description": "Snapshot names and node names in URL paths are not URL-encoded. Low risk as values come from validated/system sources, but defense-in-depth recommends encoding.",
+      "description": "Uri.EscapeDataString() missing on node, iface, zone, and vnet path parameters in 5 service files (20 instances total). NodeService (7 methods), NetworkService (7 methods incl. RemoveSdnZone/RemoveSdnVnet), CloudInitService (3 methods), TaskService (2 methods), TemplateService (1 method). Other services (VmService, ContainerService, SnapshotService, FirewallService, PoolService, UserService, StorageService) are properly escaped.",
       "scan_history": [
         {
           "scan_date": "2026-03-21",
@@ -1563,14 +1578,33 @@
           "scan_date": "2026-03-22",
           "local_id": null,
           "status": "fixed"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "regressed"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "fixed"
         }
       ],
       "resolution": {
-        "scan_date": "2026-03-22",
-        "evidence": "Uri.EscapeDataString() now used consistently across all services",
-        "verified_by": "self-reported"
+        "scan_date": "2026-03-23",
+        "report_id": "scan-7",
+        "verified_by": "scan",
+        "evidence": "Uri.EscapeDataString() added to all 20 instances across NodeService (7), NetworkService (7), CloudInitService (3), TaskService (2), TemplateService (1). Verified via grep: no unescaped {node}/{iface}/{zone}/{vnet} remain in any service file URL paths."
       },
-      "decisions_ref": "D003"
+      "decisions_ref": "D003",
+      "notes": "Previously resolved in scan-4 (2026-03-22) with evidence \"Uri.EscapeDataString() now used consistently across all services\". Regression found in scan-7: 5 of 14 services still lack encoding on node/iface/zone/vnet params.",
+      "regression_history": [
+        {
+          "regressed_in_scan": "2026-03-23",
+          "report_id": "scan-7",
+          "description": "20 instances of unescaped path params found in NodeService (7), NetworkService (7), CloudInitService (3), TaskService (2), TemplateService (1). Prior resolution evidence was self-reported, not scan-verified."
+        }
+      ]
     },
     {
       "id": "F051",
@@ -2555,7 +2589,7 @@
       "title": "PVE 8 integration: Docker container image not found",
       "category": "ci_integration",
       "severity": "low",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-23",
       "files": [
         ".github/workflows/integration-tests.yml"
@@ -2576,8 +2610,19 @@
           "scan_date": "2026-03-23",
           "local_id": null,
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "scan_date": "2026-03-23",
+        "report_id": "scan-7",
+        "verified_by": "scan",
+        "evidence": "Integration test run 23461565300 (SHA 1faaba0, 2026-03-23T21:42:02Z) succeeded on all jobs including container-image build and both PVE 8 and PVE 9 test matrices. Docker image is now built and found correctly."
+      }
     },
     {
       "id": "F083",
