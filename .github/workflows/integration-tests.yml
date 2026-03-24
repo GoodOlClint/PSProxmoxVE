@@ -16,8 +16,10 @@ name: Integration Tests
 # Required repository secrets (for provisioning):
 #   PVE_ENDPOINT       - Parent PVE API URL (e.g. https://pve.example.com:8006)
 #   PVE_API_TOKEN      - Parent PVE API token (for Terraform + uploads)
-#   PVE_TARGET_NODE    - Parent PVE node name
 #   PVE_TEST_PASSWORD  - Root password for nested PVE instances
+#
+# Required repository variables:
+#   PVE_TARGET_NODE    - Parent PVE node name (variable, not secret, to avoid log masking)
 #
 # Optional secrets (for skip_provision mode):
 #   PVETEST_HOST       - Hostname or IP of a pre-existing nested PVE
@@ -121,7 +123,7 @@ jobs:
         env:
           PVE_ENDPOINT: ${{ secrets.PVE_ENDPOINT }}
           PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
-          PVE_TARGET_NODE: ${{ secrets.PVE_TARGET_NODE }}
+          PVE_TARGET_NODE: ${{ vars.PVE_TARGET_NODE }}
           PVE_PASSWORD: ${{ secrets.PVE_TEST_PASSWORD }}
         run: bash ${SCRIPTS_DIR}/run-integration.sh provision
 
@@ -191,7 +193,7 @@ jobs:
         env:
           PVE_ENDPOINT: ${{ secrets.PVE_ENDPOINT }}
           PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
-          PVE_TARGET_NODE: ${{ secrets.PVE_TARGET_NODE }}
+          PVE_TARGET_NODE: ${{ vars.PVE_TARGET_NODE }}
         run: bash ${SCRIPTS_DIR}/run-integration.sh cleanup
 
   # ── Clean up old container images from GHCR ──────────────────────────
