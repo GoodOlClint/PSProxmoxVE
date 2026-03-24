@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Management.Automation;
 using Newtonsoft.Json.Linq;
@@ -63,6 +64,14 @@ namespace PSProxmoxVE.Cmdlets.Storage
         [Parameter(Mandatory = false, HelpMessage = "Ceph monitor host list.")]
         public string? MonHost { get; set; }
 
+        /// <summary>iSCSI target IQN (for "iscsi" type).</summary>
+        [Parameter(Mandatory = false, HelpMessage = "iSCSI target IQN (e.g. iqn.2024-01.com.example:storage).")]
+        public string? Target { get; set; }
+
+        /// <summary>iSCSI portal address (for "iscsi" type). Defaults to server:3260 if not specified.</summary>
+        [Parameter(Mandatory = false, HelpMessage = "iSCSI portal address (host:port).")]
+        public string? Portal { get; set; }
+
         /// <summary>Whether this storage is shared across cluster nodes.</summary>
         [Parameter(Mandatory = false, HelpMessage = "Storage is shared across cluster nodes.")]
         public SwitchParameter Shared { get; set; }
@@ -74,6 +83,12 @@ namespace PSProxmoxVE.Cmdlets.Storage
         /// <summary>Limit nodes that can access this storage (comma-separated node names).</summary>
         [Parameter(Mandatory = false, HelpMessage = "Limit access to these nodes (comma-separated).")]
         public string? Nodes { get; set; }
+
+        private static void AddIfNotEmpty(Dictionary<string, string> data, string key, string? value)
+        {
+            if (!string.IsNullOrEmpty(value))
+                data[key] = value!;
+        }
 
         protected override void ProcessRecord()
         {
@@ -98,16 +113,35 @@ namespace PSProxmoxVE.Cmdlets.Storage
                 ["type"]    = Type
             };
 
-            if (!string.IsNullOrEmpty(Content))  data["content"]  = Content!;
-            if (!string.IsNullOrEmpty(Path))      data["path"]     = Path!;
-            if (!string.IsNullOrEmpty(Server))    data["server"]   = Server!;
-            if (!string.IsNullOrEmpty(Export))    data["export"]   = Export!;
-            if (!string.IsNullOrEmpty(VgName))    data["vgname"]   = VgName!;
-            if (!string.IsNullOrEmpty(ThinPool))  data["thinpool"] = ThinPool!;
-            if (!string.IsNullOrEmpty(Pool))      data["pool"]     = Pool!;
-            if (!string.IsNullOrEmpty(CephPool))  data["pool"]     = CephPool!;
-            if (!string.IsNullOrEmpty(MonHost))   data["monhost"]  = MonHost!;
-            if (!string.IsNullOrEmpty(Nodes))     data["nodes"]    = Nodes!;
+            AddIfNotEmpty(data, "content", Content);
+            AddIfNotEmpty(data, "path", Path);
+            AddIfNotEmpty(data, "export", Export);
+            AddIfNotEmpty(data, "vgname", VgName);
+            AddIfNotEmpty(data, "thinpool", ThinPool);
+            AddIfNotEmpty(data, "pool", !string.IsNullOrEmpty(Pool) ? Pool : CephPool);
+            AddIfNotEmpty(data, "monhost", MonHost);
+            AddIfNotEmpty(data, "target", Target);
+
+            // For iSCSI types, 'server' is not a valid API field; derive portal from Server if Portal omitted.
+            bool isIscsiType = string.Equals(Type, "iscsi", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(Type, "iscsidirect", StringComparison.OrdinalIgnoreCase);
+            if (isIscsiType)
+            {
+                string? portalValue;
+                if (!string.IsNullOrEmpty(Portal))
+                    portalValue = Portal;
+                else if (!string.IsNullOrEmpty(Server))
+                    portalValue = $"{Server}:3260";
+                else
+                    portalValue = null;
+                AddIfNotEmpty(data, "portal", portalValue);
+            }
+            else
+            {
+                AddIfNotEmpty(data, "server", Server);
+                AddIfNotEmpty(data, "portal", Portal);
+            }
+            AddIfNotEmpty(data, "nodes", Nodes);
             if (Shared.IsPresent)  data["shared"]  = "1";
             if (Disable.IsPresent) data["disable"] = "1";
 
