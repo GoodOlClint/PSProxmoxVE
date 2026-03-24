@@ -5,10 +5,10 @@
 # Called by both the GitHub Actions workflow and the local dev container.
 #
 # Provisions two PVE nodes per version (a/b) for cluster testing, plus
-# an Ubuntu storage VM for iSCSI/NFS shared storage testing.
+# Docker containers on the runner host for iSCSI/NFS shared storage.
 #
 # Usage:
-#   run-integration.sh provision          Provision nested PVE VMs + storage VM
+#   run-integration.sh provision          Provision nested PVE VMs + start storage containers
 #   run-integration.sh test [8|9|all]     Run integration tests (default: all)
 #   run-integration.sh cleanup            Destroy provisioned VMs
 #   run-integration.sh all [8|9|all]      Full lifecycle: provision → test → cleanup
@@ -204,10 +204,12 @@ cmd_provision() {
     # Get the Docker host's real IP (not the container's). The storage containers
     # use host networking, so PVE nodes reach them via the host's IP.
     local storage_ip
-    storage_ip=$(docker info --format '{{range .Swarm.RemoteManagers}}{{.Addr}}{{end}}' 2>/dev/null | cut -d: -f1)
+    # Prefer the IP of the default route's interface on the Docker host.
+    storage_ip=$(docker run --rm --net=host alpine ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
     if [ -z "$storage_ip" ]; then
-        # Fallback: get IP of the default route's interface on the Docker host
-        storage_ip=$(docker run --rm --net=host alpine ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
+        # Fallback: use the local node address from Docker info (not RemoteManagers,
+        # which can return addresses of remote Swarm managers).
+        storage_ip=$(docker info --format '{{.Swarm.NodeAddr}}' 2>/dev/null | cut -d: -f1)
     fi
     if [ -z "$storage_ip" ]; then
         ci_error "Could not determine Docker host IP for storage services"
@@ -453,7 +455,7 @@ main() {
             echo "Usage: $(basename "$0") {provision|test|cleanup|all} [8|9|all]"
             echo ""
             echo "Subcommands:"
-            echo "  provision          Provision nested PVE VMs + storage VM"
+            echo "  provision          Provision nested PVE VMs + start storage containers"
             echo "  test [8|9|all]     Run integration tests (default: all versions)"
             echo "  cleanup            Destroy all provisioned VMs"
             echo "  all [8|9|all]      Full lifecycle: provision → test → cleanup"
