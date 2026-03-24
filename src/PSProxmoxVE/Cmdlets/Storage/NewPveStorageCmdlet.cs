@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Management.Automation;
 using Newtonsoft.Json.Linq;
@@ -114,14 +115,32 @@ namespace PSProxmoxVE.Cmdlets.Storage
 
             AddIfNotEmpty(data, "content", Content);
             AddIfNotEmpty(data, "path", Path);
-            AddIfNotEmpty(data, "server", Server);
             AddIfNotEmpty(data, "export", Export);
             AddIfNotEmpty(data, "vgname", VgName);
             AddIfNotEmpty(data, "thinpool", ThinPool);
-            AddIfNotEmpty(data, "pool", Pool ?? CephPool);
+            AddIfNotEmpty(data, "pool", !string.IsNullOrEmpty(Pool) ? Pool : CephPool);
             AddIfNotEmpty(data, "monhost", MonHost);
             AddIfNotEmpty(data, "target", Target);
-            AddIfNotEmpty(data, "portal", Portal);
+
+            // For iSCSI types, 'server' is not a valid API field; derive portal from Server if Portal omitted.
+            bool isIscsiType = string.Equals(Type, "iscsi", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(Type, "iscsidirect", StringComparison.OrdinalIgnoreCase);
+            if (isIscsiType)
+            {
+                string? portalValue;
+                if (!string.IsNullOrEmpty(Portal))
+                    portalValue = Portal;
+                else if (!string.IsNullOrEmpty(Server))
+                    portalValue = $"{Server}:3260";
+                else
+                    portalValue = null;
+                AddIfNotEmpty(data, "portal", portalValue);
+            }
+            else
+            {
+                AddIfNotEmpty(data, "server", Server);
+                AddIfNotEmpty(data, "portal", Portal);
+            }
             AddIfNotEmpty(data, "nodes", Nodes);
             if (Shared.IsPresent)  data["shared"]  = "1";
             if (Disable.IsPresent) data["disable"] = "1";
