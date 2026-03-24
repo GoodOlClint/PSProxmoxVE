@@ -95,6 +95,13 @@ Describe 'Shared Storage — Integration' -Tag 'Integration' {
 
             # Parse server and export from the full NFS export path (e.g. "10.0.0.1:/srv/nfs/shared")
             $nfsParts = $script:NfsExport -split ':', 2
+            if (-not $nfsParts -or
+                $nfsParts.Count -ne 2 -or
+                [string]::IsNullOrWhiteSpace($nfsParts[0]) -or
+                [string]::IsNullOrWhiteSpace($nfsParts[1])) {
+                Set-ItResult -Skipped -Because "PVETEST_NFS_EXPORT must be in 'server:/export/path' format (current value: '$($script:NfsExport)')"
+                return
+            }
             $nfsServer = $nfsParts[0]
             $nfsExportPath = $nfsParts[1]
 
