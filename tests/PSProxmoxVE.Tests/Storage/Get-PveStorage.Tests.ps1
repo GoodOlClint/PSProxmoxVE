@@ -171,6 +171,48 @@ Describe 'New-PveStorage' {
             $isMandatory | Should -Not -BeNullOrEmpty
         }
     }
+
+    Context 'iSCSI/NFS parameters' {
+        It 'Should have Target parameter for iSCSI IQN' {
+            Skip-IfMissing 'New-PveStorage'
+            $script:Cmd.Parameters.ContainsKey('Target') | Should -BeTrue
+        }
+
+        It 'Target should not be Mandatory' {
+            Skip-IfMissing 'New-PveStorage'
+            $isMandatory = $script:Cmd.Parameters['Target'].ParameterSets.Values |
+                Where-Object { $_.IsMandatory }
+            $isMandatory | Should -BeNullOrEmpty
+        }
+
+        It 'Should have Portal parameter for iSCSI portal' {
+            Skip-IfMissing 'New-PveStorage'
+            $script:Cmd.Parameters.ContainsKey('Portal') | Should -BeTrue
+        }
+
+        It 'Portal should not be Mandatory' {
+            Skip-IfMissing 'New-PveStorage'
+            $isMandatory = $script:Cmd.Parameters['Portal'].ParameterSets.Values |
+                Where-Object { $_.IsMandatory }
+            $isMandatory | Should -BeNullOrEmpty
+        }
+
+        It 'Should have Server parameter for NFS/iSCSI server' {
+            Skip-IfMissing 'New-PveStorage'
+            $script:Cmd.Parameters.ContainsKey('Server') | Should -BeTrue
+        }
+
+        It 'Should have Export parameter for NFS export path' {
+            Skip-IfMissing 'New-PveStorage'
+            $script:Cmd.Parameters.ContainsKey('Export') | Should -BeTrue
+        }
+
+        It 'Should have Shared switch parameter' {
+            Skip-IfMissing 'New-PveStorage'
+            $script:Cmd.Parameters.ContainsKey('Shared') | Should -BeTrue
+            $script:Cmd.Parameters['Shared'].ParameterType | Should -Be ([System.Management.Automation.SwitchParameter])
+        }
+    }
 }
 
 # ---------------------------------------------------------------------------

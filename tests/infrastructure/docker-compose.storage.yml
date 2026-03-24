@@ -53,6 +53,10 @@ services:
     privileged: true
     volumes:
       - nfs-data:/srv/nfs/shared
+      # NOTE: /lib/modules is required by the NFS kernel module loader.
+      # This mount is Linux-host-specific and will fail on macOS/Windows Docker Desktop.
+      # Integration tests using this compose file must run on a Linux host (e.g. GitHub-hosted runners or the dev container).
+      - /lib/modules:/lib/modules:ro
     environment:
       NFS_EXPORT_0: /srv/nfs/shared *(rw,sync,no_subtree_check,no_root_squash)
     restart: unless-stopped
