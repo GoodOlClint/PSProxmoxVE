@@ -53,6 +53,7 @@ services:
     privileged: true
     volumes:
       - nfs-data:/srv/nfs/shared
+      - /lib/modules:/lib/modules:ro
     environment:
       NFS_EXPORT_0: /srv/nfs/shared *(rw,sync,no_subtree_check,no_root_squash)
     restart: unless-stopped
