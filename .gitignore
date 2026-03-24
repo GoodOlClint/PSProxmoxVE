@@ -13,3 +13,5 @@ nupkg/
 BenchmarkDotNet.Artifacts/
 .env
 .env.*
+!.env.*.example
+tests/.env.test

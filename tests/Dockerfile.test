@@ -1,36 +1,53 @@
-# Replicates the GitHub Actions CI environment for PS 7.x unit tests
-FROM mcr.microsoft.com/powershell:7.5-ubuntu-24.04
+# PSProxmoxVE development and integration testing container
+#
+# Two targets:
+#   dev        - .NET SDK + PowerShell + Pester (build & test, works on ARM/x86)
+#   dev-infra  - Adds Terraform + PVE provisioning tools (x86 only)
+#
+# Usage:
+#   # For build + test (works on Mac M-series):
+#   docker compose -f tests/docker-compose.test.yml up -d
+#
+#   # For full CI flow including provisioning (x86 only):
+#   docker compose -f tests/docker-compose.test.yml --profile infra up -d
 
-# Install .NET SDK 9.0, build module, install Pester, copy to module path
-RUN apt-get update && apt-get install -y wget \
-    && wget https://dot.net/v1/dotnet-install.sh -O /tmp/dotnet-install.sh \
-    && chmod +x /tmp/dotnet-install.sh \
-    && /tmp/dotnet-install.sh --channel 9.0 --install-dir /usr/share/dotnet \
-    && ln -sf /usr/share/dotnet/dotnet /usr/local/bin/dotnet \
-    && rm /tmp/dotnet-install.sh \
-    && rm -rf /var/lib/apt/lists/*
+# ── Base: .NET SDK + PowerShell + Pester ────────────────────────────
+FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS dev
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl jq openssh-client ca-certificates apt-transport-https gnupg \
+    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
+       | gpg --dearmor -o /usr/share/keyrings/microsoft-archive-keyring.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] \
+       https://packages.microsoft.com/ubuntu/24.04/prod noble main" \
+       > /etc/apt/sources.list.d/microsoft-prod.list \
+    && apt-get update && apt-get install -y --no-install-recommends powershell \
+    && rm -rf /var/lib/apt/lists/* \
+    && pwsh -NoProfile -Command \
+       'Set-PSRepository -Name PSGallery -InstallationPolicy Trusted; \
+        Install-Module -Name Pester -MinimumVersion 5.0 -Scope AllUsers -Force' \
+    && mkdir -p /usr/local/share/powershell/Modules/PSProxmoxVE
 
 WORKDIR /repo
-COPY . .
+CMD ["pwsh", "-NoProfile"]
 
-RUN dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj \
-        --configuration Release --framework net9.0 --output ./publish/net9.0 \
-    && rm -f ./publish/net9.0/PSProxmoxVE.deps.json \
-    && pwsh -NoProfile -Command ' \
-        Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope AllUsers; \
-        $modulePath = "/usr/local/share/powershell/Modules/PSProxmoxVE"; \
-        New-Item -ItemType Directory -Path $modulePath -Force | Out-Null; \
-        Copy-Item -Path ./publish/net9.0/* -Destination $modulePath -Recurse -Force'
+# ── Full: adds Terraform + PVE provisioning tools (x86 only) ───────
+FROM dev AS dev-infra
 
-# Unset DOTNET_ROOT so PS uses its own bundled runtime
-ENV DOTNET_ROOT=""
-ENV DOTNET_MULTILEVEL_LOOKUP=""
-
-CMD ["pwsh", "-NoProfile", "-Command", " \
-    Import-Module Pester -MinimumVersion 5.0; \
-    $config = New-PesterConfiguration; \
-    $config.Run.Path = 'tests/PSProxmoxVE.Tests'; \
-    $config.Run.Exit = $true; \
-    $config.Filter.ExcludeTag = @('Integration'); \
-    $config.Output.Verbosity = 'Detailed'; \
-    Invoke-Pester -Configuration $config"]
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        dosfstools mtools sshpass python3 xorriso gnupg \
+    && curl -fsSL https://apt.releases.hashicorp.com/gpg \
+       | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
+       https://apt.releases.hashicorp.com noble main" \
+       > /etc/apt/sources.list.d/hashicorp.list \
+    && curl -fsSL https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg \
+       -o /usr/share/keyrings/proxmox-release-bookworm.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/proxmox-release-bookworm.gpg] \
+       http://download.proxmox.com/debian/pve bookworm pve-no-subscription" \
+       > /etc/apt/sources.list.d/proxmox-pve.list \
+    && apt-get update && apt-get install -y --no-install-recommends \
+       terraform proxmox-auto-install-assistant qemu-utils \
+    && rm -rf /var/lib/apt/lists/*
