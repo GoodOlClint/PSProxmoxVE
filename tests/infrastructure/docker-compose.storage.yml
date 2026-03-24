@@ -1,0 +1,62 @@
+## Shared storage services for integration testing.
+## Provides iSCSI target and NFS server accessible from nested PVE nodes.
+##
+## These run on the GitHub runner (or any Docker host on the same network
+## as the PVE nodes) using host networking so the PVE nodes can reach them.
+##
+## Usage:
+##   docker compose -f tests/infrastructure/docker-compose.storage.yml up -d
+##   docker compose -f tests/infrastructure/docker-compose.storage.yml down -v
+
+services:
+  iscsi-target:
+    image: ubuntu:24.04
+    container_name: pvetest-iscsi
+    network_mode: host
+    privileged: true
+    volumes:
+      - iscsi-data:/srv/iscsi
+    environment:
+      ISCSI_IQN: ${ISCSI_IQN:-iqn.2024-01.local.test:storage}
+      ISCSI_LUN_SIZE: ${ISCSI_LUN_SIZE:-10G}
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -e
+        apt-get update -qq && apt-get install -y -qq tgt >/dev/null 2>&1
+        mkdir -p /srv/iscsi
+        if [ ! -f /srv/iscsi/lun0.img ]; then
+          truncate -s $$ISCSI_LUN_SIZE /srv/iscsi/lun0.img
+        fi
+        tgtd --foreground &
+        sleep 2
+        # Create target if it does not already exist
+        if ! tgtadm --lld iscsi --op show --mode target | grep -q "Target 1: $$ISCSI_IQN"; then
+          tgtadm --lld iscsi --op new --mode target --tid 1 -T $$ISCSI_IQN
+        fi
+        # Create logical unit (LUN 1) if it does not already exist
+        if ! tgtadm --lld iscsi --op show --mode logicalunit --tid 1 2>/dev/null | grep -qE "LUN:[[:space:]]*1($|[^0-9])"; then
+          tgtadm --lld iscsi --op new --mode logicalunit --tid 1 --lun 1 --backing-store /srv/iscsi/lun0.img
+        fi
+        # Bind target to all initiators if not already bound
+        if ! tgtadm --lld iscsi --op show --mode target --tid 1 2>/dev/null | grep -q "Initiator-address: ALL"; then
+          tgtadm --lld iscsi --op bind --mode target --tid 1 -I ALL
+        fi
+        echo "iSCSI target ready: $$ISCSI_IQN (port 3260)"
+        wait
+    restart: unless-stopped
+
+  nfs-server:
+    image: erichough/nfs-server:2.2.1
+    container_name: pvetest-nfs
+    network_mode: host
+    privileged: true
+    volumes:
+      - nfs-data:/srv/nfs/shared
+    environment:
+      NFS_EXPORT_0: /srv/nfs/shared *(rw,sync,no_subtree_check,no_root_squash)
+    restart: unless-stopped
+
+volumes:
+  iscsi-data:
+  nfs-data:

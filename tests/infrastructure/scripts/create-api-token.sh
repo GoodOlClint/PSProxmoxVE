@@ -88,7 +88,14 @@ if [ -z "$TICKET" ] || [ -z "$CSRF" ]; then
     exit 1
 fi
 
+# Delete existing token if present, then create fresh
 echo "Creating API token root@pam!integration..."
+curl -sk \
+    -b "PVEAuthCookie=${TICKET}" \
+    -H "CSRFPreventionToken: ${CSRF}" \
+    -X DELETE \
+    "${NESTED_API}/access/users/root@pam/token/integration" >/dev/null 2>&1 || true
+
 TOKEN_RESPONSE=$(curl -sk \
     -b "PVEAuthCookie=${TICKET}" \
     -H "CSRFPreventionToken: ${CSRF}" \
