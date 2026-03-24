@@ -30,15 +30,24 @@ services:
         fi
         tgtd --foreground &
         sleep 2
-        tgtadm --lld iscsi --op new --mode target --tid 1 -T $$ISCSI_IQN
-        tgtadm --lld iscsi --op new --mode logicalunit --tid 1 --lun 1 --backing-store /srv/iscsi/lun0.img
-        tgtadm --lld iscsi --op bind --mode target --tid 1 -I ALL
+        # Create target if it does not already exist
+        if ! tgtadm --lld iscsi --op show --mode target | grep -q "Target 1: $$ISCSI_IQN"; then
+          tgtadm --lld iscsi --op new --mode target --tid 1 -T $$ISCSI_IQN
+        fi
+        # Create logical unit (LUN 1) if it does not already exist
+        if ! tgtadm --lld iscsi --op show --mode logicalunit --tid 1 2>/dev/null | grep -qE "LUN:[[:space:]]*1($|[^0-9])"; then
+          tgtadm --lld iscsi --op new --mode logicalunit --tid 1 --lun 1 --backing-store /srv/iscsi/lun0.img
+        fi
+        # Bind target to all initiators if not already bound
+        if ! tgtadm --lld iscsi --op show --mode target --tid 1 2>/dev/null | grep -q "Initiator-address: ALL"; then
+          tgtadm --lld iscsi --op bind --mode target --tid 1 -I ALL
+        fi
         echo "iSCSI target ready: $$ISCSI_IQN (port 3260)"
         wait
     restart: unless-stopped
 
   nfs-server:
-    image: erichough/nfs-server:latest
+    image: erichough/nfs-server:2.2.1
     container_name: pvetest-nfs
     network_mode: host
     privileged: true
