@@ -396,10 +396,11 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.GetAsync(resource).GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
-                // The API returns the ID as a string, parse it to int
-                if (data != null && int.TryParse(data.ToString(), out var id))
+                if (data == null)
+                    throw new InvalidOperationException("API response for next VMID did not contain a 'data' field.");
+                if (int.TryParse(data.ToString(), out var id))
                     return id;
-                return 0;
+                throw new InvalidOperationException($"API returned unexpected next VMID value: '{data}'");
             }
             finally
             {

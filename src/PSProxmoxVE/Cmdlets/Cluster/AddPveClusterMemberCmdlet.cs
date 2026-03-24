@@ -61,7 +61,7 @@ namespace PSProxmoxVE.Cmdlets.Cluster
             try
             {
                 ptr = Marshal.SecureStringToGlobalAllocUnicode(Password);
-                var plainPassword = Marshal.PtrToStringUni(ptr)!;
+                var plainPassword = Marshal.PtrToStringUni(ptr) ?? string.Empty;
 
                 var linkDict = ParseLinks(Links);
 
