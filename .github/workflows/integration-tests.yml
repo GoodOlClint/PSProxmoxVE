@@ -25,9 +25,10 @@ name: Integration Tests
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
-    types: [ opened, synchronize, reopened ]
+  # NOTE: pull_request trigger intentionally removed. Integration tests
+  # run on a self-hosted runner with access to secrets and a live PVE
+  # node. Fork PRs must not execute code on that runner. Integration
+  # tests run automatically on push to main after merge.
   workflow_dispatch:
     inputs:
       skip_provision:
