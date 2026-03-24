@@ -4,8 +4,11 @@
 # Single source of truth for the provision → test → cleanup lifecycle.
 # Called by both the GitHub Actions workflow and the local dev container.
 #
+# Provisions two PVE nodes per version (a/b) for cluster testing, plus
+# an Ubuntu storage VM for iSCSI/NFS shared storage testing.
+#
 # Usage:
-#   run-integration.sh provision          Provision nested PVE VMs
+#   run-integration.sh provision          Provision nested PVE VMs + storage VM
 #   run-integration.sh test [8|9|all]     Run integration tests (default: all)
 #   run-integration.sh cleanup            Destroy provisioned VMs
 #   run-integration.sh all [8|9|all]      Full lifecycle: provision → test → cleanup
@@ -17,8 +20,8 @@
 #   PVE_PASSWORD       Root password for nested PVE instances
 #
 # Required env vars (test with pre-existing PVE):
-#   PVETEST_HOST       PVE host IP
-#   PVETEST_APITOKEN   PVE API token
+#   PVETEST_HOST       PVE host IP (node A)
+#   PVETEST_APITOKEN   PVE API token (node A)
 #   Set SKIP_PROVISION=true
 #
 # Optional env vars:
@@ -27,6 +30,7 @@
 #   CONFIG_FILE        Test config JSON path (default: $CACHE_DIR/test-config.json)
 #   MODULE_ARTIFACT    Path to built module DLLs (default: ./publish/netstandard2.0)
 #   PVE_VERSIONS       Space-separated versions to provision (default: "9 8")
+#   STORAGE_ISCSI_IQN  iSCSI IQN for storage target (default: iqn.2024-01.local.test:storage)
 
 set -euo pipefail
 
@@ -42,11 +46,52 @@ CONFIG_FILE="${CONFIG_FILE:-$CACHE_DIR/test-config.json}"
 MODULE_ARTIFACT="${MODULE_ARTIFACT:-$REPO_ROOT/publish/netstandard2.0}"
 PVE_VERSIONS="${PVE_VERSIONS:-9 8}"
 SKIP_PROVISION="${SKIP_PROVISION:-false}"
+STORAGE_ISCSI_IQN="${STORAGE_ISCSI_IQN:-iqn.2024-01.local.test:storage}"
+STORAGE_COMPOSE="$INFRA_DIR/docker-compose.storage.yml"
 
-# ── Version config ──────────────────────────────────────────────────
-pve_iso()    { case "$1" in 9) echo "${PVE9_ISO:-proxmox-ve_9.1-1.iso}";; 8) echo "${PVE8_ISO:-proxmox-ve_8.4-1.iso}";; esac; }
-pve_vmid()   { case "$1" in 9) echo "${PVE9_VMID:-99909}";; 8) echo "${PVE8_VMID:-99908}";; esac; }
-pve_vmname() { case "$1" in 9) echo "pve-test-pve9";; 8) echo "pve-test-pve8";; esac; }
+# ── Node config ───────────────────────────────────────────────────
+# Each version gets two nodes: a (primary) and b (secondary).
+# ISOs are per-version; nodes within a version share the same base ISO.
+
+pve_iso() {
+    local ver="${1%%[ab]}"  # strip suffix: "9a" -> "9"
+    case "$ver" in
+        9) echo "${PVE9_ISO:-proxmox-ve_9.1-1.iso}" ;;
+        8) echo "${PVE8_ISO:-proxmox-ve_8.4-1.iso}" ;;
+    esac
+}
+
+pve_vmid() {
+    case "$1" in
+        9a) echo "${PVE9A_VMID:-99091}" ;; 9b) echo "${PVE9B_VMID:-99092}" ;;
+        8a) echo "${PVE8A_VMID:-99081}" ;; 8b) echo "${PVE8B_VMID:-99082}" ;;
+    esac
+}
+
+pve_vmname() {
+    case "$1" in
+        9a) echo "pve-test-9a" ;; 9b) echo "pve-test-9b" ;;
+        8a) echo "pve-test-8a" ;; 8b) echo "pve-test-8b" ;;
+    esac
+}
+
+pve_fqdn() {
+    case "$1" in
+        9a) echo "pve9a.test.local" ;; 9b) echo "pve9b.test.local" ;;
+        8a) echo "pve8a.test.local" ;; 8b) echo "pve8b.test.local" ;;
+    esac
+}
+
+# Expand versions to node list: "9 8" -> "9a 9b 8a 8b"
+expand_nodes() {
+    local nodes=""
+    for v in $PVE_VERSIONS; do
+        nodes="$nodes ${v}a ${v}b"
+    done
+    echo $nodes
+}
+
+ALL_NODES="$(expand_nodes)"
 
 # ── CI helpers ──────────────────────────────────────────────────────
 ci_mask()  { [[ "${GITHUB_ACTIONS:-}" == "true" ]] && echo "::add-mask::$1" || true; }
@@ -66,6 +111,9 @@ require_env() {
 
 cmd_provision() {
     log "Starting provisioning..."
+    log "  Versions: $PVE_VERSIONS"
+    log "  Nodes: $ALL_NODES"
+    log "  Storage: Docker containers (iSCSI + NFS)"
     require_env PVE_ENDPOINT
     require_env PVE_API_TOKEN
     require_env PVE_TARGET_NODE
@@ -74,7 +122,7 @@ cmd_provision() {
     ci_mask "$PVE_PASSWORD"
     mkdir -p "$WORK_DIR" "$CACHE_DIR"
 
-    # Ensure base ISOs
+    # Ensure base ISOs (one per version, not per node)
     for v in $PVE_VERSIONS; do
         log "Ensuring base ISO for PVE $v..."
         bash "$SCRIPT_DIR/ensure-base-iso.sh" "$(pve_iso "$v")" "$CACHE_DIR"
@@ -87,111 +135,144 @@ cmd_provision() {
     CLOUD_IMAGE_PATH=$(echo "$cloud_output" | grep "^CLOUD_IMAGE_PATH=" | cut -d= -f2)
     OVA_PATH=$(echo "$cloud_output" | grep "^OVA_PATH=" | cut -d= -f2)
 
-    # Pre-flight cleanup
-    for v in $PVE_VERSIONS; do
-        local iso_name
-        iso_name="$(pve_iso "$v")"
-        log "Pre-flight cleanup for PVE $v (VMID $(pve_vmid "$v"))..."
-        bash "$SCRIPT_DIR/preflight-cleanup.sh" \
-            "$PVE_ENDPOINT" "$PVE_API_TOKEN" \
-            "$(pve_vmid "$v")" "${iso_name%.iso}-auto.iso" "$INFRA_DIR"
-    done
-
-    # Generate answer file
-    log "Generating answer file..."
+    # Generate per-node answer files (each needs unique FQDN for clustering)
+    log "Generating answer files..."
     local escaped_pve_password
     escaped_pve_password=$(printf '%s' "$PVE_PASSWORD" | sed 's/[\/&\\]/\\&/g')
-    sed "s/\${root_password}/${escaped_pve_password}/" \
-        "$INFRA_DIR/answer.toml.tftpl" > "$WORK_DIR/answer.toml"
+    for node in $ALL_NODES; do
+        local fqdn
+        fqdn="$(pve_fqdn "$node")"
+        sed -e "s/\${root_password}/${escaped_pve_password}/" \
+            -e "s/\${fqdn}/${fqdn}/" \
+            "$INFRA_DIR/answer.toml.tftpl" > "$WORK_DIR/answer-${node}.toml"
+    done
 
-    # Prepare auto-install ISOs
-    for v in $PVE_VERSIONS; do
+    # Prepare auto-install ISOs (one per node — each has unique answer file)
+    for node in $ALL_NODES; do
         local iso_name
-        iso_name="$(pve_iso "$v")"
-        log "Preparing auto-install ISO for PVE $v..."
+        iso_name="$(pve_iso "$node")"
+        log "Preparing auto-install ISO for $node..."
         bash "$SCRIPT_DIR/prepare-auto-iso.sh" \
             "$CACHE_DIR/$iso_name" \
-            "$WORK_DIR/answer.toml" \
+            "$WORK_DIR/answer-${node}.toml" \
             "$SCRIPT_DIR/first-boot.sh" \
-            "$WORK_DIR/${iso_name%.iso}-auto.iso" \
+            "$WORK_DIR/${iso_name%.iso}-${node}-auto.iso" \
             --cache-dir "$CACHE_DIR"
     done
 
-    # Terraform
+    # Terraform — remove any stale .tfvars from previous manual runs
+    rm -f "$INFRA_DIR/terraform.tfvars"
+
     log "Running Terraform init..."
     (cd "$INFRA_DIR" && terraform init -input=false)
 
     log "Building Terraform vars..."
     local tfvars="$WORK_DIR/instances.tfvars.json"
     local instances='{}'
-    for v in $PVE_VERSIONS; do
+    for node in $ALL_NODES; do
         local iso_name
-        iso_name="$(pve_iso "$v")"
-        local iso_path="$WORK_DIR/${iso_name%.iso}-auto.iso"
+        iso_name="$(pve_iso "$node")"
+        local iso_path="$WORK_DIR/${iso_name%.iso}-${node}-auto.iso"
         local vm_id
-        vm_id="$(pve_vmid "$v")"
+        vm_id="$(pve_vmid "$node")"
         local vm_name
-        vm_name="$(pve_vmname "$v")"
+        vm_name="$(pve_vmname "$node")"
         instances="$(jq \
-            --arg key "pve${v}" \
+            --arg key "$node" \
             --arg iso_local_path "$iso_path" \
             --arg vm_name "$vm_name" \
             --argjson vm_id "$vm_id" \
             '. + {($key): {iso_local_path: $iso_local_path, vm_id: $vm_id, vm_name: $vm_name}}' \
             <<<"$instances")"
     done
-    jq -n --argjson pve_instances "$instances" '{pve_instances: $pve_instances}' > "$tfvars"
 
-    log "Running Terraform apply..."
+    jq -n --argjson pve_instances "$instances" \
+        '{pve_instances: $pve_instances}' > "$tfvars"
+
+    log "Running Terraform apply (PVE nodes)..."
+    # TMPDIR: use work dir to avoid filling the container's /tmp with multi-GB ISO uploads.
     (cd "$INFRA_DIR" && \
+        TMPDIR="$WORK_DIR" \
         TF_VAR_proxmox_endpoint="$PVE_ENDPOINT" \
         TF_VAR_proxmox_api_token="$PVE_API_TOKEN" \
         TF_VAR_target_node="$PVE_TARGET_NODE" \
         TF_VAR_test_vm_password="$PVE_PASSWORD" \
         terraform apply -auto-approve -input=false -var-file="$tfvars")
 
-    # Wait for PVE instances and create API tokens
-    for v in $PVE_VERSIONS; do
-        log "Waiting for PVE $v to boot and creating API token..."
+    # Start iSCSI/NFS storage containers on the Docker host
+    log "Starting storage containers (iSCSI + NFS)..."
+    # Get the Docker host's real IP (not the container's). The storage containers
+    # use host networking, so PVE nodes reach them via the host's IP.
+    local storage_ip
+    storage_ip=$(docker info --format '{{range .Swarm.RemoteManagers}}{{.Addr}}{{end}}' 2>/dev/null | cut -d: -f1)
+    if [ -z "$storage_ip" ]; then
+        # Fallback: get IP of the default route's interface on the Docker host
+        storage_ip=$(docker run --rm --net=host alpine ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
+    fi
+    if [ -z "$storage_ip" ]; then
+        ci_error "Could not determine Docker host IP for storage services"
+        exit 1
+    fi
+    ISCSI_IQN="$STORAGE_ISCSI_IQN" \
+        docker compose -f "$STORAGE_COMPOSE" up -d
+    log "Storage services ready at $storage_ip (iSCSI: $STORAGE_ISCSI_IQN)"
+
+    # Wait for PVE instances and create API tokens (per node)
+    for node in $ALL_NODES; do
+        log "Waiting for $node to boot and creating API token..."
         local output
         output=$(bash "$SCRIPT_DIR/create-api-token.sh" \
             "$PVE_ENDPOINT" "$PVE_API_TOKEN" \
-            "$(pve_vmid "$v")" "$PVE_PASSWORD" 900)
+            "$(pve_vmid "$node")" "$PVE_PASSWORD" 900)
         local ip token
         ip=$(echo "$output" | grep "^IP=" | cut -d= -f2)
         token=$(echo "$output" | grep "^TOKEN=" | cut -d= -f2-)
-        log "PVE $v ready at $ip"
-        echo "{\"host\":\"$ip\",\"token\":\"$token\"}" > "$WORK_DIR/pve${v}.json"
+        # Node name = hostname portion of FQDN (e.g. pve9a.test.local -> pve9a)
+        local node_name
+        node_name="$(pve_fqdn "$node" | cut -d. -f1)"
+        log "$node ready at $ip (node: $node_name)"
+        jq -n --arg host "$ip" --arg token "$token" --arg node "$node_name" \
+            '{host: $host, token: $token, node: $node}' > "$WORK_DIR/${node}.json"
     done
 
-    # Prepare test environments
-    for v in $PVE_VERSIONS; do
+    # Prepare test environments on all PVE nodes
+    for node in $ALL_NODES; do
         local ip
-        ip=$(jq -r .host "$WORK_DIR/pve${v}.json")
-        log "Preparing test environment on PVE $v ($ip)..."
+        ip=$(jq -r .host "$WORK_DIR/${node}.json")
+        log "Preparing test environment on $node ($ip)..."
         bash "$SCRIPT_DIR/prepare-test-environment.sh" "$ip" "$PVE_PASSWORD"
     done
 
     # Write test config
     log "Writing test config to $CONFIG_FILE..."
-    local jq_args=()
-    for v in $PVE_VERSIONS; do
-        jq_args+=(--argjson "pve${v}" "$(cat "$WORK_DIR/pve${v}.json")")
-    done
-    jq_args+=(--arg cloud_image "${CLOUD_IMAGE_PATH:-}")
-    jq_args+=(--arg ova "${OVA_PATH:-}")
+    local config='{}'
 
-    local jq_expr="{"
-    local first=true
     for v in $PVE_VERSIONS; do
-        $first || jq_expr+=","
-        first=false
-        jq_expr+="pve${v}: \$pve${v}"
+        local node_a="${v}a"
+        local node_b="${v}b"
+        local version_config
+        version_config=$(jq -n \
+            --argjson a "$(cat "$WORK_DIR/${node_a}.json")" \
+            --argjson b "$(cat "$WORK_DIR/${node_b}.json")" \
+            '{nodes: {a: $a, b: $b}}')
+        config=$(jq --arg key "pve${v}" --argjson val "$version_config" \
+            '. + {($key): $val}' <<<"$config")
     done
-    jq_expr+=", cloud_image_path: \$cloud_image, ova_path: \$ova}"
 
-    jq -n "${jq_args[@]}" "$jq_expr" > "$CONFIG_FILE"
+    config=$(jq \
+        --arg cloud_image "${CLOUD_IMAGE_PATH:-}" \
+        --arg ova "${OVA_PATH:-}" \
+        --arg storage_ip "$storage_ip" \
+        --arg storage_iqn "$STORAGE_ISCSI_IQN" \
+        '. + {
+            storage: {ip: $storage_ip, iscsi_iqn: $storage_iqn, nfs_export: ($storage_ip + ":/srv/nfs/shared")},
+            cloud_image_path: $cloud_image,
+            ova_path: $ova
+        }' <<<"$config")
+
+    echo "$config" | jq . > "$CONFIG_FILE"
     log "Test config written to $CONFIG_FILE"
+    jq . "$CONFIG_FILE"
     log "Provisioning complete."
 }
 
@@ -241,32 +322,58 @@ cmd_test() {
             export PVETEST_STORAGE="${PVETEST_STORAGE:-local}"
             export PVETEST_CLOUD_IMAGE_PATH="${PVETEST_CLOUD_IMAGE_PATH:-}"
             export PVETEST_OVA_PATH="${PVETEST_OVA_PATH:-}"
+            # Secondary node and storage VM may not be available in skip mode
+            export PVETEST_HOST_B="${PVETEST_HOST_B:-}"
+            export PVETEST_APITOKEN_B="${PVETEST_APITOKEN_B:-}"
+            export PVETEST_STORAGE_VM_IP="${PVETEST_STORAGE_VM_IP:-}"
+            export PVETEST_ISCSI_IQN="${PVETEST_ISCSI_IQN:-}"
+            export PVETEST_NFS_EXPORT="${PVETEST_NFS_EXPORT:-}"
         else
             if [[ ! -f "$CONFIG_FILE" ]]; then
                 ci_error "No test config found at $CONFIG_FILE — run 'provision' first or set SKIP_PROVISION=true"
                 exit 1
             fi
-            export PVETEST_HOST=$(jq -r ".pve${v}.host" "$CONFIG_FILE")
-            export PVETEST_APITOKEN=$(jq -r ".pve${v}.token" "$CONFIG_FILE")
+            # Primary node (a)
+            export PVETEST_HOST=$(jq -r ".pve${v}.nodes.a.host" "$CONFIG_FILE")
+            export PVETEST_APITOKEN=$(jq -r ".pve${v}.nodes.a.token" "$CONFIG_FILE")
             export PVETEST_PORT=8006
-            export PVETEST_NODE=pve
+            export PVETEST_NODE=$(jq -r ".pve${v}.nodes.a.node" "$CONFIG_FILE")
             export PVETEST_STORAGE=local
             export PVETEST_CLOUD_IMAGE_PATH=$(jq -r '.cloud_image_path' "$CONFIG_FILE")
             export PVETEST_OVA_PATH=$(jq -r '.ova_path' "$CONFIG_FILE")
+            # Secondary node (b)
+            export PVETEST_HOST_B=$(jq -r ".pve${v}.nodes.b.host" "$CONFIG_FILE")
+            export PVETEST_APITOKEN_B=$(jq -r ".pve${v}.nodes.b.token" "$CONFIG_FILE")
+            # Storage services (Docker on runner)
+            export PVETEST_STORAGE_VM_IP=$(jq -r '.storage.ip' "$CONFIG_FILE")
+            export PVETEST_ISCSI_IQN=$(jq -r '.storage.iscsi_iqn' "$CONFIG_FILE")
+            export PVETEST_NFS_EXPORT=$(jq -r '.storage.nfs_export' "$CONFIG_FILE")
         fi
 
         export PVETEST_ISO_PATH="$iso_path"
         export PVETEST_PVE_VERSION="$v"
         export PVETEST_PASSWORD="${PVETEST_PASSWORD:-${PVE_PASSWORD:-}}"
 
-        # Verify API reachable
-        log "Verifying PVE $v API at $PVETEST_HOST:$PVETEST_PORT..."
+        # Verify API reachable (node A)
+        log "Verifying PVE $v node A API at $PVETEST_HOST:$PVETEST_PORT..."
         if ! curl -sk --connect-timeout 10 \
             -H "Authorization: PVEAPIToken=${PVETEST_APITOKEN}" \
             "https://${PVETEST_HOST}:${PVETEST_PORT}/api2/json/nodes" | grep -q '"node"'; then
-            ci_error "Cannot reach PVE $v API at ${PVETEST_HOST}:${PVETEST_PORT}"
+            ci_error "Cannot reach PVE $v node A API at ${PVETEST_HOST}:${PVETEST_PORT}"
             overall_exit=3
             continue
+        fi
+
+        # Verify node B if available
+        if [[ -n "${PVETEST_HOST_B:-}" ]]; then
+            log "Verifying PVE $v node B API at $PVETEST_HOST_B:$PVETEST_PORT..."
+            if ! curl -sk --connect-timeout 10 \
+                -H "Authorization: PVEAPIToken=${PVETEST_APITOKEN_B}" \
+                "https://${PVETEST_HOST_B}:${PVETEST_PORT}/api2/json/nodes" | grep -q '"node"'; then
+                ci_error "Cannot reach PVE $v node B API at ${PVETEST_HOST_B}:${PVETEST_PORT}"
+                overall_exit=3
+                continue
+            fi
         fi
 
         # Run Pester
@@ -296,15 +403,22 @@ cmd_test() {
 
 cmd_cleanup() {
     log "Starting cleanup..."
-    for v in $PVE_VERSIONS; do
+
+    # Clean up PVE nodes
+    for node in $ALL_NODES; do
         local iso_name
-        iso_name="$(pve_iso "$v")"
-        log "Cleaning up PVE $v (VMID $(pve_vmid "$v"))..."
+        iso_name="$(pve_iso "$node")"
+        log "Cleaning up $node (VMID $(pve_vmid "$node"))..."
         bash "$SCRIPT_DIR/preflight-cleanup.sh" \
             "${PVE_ENDPOINT:-}" "${PVE_API_TOKEN:-}" \
-            "$(pve_vmid "$v")" "${iso_name%.iso}-auto.iso" "$INFRA_DIR" \
+            "$(pve_vmid "$node")" "${iso_name%.iso}-${node}-auto.iso" "$INFRA_DIR" \
             || true
     done
+
+    # Stop storage containers
+    log "Stopping storage containers..."
+    docker compose -f "$STORAGE_COMPOSE" down -v 2>/dev/null || true
+
     log "Cleanup complete."
 }
 
@@ -339,9 +453,9 @@ main() {
             echo "Usage: $(basename "$0") {provision|test|cleanup|all} [8|9|all]"
             echo ""
             echo "Subcommands:"
-            echo "  provision          Provision nested PVE VMs via Terraform"
+            echo "  provision          Provision nested PVE VMs + storage VM"
             echo "  test [8|9|all]     Run integration tests (default: all versions)"
-            echo "  cleanup            Destroy provisioned VMs"
+            echo "  cleanup            Destroy all provisioned VMs"
             echo "  all [8|9|all]      Full lifecycle: provision → test → cleanup"
             exit 1
             ;;

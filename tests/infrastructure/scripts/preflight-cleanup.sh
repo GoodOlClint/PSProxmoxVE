@@ -49,6 +49,9 @@ else
 fi
 
 # --- Clean up orphaned ISO ---
+if [ -z "$ISO_FILENAME" ]; then
+    echo "No ISO filename specified, skipping ISO cleanup"
+else
 ISO_EXISTS=$(curl -sk -H "Authorization: PVEAPIToken=${API_TOKEN}" \
     "${API_BASE}/nodes/${NODE}/storage/local/content" 2>/dev/null \
     | python3 -c "
@@ -71,6 +74,7 @@ if [ -n "$ISO_EXISTS" ]; then
 else
     echo "No orphaned ISO found"
 fi
+fi  # end ISO_FILENAME check
 
 # --- Clean up stale Terraform state ---
 if [ -d "$TF_DIR" ]; then

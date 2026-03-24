@@ -25,6 +25,8 @@ resource "proxmox_virtual_environment_file" "auto_iso" {
   }
 }
 
+# ── Nested PVE VMs ────────────────────────────────────────────────────
+
 resource "proxmox_virtual_environment_vm" "nested_pve" {
   for_each  = var.pve_instances
   name      = each.value.vm_name

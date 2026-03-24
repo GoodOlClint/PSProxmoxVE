@@ -38,6 +38,7 @@ services:
     volumes:
       - ..:/repo
       - /opt/pve-isos:/opt/pve-isos
+      - /var/run/docker.sock:/var/run/docker.sock
     working_dir: /repo
     stdin_open: true
     tty: true

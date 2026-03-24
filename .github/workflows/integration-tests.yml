@@ -102,12 +102,12 @@ jobs:
           push: true
           tags: ${{ env.TEST_IMAGE }}:${{ github.sha }},${{ env.TEST_IMAGE }}:latest
 
-  # ── Provision all nested PVE VMs (self-hosted) ──────────────────────
+  # ── Provision all nested PVE VMs + storage VM (self-hosted) ─────────
   provision:
     if: inputs.skip_provision != true
     needs: [build, container-image]
     runs-on: [self-hosted, proxmox, integration]
-    timeout-minutes: 30
+    timeout-minutes: 45
     container:
       image: ghcr.io/goodolclint/psproxmoxve-integration:${{ github.sha }}
       credentials:
@@ -115,6 +115,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
       volumes:
         - /opt/pve-isos:/opt/pve-isos
+        - /var/run/docker.sock:/var/run/docker.sock
 
     steps:
       - uses: actions/checkout@v6
@@ -185,6 +186,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
       volumes:
         - /opt/pve-isos:/opt/pve-isos
+        - /var/run/docker.sock:/var/run/docker.sock
 
     steps:
       - uses: actions/checkout@v6

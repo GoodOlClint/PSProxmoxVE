@@ -63,3 +63,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get update && apt-get install -y --no-install-recommends \
        terraform proxmox-auto-install-assistant qemu-utils \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Docker CLI (for managing storage containers on the host via mounted socket)
+RUN curl -fsSL https://get.docker.com | sh 2>/dev/null \
+    && rm -rf /var/lib/apt/lists/*

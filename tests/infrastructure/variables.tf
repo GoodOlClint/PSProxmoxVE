@@ -70,3 +70,4 @@ variable "test_vm_password" {
   type        = string
   sensitive   = true
 }
+
