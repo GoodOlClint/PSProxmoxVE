@@ -28,6 +28,10 @@ name: Integration Tests
 # WARNING: Integration tests create and destroy real resources on the target
 # node. Never run against production.
 
+concurrency:
+  group: integration-tests
+  cancel-in-progress: false
+
 on:
   push:
     branches: [ main ]
