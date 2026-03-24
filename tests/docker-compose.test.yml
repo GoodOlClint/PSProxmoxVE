@@ -37,7 +37,7 @@ services:
     profiles: [infra]
     volumes:
       - ..:/repo
-      - pve-isos:/opt/pve-isos
+      - /opt/pve-isos:/opt/pve-isos
     working_dir: /repo
     stdin_open: true
     tty: true
@@ -45,6 +45,3 @@ services:
     env_file:
       - path: .env.test
         required: false
-
-volumes:
-  pve-isos:

@@ -32,15 +32,15 @@ gh pr create
 A Docker-based dev environment replicates the full CI setup locally. Works on ARM Macs
 (build + test) and x86 (full provisioning flow).
 
-```bash
-./tests/dev.sh              # Open pwsh shell in dev container
-./tests/dev.sh build        # Build the module
-./tests/dev.sh test         # Run unit tests
-./tests/dev.sh integration  # Run integration tests against existing PVE
-./tests/dev.sh provision    # Full CI flow: provision → test → cleanup (x86 only)
+```powershell
+./tests/dev.ps1              # Open pwsh shell in dev container
+./tests/dev.ps1 build        # Build the module
+./tests/dev.ps1 test         # Run unit tests (ARM + x86)
+./tests/dev.ps1 integration  # Provision nested PVE, run tests, cleanup (x86 only)
+./tests/dev.ps1 provision    # Provision nested PVE only, no tests (x86 only)
 ```
 
-Configure integration test targets by copying `tests/.env.test.example` to `tests/.env.test`.
+Configure parent PVE credentials by copying `tests/.env.test.example` to `tests/.env.test`.
 
 ### Build & test without container
 
@@ -54,8 +54,8 @@ dotnet test tests/PSProxmoxVE.Core.Tests/
 # Pester tests (requires pwsh)
 pwsh -Command "Invoke-Pester tests/PSProxmoxVE.Tests/ -Output Detailed"
 
-# Run all tests via helper
-pwsh -File tools/Invoke-Tests.ps1
+# Run all tests via dev container
+./tests/dev.ps1 test
 ```
 
 ## Key Conventions

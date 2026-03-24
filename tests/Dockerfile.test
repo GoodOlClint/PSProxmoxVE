@@ -16,16 +16,28 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS dev
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Install base packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl jq openssh-client ca-certificates apt-transport-https gnupg \
-    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
-       | gpg --dearmor -o /usr/share/keyrings/microsoft-archive-keyring.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] \
-       https://packages.microsoft.com/ubuntu/24.04/prod noble main" \
-       > /etc/apt/sources.list.d/microsoft-prod.list \
-    && apt-get update && apt-get install -y --no-install-recommends powershell \
-    && rm -rf /var/lib/apt/lists/* \
-    && pwsh -NoProfile -Command \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PowerShell: APT package on amd64, dotnet global tool on arm64.
+# The Microsoft APT repo does not publish arm64 packages for PowerShell.
+RUN if [ "$(dpkg --print-architecture)" = "amd64" ]; then \
+        curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
+            | gpg --dearmor -o /usr/share/keyrings/microsoft-archive-keyring.gpg \
+        && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] \
+           https://packages.microsoft.com/ubuntu/24.04/prod noble main" \
+           > /etc/apt/sources.list.d/microsoft-prod.list \
+        && apt-get update && apt-get install -y --no-install-recommends powershell \
+        && rm -rf /var/lib/apt/lists/*; \
+    else \
+        dotnet tool install --global PowerShell \
+        && ln -s /root/.dotnet/tools/pwsh /usr/local/bin/pwsh; \
+    fi
+
+# Install Pester and prepare module directory
+RUN pwsh -NoProfile -Command \
        'Set-PSRepository -Name PSGallery -InstallationPolicy Trusted; \
         Install-Module -Name Pester -MinimumVersion 5.0 -Scope AllUsers -Force' \
     && mkdir -p /usr/local/share/powershell/Modules/PSProxmoxVE

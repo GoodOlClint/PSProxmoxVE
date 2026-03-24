@@ -24,8 +24,8 @@
 
     To run:
         Invoke-Pester -Path ./tests/PSProxmoxVE.Tests -Tag Integration
-        # or use the project's helper script:
-        ./Invoke-Tests.ps1 -Tier Integration
+        # or use the dev container:
+        ./tests/dev.ps1 integration
 #>
 
 BeforeAll {

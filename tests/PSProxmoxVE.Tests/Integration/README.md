@@ -119,10 +119,10 @@ env:
 The integration suite is tagged `Integration`. Use the `-Tag` filter so that the unit
 tests and integration tests can be run independently.
 
-### Via the project helper script (recommended)
+### Via the dev container (recommended)
 
 ```powershell
-./Invoke-Tests.ps1 -Tier Integration
+./tests/dev.ps1 integration
 ```
 
 ### Directly with Invoke-Pester
