@@ -98,11 +98,11 @@ Describe 'Shared Storage — Integration' -Tag 'Integration' {
             $nfsServer = $nfsParts[0]
             $nfsExportPath = $nfsParts[1]
 
+            # Note: NFS is implicitly shared in PVE — do not pass -Shared
             $result = New-PveStorage -Storage 'pester-nfs' -Type 'nfs' `
                 -Server $nfsServer `
                 -Export $nfsExportPath `
                 -Content 'images,iso,backup' `
-                -Shared `
                 -ErrorAction Stop
 
             $result | Should -Not -BeNullOrEmpty
@@ -141,10 +141,11 @@ Describe 'Shared Storage — Integration' -Tag 'Integration' {
         It 'Should create iSCSI storage with -Target parameter' {
             if (Skip-IfNoSharedStorage) { return }
 
+            # iSCSI uses -Portal (not -Server) for the target address.
+            # iSCSI is implicitly shared in PVE — do not pass -Shared.
             $result = New-PveStorage -Storage 'pester-iscsi' -Type 'iscsi' `
-                -Server $script:StorageVmIp `
+                -Portal $script:StorageVmIp `
                 -Target $script:IscsiIqn `
-                -Shared `
                 -ErrorAction Stop
 
             $result | Should -Not -BeNullOrEmpty
