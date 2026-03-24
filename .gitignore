@@ -15,3 +15,7 @@ BenchmarkDotNet.Artifacts/
 .env.*
 !.env.*.example
 tests/.env.test
+tests/infrastructure/.terraform/
+tests/infrastructure/.terraform.lock.hcl
+tests/infrastructure/terraform.tfstate*
+tests/infrastructure/*.tfvars.json

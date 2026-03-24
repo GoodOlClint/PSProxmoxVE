@@ -96,8 +96,9 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
-          context: tests/infrastructure
-          file: tests/infrastructure/Dockerfile
+          context: .
+          file: tests/Dockerfile.test
+          target: dev-infra
           push: true
           tags: ${{ env.TEST_IMAGE }}:${{ github.sha }},${{ env.TEST_IMAGE }}:latest
 
