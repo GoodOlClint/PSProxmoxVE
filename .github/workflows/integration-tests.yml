@@ -5,15 +5,19 @@ name: Integration Tests
 # Architecture:
 #   build           → GitHub-hosted, dotnet publish → upload artifact
 #   container-image → GitHub-hosted, build+push Docker image to GHCR
-#   provision       → self-hosted, provisions ALL nested PVE VMs in parallel via Terraform
-#   test            → self-hosted, runs Pester tests against pre-provisioned VMs
-#   cleanup         → self-hosted, tears down all VMs (always runs)
+#   provision       → self-hosted, provisions ALL nested PVE VMs via run-integration.sh
+#   test            → self-hosted, runs Pester tests via run-integration.sh
+#   cleanup         → self-hosted, tears down all VMs via run-integration.sh (always runs)
 #   cleanup-images  → GitHub-hosted, prunes old GHCR container images
+#
+# The provision/test/cleanup logic lives in tests/infrastructure/scripts/run-integration.sh
+# which is the single source of truth shared between CI and local dev containers.
 #
 # Required repository secrets (for provisioning):
 #   PVE_ENDPOINT       - Parent PVE API URL (e.g. https://pve.example.com:8006)
 #   PVE_API_TOKEN      - Parent PVE API token (for Terraform + uploads)
 #   PVE_TARGET_NODE    - Parent PVE node name
+#   PVE_TEST_PASSWORD  - Root password for nested PVE instances
 #
 # Optional secrets (for skip_provision mode):
 #   PVETEST_HOST       - Hostname or IP of a pre-existing nested PVE
@@ -42,9 +46,7 @@ permissions:
   packages: write
 
 env:
-  INFRA_DIR: tests/infrastructure
   SCRIPTS_DIR: tests/infrastructure/scripts
-  PVE_PASSWORD: ${{ secrets.PVE_TEST_PASSWORD }}
   TEST_IMAGE: ghcr.io/goodolclint/psproxmoxve-integration
   CACHE_DIR: /opt/pve-isos
 
@@ -110,181 +112,18 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
       volumes:
         - /opt/pve-isos:/opt/pve-isos
-    # Connection details are written to /opt/pve-isos/test-config.json
-    # instead of job outputs, because GitHub Actions redacts masked/secret
-    # values in outputs making them empty in downstream jobs.
 
     steps:
-      - name: Mask test password
-        run: echo "::add-mask::${PVE_PASSWORD}"
-
       - uses: actions/checkout@v6
 
-      # ── Cache: ensure base ISOs ──────────────────────────────────────
-
-      - name: Ensure PVE 9 base ISO
-        shell: bash
-        run: bash ${SCRIPTS_DIR}/ensure-base-iso.sh "proxmox-ve_9.1-1.iso" "${CACHE_DIR}"
-
-      - name: Ensure PVE 8 base ISO
-        shell: bash
-        run: bash ${SCRIPTS_DIR}/ensure-base-iso.sh "proxmox-ve_8.4-1.iso" "${CACHE_DIR}"
-
-      # ── Cache: ensure cloud images ───────────────────────────────────
-
-      - name: Ensure cloud images cached
-        id: cloud_images
-        shell: bash
-        run: |
-          OUTPUT=$(bash ${SCRIPTS_DIR}/ensure-cloud-images.sh "${CACHE_DIR}")
-          CLOUD_IMAGE_PATH=$(echo "$OUTPUT" | grep "^CLOUD_IMAGE_PATH=" | cut -d= -f2)
-          OVA_PATH=$(echo "$OUTPUT" | grep "^OVA_PATH=" | cut -d= -f2)
-          echo "cloud_image_path=${CLOUD_IMAGE_PATH}" >> "$GITHUB_OUTPUT"
-          echo "ova_path=${OVA_PATH}" >> "$GITHUB_OUTPUT"
-
-      # ── Pre-flight cleanup for ALL VMs ───────────────────────────────
-
-      - name: Pre-flight cleanup (PVE 9)
+      - name: Provision PVE instances
         shell: bash
         env:
+          PVE_ENDPOINT: ${{ secrets.PVE_ENDPOINT }}
           PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
-        run: |
-          bash ${SCRIPTS_DIR}/preflight-cleanup.sh \
-            "${{ secrets.PVE_ENDPOINT }}" "${PVE_API_TOKEN}" \
-            99909 "proxmox-ve_9.1-1-auto.iso" "${INFRA_DIR}"
-
-      - name: Pre-flight cleanup (PVE 8)
-        shell: bash
-        env:
-          PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
-        run: |
-          bash ${SCRIPTS_DIR}/preflight-cleanup.sh \
-            "${{ secrets.PVE_ENDPOINT }}" "${PVE_API_TOKEN}" \
-            99908 "proxmox-ve_8.4-1-auto.iso" "${INFRA_DIR}"
-
-      # ── Generate answer files ────────────────────────────────────────
-
-      - name: Generate answer file
-        shell: bash
-        run: |
-          sed "s/\${root_password}/${PVE_PASSWORD}/" \
-            ${INFRA_DIR}/answer.toml.tftpl > ${RUNNER_TEMP}/answer.toml
-
-      # ── Prepare auto-install ISOs (cached) ───────────────────────────
-
-      - name: Prepare PVE 9 auto-install ISO
-        shell: bash
-        run: |
-          bash ${SCRIPTS_DIR}/prepare-auto-iso.sh \
-            "${CACHE_DIR}/proxmox-ve_9.1-1.iso" \
-            ${RUNNER_TEMP}/answer.toml \
-            ${SCRIPTS_DIR}/first-boot.sh \
-            "${RUNNER_TEMP}/proxmox-ve_9.1-1-auto.iso" \
-            --cache-dir "${CACHE_DIR}"
-
-      - name: Prepare PVE 8 auto-install ISO
-        shell: bash
-        run: |
-          bash ${SCRIPTS_DIR}/prepare-auto-iso.sh \
-            "${CACHE_DIR}/proxmox-ve_8.4-1.iso" \
-            ${RUNNER_TEMP}/answer.toml \
-            ${SCRIPTS_DIR}/first-boot.sh \
-            "${RUNNER_TEMP}/proxmox-ve_8.4-1-auto.iso" \
-            --cache-dir "${CACHE_DIR}"
-
-      # ── Terraform: provision both VMs in parallel ────────────────────
-
-      - name: Terraform init
-        shell: bash
-        working-directory: ${{ env.INFRA_DIR }}
-        run: terraform init -input=false
-
-      - name: Terraform apply (both VMs)
-        shell: bash
-        working-directory: ${{ env.INFRA_DIR }}
-        env:
-          TF_VAR_proxmox_endpoint: ${{ secrets.PVE_ENDPOINT }}
-          TF_VAR_proxmox_api_token: ${{ secrets.PVE_API_TOKEN }}
-          TF_VAR_target_node: ${{ secrets.PVE_TARGET_NODE }}
-          TF_VAR_test_vm_password: ${{ env.PVE_PASSWORD }}
-        run: |
-          cat > /tmp/instances.tfvars.json <<TFVARS
-          {
-            "pve_instances": {
-              "pve9": {
-                "iso_local_path": "${RUNNER_TEMP}/proxmox-ve_9.1-1-auto.iso",
-                "vm_id": 99909,
-                "vm_name": "pve-test-pve9"
-              },
-              "pve8": {
-                "iso_local_path": "${RUNNER_TEMP}/proxmox-ve_8.4-1-auto.iso",
-                "vm_id": 99908,
-                "vm_name": "pve-test-pve8"
-              }
-            }
-          }
-          TFVARS
-          terraform apply -auto-approve -input=false -var-file=/tmp/instances.tfvars.json
-
-      # ── Wait for both PVE instances and create API tokens ────────────
-
-      - name: Wait for PVE 9 and create API token
-        id: wait_pve9
-        shell: bash
-        env:
-          PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
-        run: |
-          OUTPUT=$(bash ${SCRIPTS_DIR}/create-api-token.sh \
-            "${{ secrets.PVE_ENDPOINT }}" "${PVE_API_TOKEN}" \
-            99909 "${PVE_PASSWORD}" 900)
-          PVE9_IP=$(echo "$OUTPUT" | grep "^IP=" | cut -d= -f2)
-          PVE9_TOKEN=$(echo "$OUTPUT" | grep "^TOKEN=" | cut -d= -f2-)
-          echo "PVE 9 ready at ${PVE9_IP}"
-          echo "{\"host\":\"${PVE9_IP}\",\"token\":\"${PVE9_TOKEN}\"}" > /tmp/pve9.json
-
-      - name: Wait for PVE 8 and create API token
-        shell: bash
-        env:
-          PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
-        run: |
-          OUTPUT=$(bash ${SCRIPTS_DIR}/create-api-token.sh \
-            "${{ secrets.PVE_ENDPOINT }}" "${PVE_API_TOKEN}" \
-            99908 "${PVE_PASSWORD}" 900)
-          PVE8_IP=$(echo "$OUTPUT" | grep "^IP=" | cut -d= -f2)
-          PVE8_TOKEN=$(echo "$OUTPUT" | grep "^TOKEN=" | cut -d= -f2-)
-          echo "PVE 8 ready at ${PVE8_IP}"
-          echo "{\"host\":\"${PVE8_IP}\",\"token\":\"${PVE8_TOKEN}\"}" > /tmp/pve8.json
-
-      # ── Prepare test environments on both nested PVEs ────────────────
-
-      - name: Prepare PVE 9 test environment
-        shell: bash
-        run: |
-          PVE9_IP=$(jq -r .host /tmp/pve9.json)
-          bash ${SCRIPTS_DIR}/prepare-test-environment.sh "${PVE9_IP}" "${PVE_PASSWORD}"
-
-      - name: Prepare PVE 8 test environment
-        shell: bash
-        run: |
-          PVE8_IP=$(jq -r .host /tmp/pve8.json)
-          bash ${SCRIPTS_DIR}/prepare-test-environment.sh "${PVE8_IP}" "${PVE_PASSWORD}"
-
-      # ── Write test config to shared volume ───────────────────────────
-
-      - name: Write test config to shared volume
-        shell: bash
-        run: |
-          CLOUD_IMG="${CACHE_DIR}/noble-server-cloudimg-amd64.qcow2"
-          OVA="${CACHE_DIR}/ubuntu-24.04-server-cloudimg-amd64.ova"
-          jq -n \
-            --argjson pve9 "$(cat /tmp/pve9.json)" \
-            --argjson pve8 "$(cat /tmp/pve8.json)" \
-            --arg cloud_image "$CLOUD_IMG" \
-            --arg ova "$OVA" \
-            '{pve9: $pve9, pve8: $pve8, cloud_image_path: $cloud_image, ova_path: $ova}' \
-            > "${CACHE_DIR}/test-config.json"
-          echo "Test config written:"
-          jq . "${CACHE_DIR}/test-config.json"
+          PVE_TARGET_NODE: ${{ secrets.PVE_TARGET_NODE }}
+          PVE_PASSWORD: ${{ secrets.PVE_TEST_PASSWORD }}
+        run: bash ${SCRIPTS_DIR}/run-integration.sh provision
 
   # ── Integration tests (self-hosted, per PVE version) ────────────────
   test:
@@ -305,9 +144,6 @@ jobs:
         pve_version: ['9', '8']
 
     steps:
-      - name: Mask test password
-        run: echo "::add-mask::${PVE_PASSWORD}"
-
       - uses: actions/checkout@v6
 
       - name: Download module artifact
@@ -316,86 +152,15 @@ jobs:
           name: module-integration
           path: ./publish/netstandard2.0/
 
-      # ── Load test config from shared volume ──────────────────────────
-
-      - name: Load test config
-        id: target
+      - name: Run integration tests (PVE ${{ matrix.pve_version }})
         shell: bash
-        run: |
-          CONFIG="${CACHE_DIR}/test-config.json"
-          if [ "${{ inputs.skip_provision }}" = "true" ]; then
-            echo "host=${{ secrets.PVETEST_HOST }}" >> "$GITHUB_OUTPUT"
-            echo "port=${{ secrets.PVETEST_PORT || '8006' }}" >> "$GITHUB_OUTPUT"
-            echo "token=${{ secrets.PVETEST_APITOKEN }}" >> "$GITHUB_OUTPUT"
-            echo "node=${{ secrets.PVETEST_NODE || 'pve' }}" >> "$GITHUB_OUTPUT"
-            echo "storage=${{ secrets.PVETEST_STORAGE || 'local' }}" >> "$GITHUB_OUTPUT"
-            echo "cloud_image_path=" >> "$GITHUB_OUTPUT"
-            echo "ova_path=" >> "$GITHUB_OUTPUT"
-          else
-            PVE_KEY="pve${{ matrix.pve_version }}"
-            echo "host=$(jq -r ".${PVE_KEY}.host" "$CONFIG")" >> "$GITHUB_OUTPUT"
-            echo "port=8006" >> "$GITHUB_OUTPUT"
-            echo "token=$(jq -r ".${PVE_KEY}.token" "$CONFIG")" >> "$GITHUB_OUTPUT"
-            echo "node=pve" >> "$GITHUB_OUTPUT"
-            echo "storage=local" >> "$GITHUB_OUTPUT"
-            echo "cloud_image_path=$(jq -r '.cloud_image_path' "$CONFIG")" >> "$GITHUB_OUTPUT"
-            echo "ova_path=$(jq -r '.ova_path' "$CONFIG")" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Verify PVE API reachable
-        shell: bash
-        run: |
-          HOST="${{ steps.target.outputs.host }}"
-          PORT="${{ steps.target.outputs.port }}"
-          TOKEN="${{ steps.target.outputs.token }}"
-          echo "Testing connectivity to PVE ${{ matrix.pve_version }} API at ${HOST}:${PORT}..."
-          if curl -sk --connect-timeout 10 \
-              -H "Authorization: PVEAPIToken=${TOKEN}" \
-              "https://${HOST}:${PORT}/api2/json/nodes" | grep -q '"node"'; then
-            echo "PVE API is responsive"
-          else
-            echo "::error::Cannot reach PVE API at ${HOST}:${PORT}"
-            exit 1
-          fi
-
-      # ── Install module ────────────────────────────────────────────────
-
-      - name: Copy module to module path
-        shell: pwsh
-        run: |
-          $modulePath = "$HOME/.local/share/powershell/Modules/PSProxmoxVE"
-          New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
-          Copy-Item -Path ./publish/netstandard2.0/* -Destination $modulePath -Recurse -Force
-
-      # ── Run tests ─────────────────────────────────────────────────────
-
-      - name: Create test ISO
-        shell: bash
-        run: dd if=/dev/urandom of=${RUNNER_TEMP}/pvetest.iso bs=1M count=1 2>/dev/null
-
-      - name: Run integration tests
-        shell: pwsh
         env:
-          PVETEST_HOST: ${{ steps.target.outputs.host }}
-          PVETEST_PORT: ${{ steps.target.outputs.port }}
-          PVETEST_APITOKEN: ${{ steps.target.outputs.token }}
-          PVETEST_NODE: ${{ steps.target.outputs.node }}
-          PVETEST_STORAGE: ${{ steps.target.outputs.storage }}
-          PVETEST_PVE_VERSION: ${{ matrix.pve_version }}
-          PVETEST_PASSWORD: ${{ env.PVE_PASSWORD }}
-          PVETEST_CLOUD_IMAGE_PATH: ${{ steps.target.outputs.cloud_image_path }}
-          PVETEST_OVA_PATH: ${{ steps.target.outputs.ova_path }}
-        run: |
-          $env:PVETEST_ISO_PATH = Join-Path $env:RUNNER_TEMP "pvetest.iso"
-          Import-Module Pester -MinimumVersion 5.0
-          $config = New-PesterConfiguration
-          $config.Run.Path = "tests/PSProxmoxVE.Tests/Integration"
-          $config.Filter.Tag = "Integration"
-          $config.Output.Verbosity = "Detailed"
-          $config.TestResult.Enabled = $true
-          $config.TestResult.OutputFormat = "NUnitXml"
-          $config.TestResult.OutputPath = "TestResults/integration-results.xml"
-          Invoke-Pester -Configuration $config
+          PVE_PASSWORD: ${{ secrets.PVE_TEST_PASSWORD }}
+          MODULE_ARTIFACT: ./publish/netstandard2.0
+          SKIP_PROVISION: ${{ inputs.skip_provision || 'false' }}
+          PVETEST_HOST: ${{ secrets.PVETEST_HOST }}
+          PVETEST_APITOKEN: ${{ secrets.PVETEST_APITOKEN }}
+        run: bash ${SCRIPTS_DIR}/run-integration.sh test ${{ matrix.pve_version }}
 
       - name: Upload test results
         if: always()
@@ -421,23 +186,13 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: API-based cleanup (PVE 9)
+      - name: Cleanup PVE instances
         shell: bash
         env:
+          PVE_ENDPOINT: ${{ secrets.PVE_ENDPOINT }}
           PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
-        run: |
-          bash ${SCRIPTS_DIR}/preflight-cleanup.sh \
-            "${{ secrets.PVE_ENDPOINT }}" "${PVE_API_TOKEN}" \
-            99909 "proxmox-ve_9.1-1-auto.iso" "${INFRA_DIR}" || true
-
-      - name: API-based cleanup (PVE 8)
-        shell: bash
-        env:
-          PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
-        run: |
-          bash ${SCRIPTS_DIR}/preflight-cleanup.sh \
-            "${{ secrets.PVE_ENDPOINT }}" "${PVE_API_TOKEN}" \
-            99908 "proxmox-ve_8.4-1-auto.iso" "${INFRA_DIR}" || true
+          PVE_TARGET_NODE: ${{ secrets.PVE_TARGET_NODE }}
+        run: bash ${SCRIPTS_DIR}/run-integration.sh cleanup
 
   # ── Clean up old container images from GHCR ──────────────────────────
   cleanup-images:
