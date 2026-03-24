@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         curl jq openssh-client ca-certificates apt-transport-https gnupg \
     && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
        | gpg --dearmor -o /usr/share/keyrings/microsoft-archive-keyring.gpg \
-    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/microsoft-archive-keyring.gpg] \
        https://packages.microsoft.com/ubuntu/24.04/prod noble main" \
        > /etc/apt/sources.list.d/microsoft-prod.list \
     && apt-get update && apt-get install -y --no-install-recommends powershell \

@@ -99,7 +99,9 @@ cmd_provision() {
 
     # Generate answer file
     log "Generating answer file..."
-    sed "s/\${root_password}/${PVE_PASSWORD}/" \
+    local escaped_pve_password
+    escaped_pve_password=$(printf '%s' "$PVE_PASSWORD" | sed 's/[\/&\\]/\\&/g')
+    sed "s/\${root_password}/${escaped_pve_password}/" \
         "$INFRA_DIR/answer.toml.tftpl" > "$WORK_DIR/answer.toml"
 
     # Prepare auto-install ISOs
@@ -121,17 +123,24 @@ cmd_provision() {
 
     log "Building Terraform vars..."
     local tfvars="$WORK_DIR/instances.tfvars.json"
-    local instances="{"
-    local first=true
+    local instances='{}'
     for v in $PVE_VERSIONS; do
         local iso_name
         iso_name="$(pve_iso "$v")"
-        $first || instances+=","
-        first=false
-        instances+="\"pve${v}\":{\"iso_local_path\":\"$WORK_DIR/${iso_name%.iso}-auto.iso\",\"vm_id\":$(pve_vmid "$v"),\"vm_name\":\"$(pve_vmname "$v")\"}"
+        local iso_path="$WORK_DIR/${iso_name%.iso}-auto.iso"
+        local vm_id
+        vm_id="$(pve_vmid "$v")"
+        local vm_name
+        vm_name="$(pve_vmname "$v")"
+        instances="$(jq \
+            --arg key "pve${v}" \
+            --arg iso_local_path "$iso_path" \
+            --arg vm_name "$vm_name" \
+            --argjson vm_id "$vm_id" \
+            '. + {($key): {iso_local_path: $iso_local_path, vm_id: $vm_id, vm_name: $vm_name}}' \
+            <<<"$instances")"
     done
-    instances+="}"
-    echo "{\"pve_instances\":$instances}" > "$tfvars"
+    jq -n --argjson pve_instances "$instances" '{pve_instances: $pve_instances}' > "$tfvars"
 
     log "Running Terraform apply..."
     (cd "$INFRA_DIR" && \
@@ -182,8 +191,7 @@ cmd_provision() {
     jq_expr+=", cloud_image_path: \$cloud_image, ova_path: \$ova}"
 
     jq -n "${jq_args[@]}" "$jq_expr" > "$CONFIG_FILE"
-    log "Test config:"
-    jq . "$CONFIG_FILE"
+    log "Test config written to $CONFIG_FILE"
     log "Provisioning complete."
 }
 
@@ -249,7 +257,7 @@ cmd_test() {
 
         export PVETEST_ISO_PATH="$iso_path"
         export PVETEST_PVE_VERSION="$v"
-        export PVETEST_PASSWORD="${PVE_PASSWORD:-}"
+        export PVETEST_PASSWORD="${PVETEST_PASSWORD:-${PVE_PASSWORD:-}}"
 
         # Verify API reachable
         log "Verifying PVE $v API at $PVETEST_HOST:$PVETEST_PORT..."
