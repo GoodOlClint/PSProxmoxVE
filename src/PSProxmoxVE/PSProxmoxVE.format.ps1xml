@@ -1356,5 +1356,64 @@
       </TableControl>
     </View>
 
+    <!-- PSProxmoxVE.Core.Authentication.PveSession -->
+    <!-- Hides sensitive properties (Ticket, ApiToken, CsrfToken) from default output -->
+    <View>
+      <Name>PSProxmoxVE.Core.Authentication.PveSession</Name>
+      <ViewSelectedBy>
+        <TypeName>PSProxmoxVE.Core.Authentication.PveSession</TypeName>
+      </ViewSelectedBy>
+      <TableControl>
+        <TableHeaders>
+          <TableColumnHeader>
+            <Label>Hostname</Label>
+            <Width>25</Width>
+            <Alignment>Left</Alignment>
+          </TableColumnHeader>
+          <TableColumnHeader>
+            <Label>Port</Label>
+            <Width>6</Width>
+            <Alignment>Right</Alignment>
+          </TableColumnHeader>
+          <TableColumnHeader>
+            <Label>AuthMode</Label>
+            <Width>10</Width>
+            <Alignment>Left</Alignment>
+          </TableColumnHeader>
+          <TableColumnHeader>
+            <Label>Expired</Label>
+            <Width>8</Width>
+            <Alignment>Left</Alignment>
+          </TableColumnHeader>
+          <TableColumnHeader>
+            <Label>Version</Label>
+            <Width>15</Width>
+            <Alignment>Left</Alignment>
+          </TableColumnHeader>
+        </TableHeaders>
+        <TableRowEntries>
+          <TableRowEntry>
+            <TableColumnItems>
+              <TableColumnItem>
+                <PropertyName>Hostname</PropertyName>
+              </TableColumnItem>
+              <TableColumnItem>
+                <PropertyName>Port</PropertyName>
+              </TableColumnItem>
+              <TableColumnItem>
+                <PropertyName>AuthMode</PropertyName>
+              </TableColumnItem>
+              <TableColumnItem>
+                <ScriptBlock>if ($_.IsExpired) { 'Yes' } else { 'No' }</ScriptBlock>
+              </TableColumnItem>
+              <TableColumnItem>
+                <ScriptBlock>if ($_.ServerVersion) { $_.ServerVersion.ToString() } else { 'Unknown' }</ScriptBlock>
+              </TableColumnItem>
+            </TableColumnItems>
+          </TableRowEntry>
+        </TableRowEntries>
+      </TableControl>
+    </View>
+
   </ViewDefinitions>
 </Configuration>

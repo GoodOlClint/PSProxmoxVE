@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Management.Automation;
+using System.Net;
 using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Client;
+using PSProxmoxVE.Core.Exceptions;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
 
@@ -274,9 +276,10 @@ namespace PSProxmoxVE.Cmdlets.Vms
                 var vm = vmService.GetVm(session, Node, vmId);
                 WriteObject(vm);
             }
-            catch
+            catch (PveApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
             {
-                // If the VM isn't queryable yet (e.g. disk import still running), return basic info
+                // VM not yet queryable (e.g. disk import still in progress); return basic info
+                WriteVerbose($"VM retrieval failed, returning basic info: {ex.Message}");
                 WriteObject(new PveVm
                 {
                     VmId = vmId,
