@@ -1,16 +1,16 @@
 {
   "_schema_version": "1.0",
   "_description": "PSProxmoxVE stable findings ledger. IDs are permanent (F001, F002...). Resolved findings are never deleted — they are marked resolved with evidence. If a finding reappears, it is marked regressed and retains its original ID.",
-  "last_updated": "2026-03-23",
-  "last_scan_date": "2026-03-23",
+  "last_updated": "2026-03-24",
+  "last_scan_date": "2026-03-24",
   "counters": {
-    "next_id": 84,
+    "next_id": 85,
     "total_open": 10,
     "total_resolved": 72,
-    "total_regressed": 0,
+    "total_regressed": 1,
     "open": 10,
     "resolved": 72,
-    "regressed": 0,
+    "regressed": 1,
     "wont_fix": 1
   },
   "findings": [
@@ -1187,15 +1187,13 @@
       "title": "Bare catch blocks in PveHttpClient, PveCmdletBase, VmService, ContainerService, GetPveVmCmdlet",
       "category": "code_quality",
       "severity": "medium",
-      "status": "resolved",
+      "status": "regressed",
       "first_detected": "2026-03-21",
       "files": [
-        "src/PSProxmoxVE.Core/Client/PveHttpClient.cs",
-        "src/PSProxmoxVE/Cmdlets/PveCmdletBase.cs",
         "src/PSProxmoxVE.Core/Services/VmService.cs",
-        "src/PSProxmoxVE.Core/Services/ContainerService.cs"
+        "src/PSProxmoxVE/Cmdlets/Vms/ImportPveOvaCmdlet.cs"
       ],
-      "description": "Multiple bare catch {} blocks swallow exceptions silently, hiding errors and making debugging difficult.",
+      "description": "Two bare catch {} blocks found: VmService.PingGuestAgent (line 553) and ImportPveOvaCmdlet (line 277). Both swallow all exceptions including OutOfMemoryException/StackOverflowException.",
       "scan_history": [
         {
           "scan_date": "2026-03-21",
@@ -1206,6 +1204,11 @@
           "scan_date": "2026-03-22",
           "local_id": null,
           "status": "fixed"
+        },
+        {
+          "scan_date": "2026-03-24",
+          "local_id": null,
+          "status": "regressed"
         }
       ],
       "resolution": {
@@ -1213,7 +1216,13 @@
         "evidence": "All bare catches replaced with filtered catch (Exception ex) when (...) clauses that exclude OOM/SOE and are specific to PveApiException/HttpRequestException where appropriate",
         "verified_by": "self-reported"
       },
-      "decisions_ref": "D005"
+      "regression_history": [
+        {
+          "regressed_in_scan": "2026-03-24",
+          "description": "Bare catch blocks reintroduced in VmService.PingGuestAgent (line 553) and ImportPveOvaCmdlet VM retrieval fallback (line 277). Both should use filtered catch per D004."
+        }
+      ],
+      "decisions_ref": "D004"
     },
     {
       "id": "F040",
@@ -1861,9 +1870,12 @@
       "title": "VM/CT-level firewall 0% coverage",
       "category": "api_coverage",
       "severity": "medium",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-22",
-      "files": [],
+      "files": [
+        "src/PSProxmoxVE.Core/Services/FirewallService.cs",
+        "src/PSProxmoxVE/Cmdlets/Firewall/"
+      ],
       "description": "~44 combined endpoints for per-VM and per-CT firewall rules. Cluster-level is covered (21 cmdlets) but VM/CT-level is not.",
       "scan_history": [
         {
@@ -1880,8 +1892,19 @@
           "scan_date": "2026-03-23",
           "local_id": null,
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-24",
+          "local_id": null,
+          "status": "resolved"
         }
-      ]
+      ],
+      "resolution": {
+        "scan_date": "2026-03-24",
+        "report_id": "scan-8",
+        "verified_by": "scan",
+        "evidence": "All 17 firewall cmdlets support a Level parameter (Cluster/Node/Vm/Container). FirewallService.cs line 12 documents scope support. SetPveFirewallRuleCmdlet accepts Level=Vm/Container with Node and VmId params. Same pattern in all firewall cmdlets (rules, aliases, ipsets, options, refs)."
+      }
     },
     {
       "id": "F060",
@@ -2653,6 +2676,26 @@
         "verified_by": "code_change",
         "evidence": "CONTRIBUTING.md line 9 changed from .NET SDK 9.0+ to .NET SDK 10.0+, matching all CI workflows and test project TFM."
       }
+    },
+    {
+      "id": "F084",
+      "title": "PveSession exposes auth secrets in default pipeline output",
+      "category": "security",
+      "severity": "medium",
+      "status": "open",
+      "first_detected": "2026-03-24",
+      "files": [
+        "src/PSProxmoxVE.Core/Authentication/PveSession.cs",
+        "src/PSProxmoxVE/PSProxmoxVE.format.ps1xml"
+      ],
+      "description": "PveSession.Ticket, ApiToken, and CsrfToken are public string properties with no format-file hiding. When Connect-PveServer -PassThru or Test-PveConnection -Detailed writes the session to the pipeline, all secret fields are visible in default table/list view. A user piping $session | Format-List * or logging verbose output could inadvertently expose auth tokens. Add a PSProxmoxVE.format.ps1xml entry for PveSession that shows only Hostname, Port, AuthMode, IsExpired, and ServerVersion by default.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-24",
+          "local_id": null,
+          "status": "new"
+        }
+      ]
     }
   ]
 }
