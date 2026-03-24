@@ -550,8 +550,9 @@ namespace PSProxmoxVE.Core.Services
                 client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/agent/ping").GetAwaiter().GetResult();
                 return true;
             }
-            catch
+            catch (PSProxmoxVE.Core.Exceptions.PveApiException)
             {
+                // Treat API-level failures for this endpoint as "guest agent not responding".
                 return false;
             }
             finally
