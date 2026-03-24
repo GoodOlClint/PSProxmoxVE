@@ -233,6 +233,39 @@
 
         # Cluster
         'Get-PveClusterResource',
+        'Get-PveClusterStatus',
+        'Get-PveClusterNextId',
+        'Get-PveClusterOption',
+        'Set-PveClusterOption',
+        'Get-PveClusterConfig',
+        'Get-PveClusterConfigNode',
+        'Add-PveClusterConfigNode',
+        'Remove-PveClusterConfigNode',
+        'Get-PveClusterJoinInfo',
+        'Add-PveClusterMember',
+        'New-PveCluster',
+
+        # HA — Resources
+        'Get-PveHaResource',
+        'New-PveHaResource',
+        'Set-PveHaResource',
+        'Remove-PveHaResource',
+        'Move-PveHaResource',
+
+        # HA — Groups
+        'Get-PveHaGroup',
+        'New-PveHaGroup',
+        'Set-PveHaGroup',
+        'Remove-PveHaGroup',
+
+        # HA — Status
+        'Get-PveHaStatus',
+
+        # HA — Rules (PVE 9.0+)
+        'Get-PveHaRule',
+        'New-PveHaRule',
+        'Set-PveHaRule',
+        'Remove-PveHaRule',
 
         # Tasks
         'Get-PveTaskList',
