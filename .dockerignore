@@ -1,0 +1,3 @@
+# The Dockerfile.test build stages only install packages — no COPY needed.
+# Exclude everything to keep the build context minimal.
+*
