@@ -39,7 +39,7 @@ namespace PSProxmoxVE.Cmdlets.HA
             var service = new HaService();
 
             WriteVerbose($"{Mode} HA resource '{Sid}' to node '{Node}'...");
-            if (Mode == "Relocate")
+            if (string.Equals(Mode, "Relocate", System.StringComparison.OrdinalIgnoreCase))
                 service.RelocateResource(session, Sid, Node);
             else
                 service.MigrateResource(session, Sid, Node);

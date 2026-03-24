@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Management.Automation;
 using PSProxmoxVE.Core.Services;
 
@@ -55,17 +54,7 @@ namespace PSProxmoxVE.Cmdlets.Cluster
             var session = GetSession();
             var service = new ClusterConfigService();
 
-            Dictionary<string, string>? linkDict = null;
-            if (Links != null)
-            {
-                linkDict = new Dictionary<string, string>();
-                foreach (var link in Links)
-                {
-                    var parts = link.Split(new[] { '=' }, 2);
-                    if (parts.Length == 2)
-                        linkDict[parts[0]] = parts[1];
-                }
-            }
+            var linkDict = ParseLinks(Links);
 
             WriteVerbose($"Adding node '{Node}' to cluster configuration...");
             var upid = service.AddConfigNode(session, Node, NewNodeIp, linkDict, NodeId, Votes,

@@ -48,7 +48,11 @@ namespace PSProxmoxVE.Cmdlets.HA
             if (Properties != null)
             {
                 foreach (var key in Properties.Keys)
-                    data[key.ToString()!] = Properties[key]!.ToString()!;
+                {
+                    var value = Properties[key]?.ToString();
+                    if (key != null && value != null)
+                        data[key.ToString()!] = value;
+                }
             }
 
             WriteVerbose($"Updating HA rule '{Rule}'...");

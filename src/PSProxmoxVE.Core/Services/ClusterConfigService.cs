@@ -41,7 +41,8 @@ namespace PSProxmoxVE.Core.Services
             try
             {
                 var response = client.GetAsync("cluster/config").GetAwaiter().GetResult();
-                return JObject.Parse(response);
+                var data = JObject.Parse(response)["data"];
+                return data as JObject ?? new JObject();
             }
             finally
             {
@@ -54,7 +55,7 @@ namespace PSProxmoxVE.Core.Services
         /// </summary>
         /// <param name="session">The authenticated PVE session.</param>
         /// <param name="clusterName">The name for the new cluster.</param>
-        /// <param name="links">Optional Corosync link addresses (e.g., "0=10.0.0.1,1=10.0.1.1").</param>
+        /// <param name="links">Optional Corosync link addresses, using keys link0..link7 (e.g., "link0=10.0.0.1").</param>
         /// <param name="nodeid">Optional node ID for this node.</param>
         /// <param name="votes">Optional number of quorum votes for this node.</param>
         /// <returns>The UPID of the cluster creation task.</returns>

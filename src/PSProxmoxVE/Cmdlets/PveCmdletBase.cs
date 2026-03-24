@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Management.Automation;
 using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Authentication;
@@ -157,6 +158,30 @@ namespace PSProxmoxVE.Cmdlets
             throw new PveTaskTimeoutException(
                 task.Upid ?? "unknown",
                 TimeSpan.FromSeconds(timeoutSeconds));
+        }
+
+        /// <summary>
+        /// Parses an array of Corosync link strings (e.g. "link0=10.0.0.1") into a dictionary.
+        /// Emits a warning for entries that do not match the expected "key=value" format.
+        /// </summary>
+        /// <param name="links">Array of link strings in "linkN=address" format.</param>
+        /// <returns>Dictionary of parsed link entries, or null if input is null.</returns>
+        protected Dictionary<string, string>? ParseLinks(string[]? links)
+        {
+            if (links == null) return null;
+
+            var result = new Dictionary<string, string>();
+            foreach (var link in links)
+            {
+                var parts = link.Split(new[] { '=' }, 2);
+                if (parts.Length != 2 || string.IsNullOrWhiteSpace(parts[0]) || string.IsNullOrWhiteSpace(parts[1]))
+                {
+                    WriteWarning($"Ignoring malformed link entry '{link}'. Expected format: 'link0=10.0.0.1'");
+                    continue;
+                }
+                result[parts[0].Trim()] = parts[1].Trim();
+            }
+            return result.Count > 0 ? result : null;
         }
     }
 }

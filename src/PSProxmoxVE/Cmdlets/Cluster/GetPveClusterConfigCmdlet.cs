@@ -12,7 +12,7 @@ namespace PSProxmoxVE.Cmdlets.Cluster
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveClusterConfig")]
-    [OutputType(typeof(PSObject))]
+    [OutputType(typeof(JObject))]
     public sealed class GetPveClusterConfigCmdlet : PveCmdletBase
     {
         protected override void ProcessRecord()

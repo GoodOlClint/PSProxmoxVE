@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Management.Automation;
 using System.Runtime.InteropServices;
 using System.Security;
@@ -64,17 +63,7 @@ namespace PSProxmoxVE.Cmdlets.Cluster
                 ptr = Marshal.SecureStringToGlobalAllocUnicode(Password);
                 var plainPassword = Marshal.PtrToStringUni(ptr)!;
 
-                Dictionary<string, string>? linkDict = null;
-                if (Links != null)
-                {
-                    linkDict = new Dictionary<string, string>();
-                    foreach (var link in Links)
-                    {
-                        var parts = link.Split(new[] { '=' }, 2);
-                        if (parts.Length == 2)
-                            linkDict[parts[0]] = parts[1];
-                    }
-                }
+                var linkDict = ParseLinks(Links);
 
                 WriteVerbose($"Joining cluster via '{Hostname}'...");
                 var upid = service.JoinCluster(session, Hostname, Fingerprint, plainPassword,
