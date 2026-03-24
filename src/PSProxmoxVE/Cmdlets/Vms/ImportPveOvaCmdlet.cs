@@ -274,9 +274,10 @@ namespace PSProxmoxVE.Cmdlets.Vms
                 var vm = vmService.GetVm(session, Node, vmId);
                 WriteObject(vm);
             }
-            catch
+            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
             {
                 // If the VM isn't queryable yet (e.g. disk import still running), return basic info
+                WriteVerbose($"VM retrieval failed, returning basic info: {ex.Message}");
                 WriteObject(new PveVm
                 {
                     VmId = vmId,

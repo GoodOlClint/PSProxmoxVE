@@ -550,7 +550,7 @@ namespace PSProxmoxVE.Core.Services
                 client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/agent/ping").GetAwaiter().GetResult();
                 return true;
             }
-            catch
+            catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
             {
                 return false;
             }
