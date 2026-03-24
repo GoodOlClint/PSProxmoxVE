@@ -8,7 +8,41 @@ C# binary PowerShell module for managing Proxmox VE (PVE) infrastructure. Two pr
 
 Tests: xUnit (`tests/PSProxmoxVE.Core.Tests/`) and Pester 5 (`tests/PSProxmoxVE.Tests/`).
 
-## Build & Test
+## Development Workflow
+
+**All changes go through pull requests.** The `main` branch has branch protection enabled
+(required build checks, required review, admin enforced). Never push directly to main.
+
+```bash
+# Create a feature branch
+git checkout -b feat/my-feature
+
+# ... make changes ...
+
+# Commit using conventional commits
+git commit -m "feat: add new cmdlet"
+
+# Push and create PR
+git push -u origin feat/my-feature
+gh pr create
+```
+
+### Dev container (recommended)
+
+A Docker-based dev environment replicates the full CI setup locally. Works on ARM Macs
+(build + test) and x86 (full provisioning flow).
+
+```bash
+./tests/dev.sh              # Open pwsh shell in dev container
+./tests/dev.sh build        # Build the module
+./tests/dev.sh test         # Run unit tests
+./tests/dev.sh integration  # Run integration tests against existing PVE
+./tests/dev.sh provision    # Full CI flow: provision → test → cleanup (x86 only)
+```
+
+Configure integration test targets by copying `tests/.env.test.example` to `tests/.env.test`.
+
+### Build & test without container
 
 ```bash
 # Build

@@ -1,0 +1,50 @@
+## PSProxmoxVE dev/test containers
+##
+## Default (works on ARM Macs + x86):
+##   docker compose -f tests/docker-compose.test.yml up -d
+##   docker exec -it psproxmoxve-dev pwsh
+##
+## Full CI infra (x86 only — adds Terraform + PVE provisioning tools):
+##   docker compose -f tests/docker-compose.test.yml --profile infra up -d
+##   docker exec -it psproxmoxve-dev-infra bash
+##
+## Stop:
+##   docker compose -f tests/docker-compose.test.yml down
+
+services:
+  dev:
+    build:
+      context: ..
+      dockerfile: tests/Dockerfile.test
+      target: dev
+    container_name: psproxmoxve-dev
+    volumes:
+      - ..:/repo
+    working_dir: /repo
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    env_file:
+      - path: .env.test
+        required: false
+
+  dev-infra:
+    build:
+      context: ..
+      dockerfile: tests/Dockerfile.test
+      target: dev-infra
+    container_name: psproxmoxve-dev-infra
+    profiles: [infra]
+    volumes:
+      - ..:/repo
+      - pve-isos:/opt/pve-isos
+    working_dir: /repo
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    env_file:
+      - path: .env.test
+        required: false
+
+volumes:
+  pve-isos:
