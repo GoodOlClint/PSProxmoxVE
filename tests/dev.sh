@@ -40,7 +40,7 @@ build_module() {
         dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj \
             -c Release -f netstandard2.0 -o /tmp/publish 2>&1 | tail -1 && \
         cp -r /tmp/publish/* $MODULE_PATH/ && \
-        echo 'Module installed to $MODULE_PATH'
+        echo "Module installed to $MODULE_PATH"
     "
 }
 
