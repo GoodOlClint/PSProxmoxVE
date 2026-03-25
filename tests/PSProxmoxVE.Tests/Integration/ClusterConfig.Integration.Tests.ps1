@@ -108,16 +108,18 @@ BeforeAll {
 
 AfterAll {
     # Best-effort cleanup — each step may fail if cluster state is partial
-    if ($script:ClusterCreated) {
-        # Try to discover node B name and remove it from the cluster
-        if ($script:NodeBName) {
-            try {
-                Write-Warning "Cleanup: removing node '$($script:NodeBName)' from cluster..."
-                Remove-PveClusterConfigNode -Node $script:NodeBName -Confirm:$false -ErrorAction Stop
-            }
-            catch {
-                Write-Warning "Cleanup: failed to remove node B from cluster: $_"
-            }
+    if ($script:ClusterCreated -and $script:NodeBName -and $script:Password) {
+        try {
+            # Reconnect as root@pam for privileged cleanup
+            $secPw = ConvertTo-SecureString $script:Password -AsPlainText -Force
+            $cred = New-Object System.Management.Automation.PSCredential('root@pam', $secPw)
+            Connect-PveServer -Server $script:Host_ -Port $script:Port -Credential $cred -SkipCertificateCheck
+
+            Write-Warning "Cleanup: removing node '$($script:NodeBName)' from cluster..."
+            Remove-PveClusterConfigNode -Node $script:NodeBName -Confirm:$false -ErrorAction Stop
+        }
+        catch {
+            Write-Warning "Cleanup: failed to remove node B from cluster: $_"
         }
     }
 
@@ -430,11 +432,13 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
                 return
             }
 
-            # Ensure we are connected to node A
+            # Ensure we are connected to node A as root@pam (node removal requires it)
+            $secPw = ConvertTo-SecureString $script:Password -AsPlainText -Force
+            $cred = New-Object System.Management.Automation.PSCredential('root@pam', $secPw)
             Connect-PveServer `
                 -Server $script:Host_ `
                 -Port $script:Port `
-                -ApiToken $script:ApiToken `
+                -Credential $cred `
                 -SkipCertificateCheck
 
             { Remove-PveClusterConfigNode -Node $script:NodeBName -Confirm:$false -ErrorAction Stop } |
