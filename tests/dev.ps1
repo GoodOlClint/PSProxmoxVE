@@ -229,7 +229,7 @@ if ($Test) {
 
 if ($Provision) {
     Start-InfraContainer
-    docker exec $InfraContainer bash $RunIntegration provision
+    docker exec $InfraContainer bash $RunIntegration provision $Version
     if ($LASTEXITCODE -ne 0) { throw "Provisioning failed (exit code $LASTEXITCODE)" }
 }
 
@@ -248,7 +248,7 @@ if ($Integration) {
 
 if ($Cleanup) {
     Start-InfraContainer
-    docker exec $InfraContainer bash $RunIntegration cleanup
+    docker exec $InfraContainer bash $RunIntegration cleanup $Version
     if ($LASTEXITCODE -ne 0) { throw "Cleanup failed (exit code $LASTEXITCODE)" }
 }
 

@@ -8,9 +8,9 @@
 # Docker containers on the runner host for iSCSI/NFS shared storage.
 #
 # Usage:
-#   run-integration.sh provision                  Provision nested PVE VMs + start storage containers
+#   run-integration.sh provision [8|9|all]         Provision nested PVE VMs + start storage containers
 #   run-integration.sh test [8|9|all] [filter]    Run integration tests (default: all, no filter)
-#   run-integration.sh cleanup                    Destroy provisioned VMs
+#   run-integration.sh cleanup [8|9|all]           Destroy provisioned VMs
 #   run-integration.sh all [8|9|all]              Full lifecycle: provision → test → cleanup
 #
 #   The optional [filter] is a comma-separated list of test area names.
@@ -116,6 +116,11 @@ require_env() {
 # ── Subcommands ─────────────────────────────────────────────────────
 
 cmd_provision() {
+    local requested="${1:-all}"
+    if [[ "$requested" != "all" ]]; then
+        PVE_VERSIONS="$requested"
+        ALL_NODES="$(expand_nodes)"
+    fi
     log "Starting provisioning..."
     log "  Versions: $PVE_VERSIONS"
     log "  Nodes: $ALL_NODES"
@@ -444,6 +449,11 @@ cmd_test() {
 }
 
 cmd_cleanup() {
+    local requested="${1:-all}"
+    if [[ "$requested" != "all" ]]; then
+        PVE_VERSIONS="$requested"
+        ALL_NODES="$(expand_nodes)"
+    fi
     log "Starting cleanup..."
 
     # Clean up PVE nodes
@@ -495,9 +505,9 @@ main() {
             echo "Usage: $(basename "$0") {provision|test|cleanup|all} [8|9|all] [test-filter]"
             echo ""
             echo "Subcommands:"
-            echo "  provision                  Provision nested PVE VMs + start storage containers"
+            echo "  provision [8|9|all]        Provision nested PVE VMs + start storage containers"
             echo "  test [8|9|all] [filter]    Run integration tests (default: all versions, no filter)"
-            echo "  cleanup                    Destroy all provisioned VMs"
+            echo "  cleanup [8|9|all]          Destroy provisioned VMs (default: all)"
             echo "  all [8|9|all]              Full lifecycle: provision → test → cleanup"
             echo ""
             echo "Test filter: comma-separated area names matching test filenames."
