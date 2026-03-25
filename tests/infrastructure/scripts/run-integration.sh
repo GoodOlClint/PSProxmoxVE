@@ -186,21 +186,21 @@ cmd_provision() {
     log "Generating answer files..."
     local escaped_pve_password
     escaped_pve_password=$(printf '%s' "$PVE_PASSWORD" | sed 's/[\/&\\]/\\&/g')
-    mkdir -p "$WORK_DIR/answers"
+    mkdir -p "$WORK_DIR/answer-server/answers"
 
     # Default answer file (fallback for unknown MACs)
     sed -e "s/\${root_password}/${escaped_pve_password}/" \
         -e "s/\${fqdn}/pve-default.test.local/" \
-        "$INFRA_DIR/answer.toml.tftpl" > "$WORK_DIR/default-answer.toml"
+        "$INFRA_DIR/answer.toml.tftpl" > "$WORK_DIR/answer-server/default.toml"
 
     for node in $provision_nodes; do
         local mac fqdn
         mac="$(pve_mac "$node")"
         fqdn="$(pve_fqdn "$node")"
-        # Answer file named by lowercase MAC with colons (server matches on MAC)
+        # Answer file named by lowercase MAC (server matches on MAC)
         sed -e "s/\${root_password}/${escaped_pve_password}/" \
             -e "s/\${fqdn}/${fqdn}/" \
-            "$INFRA_DIR/answer.toml.tftpl" > "$WORK_DIR/answers/${mac}.toml"
+            "$INFRA_DIR/answer.toml.tftpl" > "$WORK_DIR/answer-server/answers/${mac}.toml"
     done
 
     # Prepare generic HTTP auto-install ISOs (one per PVE version, not per node).
@@ -296,8 +296,7 @@ cmd_provision() {
         TF_VAR_target_node="$PVE_TARGET_NODE" \
         TF_VAR_test_vm_password="$PVE_PASSWORD" \
         TF_VAR_docker_host_ip="$storage_ip" \
-        TF_VAR_answer_files_dir="$WORK_DIR/answers" \
-        TF_VAR_default_answer_file="$WORK_DIR/default-answer.toml" \
+        TF_VAR_answer_server_dir="$WORK_DIR/answer-server" \
         terraform apply -auto-approve -input=false -state="$TF_STATE_FILE" -var-file="$tfvars" $tf_targets)
 
     # Wait for PVE instances to boot and discover IPs
@@ -558,9 +557,9 @@ cmd_cleanup() {
 
     (cd "$INFRA_DIR" && terraform init -input=false 2>/dev/null)
 
-    # Ensure answer file paths exist (terraform destroy validates host_path mounts)
-    mkdir -p "$WORK_DIR/answers"
-    touch "$WORK_DIR/default-answer.toml"
+    # Ensure answer server dir exists (terraform destroy validates host_path mounts)
+    mkdir -p "$WORK_DIR/answer-server/answers"
+    touch "$WORK_DIR/answer-server/default.toml"
 
     # Build -target flags when destroying a subset
     local tf_targets=""
@@ -584,8 +583,7 @@ cmd_cleanup() {
         TF_VAR_target_node="$PVE_TARGET_NODE" \
         TF_VAR_test_vm_password="${PVE_PASSWORD:-placeholder}" \
         TF_VAR_docker_host_ip="${storage_ip:-127.0.0.1}" \
-        TF_VAR_answer_files_dir="${WORK_DIR}/answers" \
-        TF_VAR_default_answer_file="${WORK_DIR}/default-answer.toml" \
+        TF_VAR_answer_server_dir="${WORK_DIR}/answer-server" \
         terraform destroy -auto-approve -input=false -state="$TF_STATE_FILE" -var-file="$tfvars" $tf_targets)
 
     # Clean up work directory when destroying all

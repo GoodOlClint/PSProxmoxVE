@@ -95,13 +95,8 @@ variable "docker_host_ip" {
   type        = string
 }
 
-variable "answer_files_dir" {
-  description = "Host path to the directory containing per-MAC answer.toml files"
-  type        = string
-}
-
-variable "default_answer_file" {
-  description = "Host path to the default answer.toml file"
+variable "answer_server_dir" {
+  description = "Host path to the answer server root directory (contains default.toml and answers/ subdirectory)"
   type        = string
 }
 

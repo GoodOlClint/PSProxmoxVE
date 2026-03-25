@@ -11,14 +11,13 @@ resource "docker_container" "answer_server" {
 
   network_mode = "host"
 
+  # Mount the answer server root directory which contains:
+  #   default.toml     — fallback answer file
+  #   answers/         — per-MAC answer files
+  # The server expects both at ./default.toml and ./answers/ relative to /app
   volumes {
-    host_path      = var.answer_files_dir
-    container_path = "/app/answers"
-  }
-
-  volumes {
-    host_path      = var.default_answer_file
-    container_path = "/app/default.toml"
+    host_path      = var.answer_server_dir
+    container_path = "/app"
   }
 }
 
