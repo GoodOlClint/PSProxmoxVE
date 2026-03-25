@@ -19,9 +19,9 @@ Describe 'Safety-Net Cleanup — Integration' -Tag 'Integration' {
             $pesterVms = $vms | Where-Object { $_.Name -like 'pester-*' }
             foreach ($vm in $pesterVms) {
                 try {
-                    Stop-PveVm -Node $script:Node -VmId $vm.VmId -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
-                    Start-Sleep -Seconds 3
+                    Stop-PveVm -Node $script:Node -VmId $vm.VmId -Wait -Timeout 30 -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
                 } catch { }
+                Start-Sleep -Seconds 2
                 try {
                     # Try removing as template first (templates need Remove-PveTemplate)
                     Remove-PveTemplate -Node $script:Node -VmId $vm.VmId -Confirm:$false -ErrorAction SilentlyContinue
@@ -31,6 +31,8 @@ Describe 'Safety-Net Cleanup — Integration' -Tag 'Integration' {
                     } catch { }
                 }
             }
+            # Wait for removals to complete
+            Start-Sleep -Seconds 3
 
             # Verify
             $remaining = Get-PveVm -Node $script:Node -ErrorAction SilentlyContinue |
@@ -45,13 +47,15 @@ Describe 'Safety-Net Cleanup — Integration' -Tag 'Integration' {
             $pesterCts = $containers | Where-Object { $_.Name -like 'pester-*' }
             foreach ($ct in $pesterCts) {
                 try {
-                    Stop-PveContainer -Node $script:Node -VmId $ct.VmId -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
-                    Start-Sleep -Seconds 3
+                    Stop-PveContainer -Node $script:Node -VmId $ct.VmId -Wait -Timeout 30 -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
                 } catch { }
+                Start-Sleep -Seconds 2
                 try {
                     Remove-PveContainer -Node $script:Node -VmId $ct.VmId -Force -Purge -Confirm:$false -ErrorAction SilentlyContinue
                 } catch { }
             }
+            # Wait for removals to complete
+            Start-Sleep -Seconds 3
 
             # Verify
             $remaining = Get-PveContainer -Node $script:Node -ErrorAction SilentlyContinue |

@@ -21,11 +21,12 @@ AfterAll {
     if ($null -eq $script:SkipReason) {
         foreach ($ctId in $script:CreatedContainerIds) {
             try {
-                Stop-PveContainer -Node $script:Node -VmId $ctId -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
-                Start-Sleep -Seconds 3
+                Stop-PveContainer -Node $script:Node -VmId $ctId -Wait -Timeout 30 -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
+            } catch { }
+            Start-Sleep -Seconds 2
+            try {
                 Remove-PveContainer -Node $script:Node -VmId $ctId -Force -Purge -Confirm:$false -ErrorAction SilentlyContinue
-            }
-            catch { <# non-fatal #> }
+            } catch { }
         }
     }
     Disconnect-TestPve

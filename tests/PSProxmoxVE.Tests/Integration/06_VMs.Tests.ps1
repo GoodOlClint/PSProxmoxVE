@@ -17,16 +17,8 @@ BeforeAll {
 }
 
 AfterAll {
-    if (-not $script:SkipReason -and $script:TestVmId) {
-        # Stop and remove pester-test-vm and any clone
-        foreach ($vmId in @($script:TestVmId, ($script:TestVmId + 1000))) {
-            try {
-                Stop-PveVm -Node $script:Node -VmId $vmId -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
-                Start-Sleep -Seconds 3
-                Remove-PveVm -Node $script:Node -VmId $vmId -Force -Purge -Confirm:$false -ErrorAction SilentlyContinue
-            } catch { }
-        }
-    }
+    # Do NOT clean up pester-test-vm here — later test files (07_Snapshots,
+    # 09_CloudInit, 15_Tasks) depend on it. 99_Cleanup handles removal.
     Disconnect-TestPve
 }
 
