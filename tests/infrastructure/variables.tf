@@ -26,6 +26,7 @@ variable "pve_instances" {
     iso_local_path = string
     vm_id          = number
     vm_name        = string
+    mac_address    = string
   }))
 }
 
@@ -85,6 +86,16 @@ variable "storage_iscsi_lun_size" {
 
 variable "docker_host_ip" {
   description = "IP of the Docker host, used by PVE nodes to reach storage containers"
+  type        = string
+}
+
+variable "answer_files_dir" {
+  description = "Host path to the directory containing per-MAC answer.toml files"
+  type        = string
+}
+
+variable "default_answer_file" {
+  description = "Host path to the default answer.toml file"
   type        = string
 }
 

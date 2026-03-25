@@ -1,3 +1,23 @@
+# ── Answer server container ──────────────────────────────────────────
+
+resource "docker_container" "answer_server" {
+  name       = "pvetest-answer-server"
+  image      = "slothcroissant/proxmox-auto-installer-server:latest"
+  restart    = "unless-stopped"
+
+  network_mode = "host"
+
+  volumes {
+    host_path      = var.answer_files_dir
+    container_path = "/app/answers"
+  }
+
+  volumes {
+    host_path      = var.default_answer_file
+    container_path = "/app/default.toml"
+  }
+}
+
 # ── Docker images & volumes ──────────────────────────────────────────
 
 resource "docker_image" "ubuntu" {

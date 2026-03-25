@@ -88,6 +88,15 @@ pve_fqdn() {
     esac
 }
 
+# Deterministic MAC addresses for each node.
+# Scheme: AA:BB:CC:00:<version-hex>:<node-hex>
+pve_mac() {
+    case "$1" in
+        9a) echo "AA:BB:CC:00:09:1A" ;; 9b) echo "AA:BB:CC:00:09:1B" ;;
+        8a) echo "AA:BB:CC:00:08:1A" ;; 8b) echo "AA:BB:CC:00:08:1B" ;;
+    esac
+}
+
 # Expand versions to node list: "9 8" -> "9a 9b 8a 8b"
 expand_nodes() {
     local nodes=""
@@ -152,35 +161,8 @@ cmd_provision() {
     CLOUD_IMAGE_PATH=$(echo "$cloud_output" | grep "^CLOUD_IMAGE_PATH=" | cut -d= -f2)
     OVA_PATH=$(echo "$cloud_output" | grep "^OVA_PATH=" | cut -d= -f2)
 
-    # Generate per-node answer files (each needs unique FQDN for clustering)
-    log "Generating answer files..."
-    local escaped_pve_password
-    escaped_pve_password=$(printf '%s' "$PVE_PASSWORD" | sed 's/[\/&\\]/\\&/g')
-    for node in $provision_nodes; do
-        local fqdn
-        fqdn="$(pve_fqdn "$node")"
-        sed -e "s/\${root_password}/${escaped_pve_password}/" \
-            -e "s/\${fqdn}/${fqdn}/" \
-            "$INFRA_DIR/answer.toml.tftpl" > "$WORK_DIR/answer-${node}.toml"
-    done
-
-    # Prepare auto-install ISOs (one per node — each has unique answer file)
-    for node in $provision_nodes; do
-        local iso_name
-        iso_name="$(pve_iso "$node")"
-        log "Preparing auto-install ISO for $node..."
-        bash "$SCRIPT_DIR/prepare-auto-iso.sh" \
-            "$CACHE_DIR/$iso_name" \
-            "$WORK_DIR/answer-${node}.toml" \
-            "$SCRIPT_DIR/first-boot.sh" \
-            "$WORK_DIR/${iso_name%.iso}-${node}-auto.iso" \
-            --cache-dir "$CACHE_DIR"
-    done
-
-    # Terraform — remove any stale .tfvars from previous manual runs
-    rm -f "$INFRA_DIR/terraform.tfvars"
-
-    # Discover Docker host IP before Terraform apply (needed for docker_host_ip var)
+    # Discover Docker host IP early — needed for the HTTP auto-install ISO URL
+    # and for the docker_host_ip Terraform variable.
     local storage_ip
     storage_ip=$(docker run --rm --net=host alpine ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
     if [ -z "$storage_ip" ]; then
@@ -192,6 +174,53 @@ cmd_provision() {
     fi
     log "Docker host IP: $storage_ip"
 
+    # Generate per-MAC answer files for the HTTP answer server.
+    # Each node gets a file named by its MAC address so the server can
+    # route the correct answer to each VM during auto-install.
+    log "Generating answer files..."
+    local escaped_pve_password
+    escaped_pve_password=$(printf '%s' "$PVE_PASSWORD" | sed 's/[\/&\\]/\\&/g')
+    mkdir -p "$WORK_DIR/answers"
+
+    # Default answer file (fallback for unknown MACs)
+    sed -e "s/\${root_password}/${escaped_pve_password}/" \
+        -e "s/\${fqdn}/pve-default.test.local/" \
+        "$INFRA_DIR/answer.toml.tftpl" > "$WORK_DIR/default-answer.toml"
+
+    for node in $provision_nodes; do
+        local mac fqdn
+        mac="$(pve_mac "$node")"
+        fqdn="$(pve_fqdn "$node")"
+        # Answer file named by lowercase MAC with colons (server matches on MAC)
+        sed -e "s/\${root_password}/${escaped_pve_password}/" \
+            -e "s/\${fqdn}/${fqdn}/" \
+            "$INFRA_DIR/answer.toml.tftpl" > "$WORK_DIR/answers/${mac}.toml"
+    done
+
+    # Prepare generic HTTP auto-install ISOs (one per PVE version, not per node).
+    # The first-boot script is embedded in the ISO via --on-first-boot so that
+    # [first-boot] source = "from-iso" in the answer file still works.
+    for v in $provision_versions; do
+        local base_iso_name generic_iso
+        base_iso_name="$(pve_iso "$v")"
+        generic_iso="$WORK_DIR/${base_iso_name%.iso}-http-auto.iso"
+        if [ ! -f "$generic_iso" ]; then
+            log "Preparing HTTP auto-install ISO for PVE $v..."
+            proxmox-auto-install-assistant prepare-iso \
+                --fetch-from http \
+                --url "http://${storage_ip}:8000/answer" \
+                --on-first-boot "$SCRIPT_DIR/first-boot.sh" \
+                --tmp "$WORK_DIR" \
+                --output "$generic_iso" \
+                "$CACHE_DIR/$base_iso_name"
+        else
+            log "HTTP auto-install ISO for PVE $v already exists, skipping."
+        fi
+    done
+
+    # Terraform — remove any stale .tfvars from previous manual runs
+    rm -f "$INFRA_DIR/terraform.tfvars"
+
     log "Running Terraform init..."
     (cd "$INFRA_DIR" && terraform init -input=false)
 
@@ -201,19 +230,23 @@ cmd_provision() {
     local tfvars="$WORK_DIR/instances.tfvars.json"
     local instances='{}'
     for node in $ALL_NODES; do
+        local v="${node%[ab]}"  # Extract version: "9a" -> "9"
         local iso_name
-        iso_name="$(pve_iso "$node")"
-        local iso_path="$WORK_DIR/${iso_name%.iso}-${node}-auto.iso"
+        iso_name="$(pve_iso "$v")"
+        local iso_path="$WORK_DIR/${iso_name%.iso}-http-auto.iso"
         local vm_id
         vm_id="$(pve_vmid "$node")"
         local vm_name
         vm_name="$(pve_vmname "$node")"
+        local mac
+        mac="$(pve_mac "$node")"
         instances="$(jq \
             --arg key "$node" \
             --arg iso_local_path "$iso_path" \
             --arg vm_name "$vm_name" \
             --argjson vm_id "$vm_id" \
-            '. + {($key): {iso_local_path: $iso_local_path, vm_id: $vm_id, vm_name: $vm_name}}' \
+            --arg mac_address "$mac" \
+            '. + {($key): {iso_local_path: $iso_local_path, vm_id: $vm_id, vm_name: $vm_name, mac_address: $mac_address}}' \
             <<<"$instances")"
     done
 
@@ -230,10 +263,11 @@ cmd_provision() {
             tf_targets="$tf_targets -target=proxmox_virtual_environment_file.auto_iso[\"$node\"]"
             tf_targets="$tf_targets -target=proxmox_virtual_environment_vm.nested_pve[\"$node\"]"
         done
-        # Always include shared Docker storage resources
+        # Always include shared Docker storage and answer server resources
         tf_targets="$tf_targets -target=docker_image.ubuntu"
         tf_targets="$tf_targets -target=docker_container.iscsi_target"
         tf_targets="$tf_targets -target=docker_container.nfs_server"
+        tf_targets="$tf_targets -target=docker_container.answer_server"
         tf_targets="$tf_targets -target=docker_volume.iscsi_data"
         tf_targets="$tf_targets -target=docker_volume.nfs_data"
         log "Terraform targets: $tf_targets"
@@ -247,6 +281,8 @@ cmd_provision() {
         TF_VAR_target_node="$PVE_TARGET_NODE" \
         TF_VAR_test_vm_password="$PVE_PASSWORD" \
         TF_VAR_docker_host_ip="$storage_ip" \
+        TF_VAR_answer_files_dir="$WORK_DIR/answers" \
+        TF_VAR_default_answer_file="$WORK_DIR/default-answer.toml" \
         terraform apply -auto-approve -input=false -var-file="$tfvars" $tf_targets)
 
     # Wait for PVE instances to boot and discover IPs
@@ -488,12 +524,15 @@ cmd_cleanup() {
             local vm_id vm_name
             vm_id="$(pve_vmid "$node")"
             vm_name="$(pve_vmname "$node")"
+            local mac
+            mac="$(pve_mac "$node")"
             instances="$(jq \
                 --arg key "$node" \
                 --arg vm_name "$vm_name" \
                 --argjson vm_id "$vm_id" \
                 --arg iso_local_path "/dev/null" \
-                '. + {($key): {iso_local_path: $iso_local_path, vm_id: $vm_id, vm_name: $vm_name}}' \
+                --arg mac_address "$mac" \
+                '. + {($key): {iso_local_path: $iso_local_path, vm_id: $vm_id, vm_name: $vm_name, mac_address: $mac_address}}' \
                 <<<"$instances")"
         done
         mkdir -p "$WORK_DIR"
@@ -525,6 +564,8 @@ cmd_cleanup() {
         TF_VAR_target_node="$PVE_TARGET_NODE" \
         TF_VAR_test_vm_password="${PVE_PASSWORD:-placeholder}" \
         TF_VAR_docker_host_ip="${storage_ip:-127.0.0.1}" \
+        TF_VAR_answer_files_dir="${WORK_DIR}/answers" \
+        TF_VAR_default_answer_file="${WORK_DIR}/default-answer.toml" \
         terraform destroy -auto-approve -input=false -var-file="$tfvars" $tf_targets) || true
 
     # Clean up work directory when destroying all
@@ -548,22 +589,30 @@ cmd_force_cleanup() {
     log "Force cleanup — bypassing Terraform, using direct API calls..."
 
     # Destroy VMs via the PVE API (works even with broken Terraform state)
+    # Track which versions we've already cleaned up ISOs for (generic ISOs are shared)
+    local cleaned_iso_versions=""
     for node in $cleanup_nodes; do
-        local vm_id
+        local vm_id v iso_name iso_file
         vm_id="$(pve_vmid "$node")"
-        local iso_name
-        iso_name="$(pve_iso "$node")"
+        v="${node%[ab]}"
+        iso_name="$(pve_iso "$v")"
+        # Only clean up the generic ISO once per version
+        iso_file=""
+        if [[ ! " $cleaned_iso_versions " =~ " $v " ]]; then
+            iso_file="${iso_name%.iso}-http-auto.iso"
+            cleaned_iso_versions="$cleaned_iso_versions $v"
+        fi
         log "Force cleaning $node (VMID $vm_id)..."
         bash "$SCRIPT_DIR/preflight-cleanup.sh" \
             "${PVE_ENDPOINT:-}" "${PVE_API_TOKEN:-}" \
-            "$vm_id" "${iso_name%.iso}-${node}-auto.iso" "$INFRA_DIR" \
+            "$vm_id" "$iso_file" "$INFRA_DIR" \
             || true
     done
 
-    # Stop Docker storage containers
+    # Stop Docker storage and answer server containers
     if [[ "$requested" == "all" ]]; then
-        log "Stopping storage containers..."
-        docker rm -f pvetest-iscsi pvetest-nfs 2>/dev/null || true
+        log "Stopping storage and answer server containers..."
+        docker rm -f pvetest-iscsi pvetest-nfs pvetest-answer-server 2>/dev/null || true
         docker volume rm pvetest-iscsi-data pvetest-nfs-data 2>/dev/null || true
     fi
 

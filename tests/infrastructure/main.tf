@@ -74,8 +74,9 @@ resource "proxmox_virtual_environment_vm" "nested_pve" {
   }
 
   network_device {
-    bridge = var.network_bridge
-    model  = "virtio"
+    bridge      = var.network_bridge
+    model       = "virtio"
+    mac_address = each.value.mac_address
   }
 
   operating_system {
