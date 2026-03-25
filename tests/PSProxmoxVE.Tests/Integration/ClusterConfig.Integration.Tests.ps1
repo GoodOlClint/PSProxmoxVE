@@ -261,27 +261,31 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
 
             $fingerprint = $script:Fingerprint
 
-            $result = Add-PveClusterMember `
-                -Hostname $script:Host_ `
-                -Fingerprint $fingerprint `
-                -Password $secPw `
-                -Wait `
-                -Confirm:$false `
-                -ErrorAction Stop
+            try {
+                $result = Add-PveClusterMember `
+                    -Hostname $script:Host_ `
+                    -Fingerprint $fingerprint `
+                    -Password $secPw `
+                    -Wait `
+                    -Confirm:$false `
+                    -ErrorAction Stop
 
-            $result | Should -Not -BeNullOrEmpty
+                $result | Should -Not -BeNullOrEmpty
 
-            # Brief pause for pmxcfs to sync after task completion
-            Start-Sleep -Seconds 5
-
-            # Reconnect to node A with root@pam for subsequent cluster operations
-            $secPwA = ConvertTo-SecureString $script:Password -AsPlainText -Force
-            $credA = New-Object System.Management.Automation.PSCredential('root@pam', $secPwA)
-            Connect-PveServer `
-                -Server $script:Host_ `
-                -Port $script:Port `
-                -Credential $credA `
-                -SkipCertificateCheck
+                # Brief pause for pmxcfs to sync after task completion
+                Start-Sleep -Seconds 5
+            }
+            finally {
+                # Always reconnect to node A — whether join succeeded or failed,
+                # the current session points at node B which may be invalid.
+                $secPwA = ConvertTo-SecureString $script:Password -AsPlainText -Force
+                $credA = New-Object System.Management.Automation.PSCredential('root@pam', $secPwA)
+                Connect-PveServer `
+                    -Server $script:Host_ `
+                    -Port $script:Port `
+                    -Credential $credA `
+                    -SkipCertificateCheck
+            }
         }
 
         It 'Get-PveClusterConfigNode shows both nodes' {
