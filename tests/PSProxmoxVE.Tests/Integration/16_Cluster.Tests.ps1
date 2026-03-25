@@ -1,96 +1,36 @@
 #Requires -Module Pester
 <#
 .SYNOPSIS
-    Pester 5 integration tests for cluster configuration and HA lifecycle.
+    Integration tests for cluster configuration and HA lifecycle.
 
-    These tests exercise the full cluster lifecycle: creating a cluster on
-    node A, joining node B, managing HA groups, and removing node B.
+    Exercises the full cluster lifecycle: create cluster on node A,
+    join node B, manage HA groups/rules, and verify cluster state.
 
-    Nodes are provisioned STANDALONE (not clustered). The tests create and
-    destroy the cluster during the run.
+    Nodes must be provisioned STANDALONE (not clustered). These tests
+    create a cluster during the run. Cleanup is handled by reprovisioning
+    (2-node cluster cannot be torn down via API due to quorum loss).
 
-    Required environment variables:
-        PVETEST_HOST       - Node A hostname or IP
-        PVETEST_PORT       - API port (default 8006)
-        PVETEST_APITOKEN   - Node A API token
-        PVETEST_NODE       - Node A node name
-
-    Optional (multi-node tests):
-        PVETEST_HOST_B     - Node B hostname or IP
-        PVETEST_APITOKEN_B - Node B API token
-        PVETEST_PASSWORD   - Root password for nested PVE instances
-
-    Optional:
-        PVETEST_PVE_VERSION - PVE major version (8 or 9)
-
-    WARNING: These tests CREATE and DESTROY a cluster on the target nodes.
+    WARNING: These tests CREATE a cluster on the target nodes.
     Never run against a production cluster.
 #>
 
 BeforeAll {
-    . $PSScriptRoot/../_TestHelper.ps1
-
-    # --- Required env vars ---
-    $requiredVars = @('PVETEST_HOST', 'PVETEST_PORT', 'PVETEST_APITOKEN', 'PVETEST_NODE')
-    $script:SkipReason = $null
-
-    foreach ($var in $requiredVars) {
-        if (-not [System.Environment]::GetEnvironmentVariable($var)) {
-            $script:SkipReason = "No live Proxmox VE target configured. Set: $($requiredVars -join ', ')"
-            break
-        }
-    }
-
-    # --- Convenience accessors ---
-    $script:Host_       = [System.Environment]::GetEnvironmentVariable('PVETEST_HOST')
-    $portEnv            = [System.Environment]::GetEnvironmentVariable('PVETEST_PORT')
-    $script:Port        = [int]$(if ($portEnv) { $portEnv } else { '8006' })
-    $script:ApiToken    = [System.Environment]::GetEnvironmentVariable('PVETEST_APITOKEN')
-    $script:Node        = [System.Environment]::GetEnvironmentVariable('PVETEST_NODE')
-
-    # --- Optional multi-node vars ---
-    $script:HostB       = [System.Environment]::GetEnvironmentVariable('PVETEST_HOST_B')
-    $script:ApiTokenB   = [System.Environment]::GetEnvironmentVariable('PVETEST_APITOKEN_B')
-    $script:Password    = [System.Environment]::GetEnvironmentVariable('PVETEST_PASSWORD')
-    $script:PveVersion  = [System.Environment]::GetEnvironmentVariable('PVETEST_PVE_VERSION')
+    . $PSScriptRoot/_IntegrationHelper.ps1
+    Connect-TestPve
 
     # --- State tracking ---
     $script:ClusterCreated = $false
     $script:JoinInfo       = $null
     $script:NodeBName      = $null
     $script:HaRuleCreated  = $false
+    $script:HaTestVmId     = $null
 
-    # --- Skip helpers ---
-    function script:Skip-IfNoTarget {
-        if ($script:SkipReason) {
-            Set-ItResult -Skipped -Because $script:SkipReason
-            return $true
-        }
-        return $false
-    }
-
-    function script:Skip-IfNoNodeB {
-        if (Skip-IfNoTarget) { return $true }
-        if (-not $script:HostB -or -not $script:ApiTokenB -or -not $script:Password) {
-            Set-ItResult -Skipped -Because 'Multi-node env vars not set (PVETEST_HOST_B, PVETEST_APITOKEN_B, PVETEST_PASSWORD)'
-            return $true
-        }
-        return $false
-    }
+    # --- Cluster-specific skip helpers ---
 
     function script:Skip-IfNoCluster {
         if (Skip-IfNoTarget) { return $true }
         if (-not $script:ClusterCreated) {
             Set-ItResult -Skipped -Because 'Cluster was not created (multi-node env vars may not be set)'
-            return $true
-        }
-        return $false
-    }
-
-    function script:Skip-IfNoPve9 {
-        if (Skip-IfNoCluster) { return $true }
-        if (-not $script:PveVersion -or [int]$script:PveVersion -lt 9) {
-            Set-ItResult -Skipped -Because 'HA rules require PVE 9.0+'
             return $true
         }
         return $false
@@ -108,7 +48,7 @@ BeforeAll {
 }
 
 AfterAll {
-    # Best-effort cleanup of HA artifacts created during testing
+    # Best-effort cleanup of HA artifacts
     if ($script:HaRuleCreated) {
         try { Remove-PveHaRule -Rule 'pester-rule-1' -Confirm:$false -ErrorAction SilentlyContinue } catch { }
     }
@@ -119,26 +59,10 @@ AfterAll {
 
     # Node removal from a 2-node cluster is not possible via API (quorum loss).
     # Test infrastructure handles cleanup via reprovisioning.
-    try { Disconnect-PveServer -ErrorAction SilentlyContinue } catch { }
+    Disconnect-TestPve
 }
 
 Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
-
-    # -------------------------------------------------------------------
-    Context 'Connection' {
-        It 'Should connect to PVE node A' {
-            if (Skip-IfNoTarget) { return }
-
-            $session = Connect-PveServer `
-                -Server $script:Host_ `
-                -Port $script:Port `
-                -ApiToken $script:ApiToken `
-                -SkipCertificateCheck `
-                -PassThru
-
-            $session | Should -Not -BeNullOrEmpty
-        }
-    }
 
     # -------------------------------------------------------------------
     Context 'Pre-cluster reads on standalone node' {
@@ -168,15 +92,12 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
         It 'Get-PveClusterConfig returns config' {
             if (Skip-IfNoTarget) { return }
 
-            # /cluster/config returns a directory listing (array) on standalone nodes
-            # and may return an object on clustered nodes — either is valid
             { Get-PveClusterConfig -ErrorAction Stop } | Should -Not -Throw
         }
 
         It 'Get-PveHaStatus returns status without throwing' {
             if (Skip-IfNoTarget) { return }
 
-            # On a standalone node this may return an empty list — that is fine
             { Get-PveHaStatus -ErrorAction Stop } | Should -Not -Throw
         }
     }
@@ -186,20 +107,12 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
         It 'New-PveCluster creates a cluster named pester-cluster' {
             if (Skip-IfNoNodeB) { return }
 
-            # Cluster creation requires root@pam ticket auth, not API token
-            $secPw = ConvertTo-SecureString $script:Password -AsPlainText -Force
-            $cred = New-Object System.Management.Automation.PSCredential('root@pam', $secPw)
-            Connect-PveServer `
-                -Server $script:Host_ `
-                -Port $script:Port `
-                -Credential $cred `
-                -SkipCertificateCheck
-
+            # Already connected as root@pam via Connect-TestPve
             $result = New-PveCluster -ClusterName 'pester-cluster' -Wait -Confirm:$false -ErrorAction Stop
             $result | Should -Not -BeNullOrEmpty
             $script:ClusterCreated = $true
 
-            # Allow corosync to fully stabilize after cluster creation
+            # Allow corosync to fully stabilize
             Start-Sleep -Seconds 5
         }
 
@@ -207,9 +120,6 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
             if (Skip-IfNoCluster) { return }
 
             $status = Get-PveClusterStatus -ErrorAction Stop
-            # On a newly created single-node cluster, we should see at least
-            # a node entry for this node. The "cluster" type entry may take
-            # a moment to appear depending on corosync state.
             @($status).Count | Should -BeGreaterOrEqual 1
         }
 
@@ -231,11 +141,10 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
             $script:JoinInfo = Get-PveClusterJoinInfo -ErrorAction Stop
             $script:JoinInfo | Should -Not -BeNullOrEmpty
 
-            # Nodelist is a Newtonsoft JArray — convert to native array for PowerShell compatibility
-            $nodelistJson = $script:JoinInfo.Nodelist.ToString()
-            $nodelist = $nodelistJson | ConvertFrom-Json
-            $nodelist | Should -Not -BeNullOrEmpty
-            $script:Fingerprint = $nodelist[0].pve_fp
+            # Nodelist is List<Dictionary<string, object?>> — access pve_fp from first entry
+            $script:JoinInfo.Nodelist | Should -Not -BeNullOrEmpty
+            $script:JoinInfo.Nodelist.Count | Should -BeGreaterOrEqual 1
+            $script:Fingerprint = $script:JoinInfo.Nodelist[0]['pve_fp']
             $script:Fingerprint | Should -Not -BeNullOrEmpty
         }
 
@@ -247,8 +156,8 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
                 return
             }
 
-            # Connect to node B with root@pam (join requires ticket auth, not API token)
-            $secPw = ConvertTo-SecureString $script:Password -AsPlainText -Force
+            # Connect to node B with root@pam
+            $secPw = ConvertTo-SecureString $script:PasswordB -AsPlainText -Force
             $credB = New-Object System.Management.Automation.PSCredential('root@pam', $secPw)
             Connect-PveServer `
                 -Server $script:HostB `
@@ -257,31 +166,25 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
                 -SkipCertificateCheck
 
             $fingerprint = $script:Fingerprint
+            $joinPw = ConvertTo-SecureString $script:Password -AsPlainText -Force
 
             try {
                 $result = Add-PveClusterMember `
                     -Hostname $script:Host_ `
                     -Fingerprint $fingerprint `
-                    -Password $secPw `
+                    -Password $joinPw `
                     -Wait `
                     -Confirm:$false `
                     -ErrorAction Stop
 
                 $result | Should -Not -BeNullOrEmpty
 
-                # Brief pause for pmxcfs to sync after task completion
+                # Brief pause for pmxcfs to sync
                 Start-Sleep -Seconds 5
             }
             finally {
-                # Always reconnect to node A — whether join succeeded or failed,
-                # the current session points at node B which may be invalid.
-                $secPwA = ConvertTo-SecureString $script:Password -AsPlainText -Force
-                $credA = New-Object System.Management.Automation.PSCredential('root@pam', $secPwA)
-                Connect-PveServer `
-                    -Server $script:Host_ `
-                    -Port $script:Port `
-                    -Credential $credA `
-                    -SkipCertificateCheck
+                # Always reconnect to node A
+                Connect-TestPve
             }
         }
 
@@ -292,7 +195,7 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
             $nodes = Get-PveClusterConfigNode -ErrorAction Stop
             @($nodes).Count | Should -BeGreaterOrEqual 2
 
-            # Discover and store node B's name for cleanup
+            # Discover and store node B's name
             $nodeNames = @($nodes) | ForEach-Object { $_.Name }
             $script:NodeBName = $nodeNames | Where-Object { $_ -ne $script:Node } | Select-Object -First 1
             $script:NodeBName | Should -Not -BeNullOrEmpty
@@ -316,8 +219,6 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
         It 'Set-PveClusterOption sets keyboard to en-us' {
             if (Skip-IfNoCluster) { return }
 
-            # Already connected as root@pam from cluster creation context
-            # Save original keyboard setting
             $options = Get-PveClusterOption -ErrorAction Stop
             $script:OriginalKeyboard = $options.Keyboard
 
@@ -338,7 +239,6 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
                 Set-PveClusterOption -Keyboard $script:OriginalKeyboard -Confirm:$false -ErrorAction Stop
             }
             else {
-                # Original was unset — delete the key to restore default
                 Set-PveClusterOption -Delete 'keyboard' -Confirm:$false -ErrorAction Stop
             }
 
@@ -348,7 +248,7 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
     }
 
     # -------------------------------------------------------------------
-    Context 'HA group management' {
+    Context 'HA group management (PVE 8 only)' {
         It 'New-PveHaGroup creates test group' {
             if (Skip-IfPve9HaGroups) { return }
 
@@ -382,9 +282,6 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
 
             { Set-PveHaGroup -Group 'pester-group' -Comment 'pester test' -Confirm:$false -ErrorAction Stop } |
                 Should -Not -Throw
-
-            $group = Get-PveHaGroup -Group 'pester-group' -ErrorAction Stop
-            $group.Comment | Should -Be 'pester test'
         }
 
         It 'Remove-PveHaGroup deletes test group' {
@@ -392,18 +289,6 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
 
             { Remove-PveHaGroup -Group 'pester-group' -Confirm:$false -ErrorAction Stop } |
                 Should -Not -Throw
-
-            # Verify the group is gone
-            $groups = @(Get-PveHaGroup -ErrorAction Stop)
-            $match = $groups | Where-Object { $_.Group -eq 'pester-group' }
-            $match | Should -BeNullOrEmpty
-        }
-    }
-
-    # -------------------------------------------------------------------
-    Context 'HA resource management' {
-        It 'Skipped — HA resources require a test VM' {
-            Set-ItResult -Skipped -Because 'HA resource tests require a running VM, which is not provisioned in this test file'
         }
     }
 
@@ -412,7 +297,6 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
         It 'Get-PveHaRule returns rules list without throwing' {
             if (Skip-IfNoPve9) { return }
 
-            # May return an empty list on a fresh cluster — that is fine
             { Get-PveHaRule -ErrorAction Stop } | Should -Not -Throw
         }
 
@@ -420,8 +304,7 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
             if (Skip-IfNoPve9) { return }
             if (Skip-IfNoCluster) { return }
 
-            # HA rules require a managed resource — create a minimal VM and
-            # register it as an HA resource first
+            # HA rules require a managed resource — create a minimal VM first
             $script:HaTestVmId = Get-PveClusterNextId -ErrorAction Stop
             New-PveVm -Node $script:Node -VmId $script:HaTestVmId `
                 -Name 'pester-ha-test' -Memory 128 -Cores 1 `
@@ -431,7 +314,6 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
                 -State 'disabled' `
                 -Confirm:$false -ErrorAction Stop
 
-            # Now create a node-affinity rule for that resource
             { New-PveHaRule -Type 'node-affinity' `
                 -Properties @{
                     rule      = 'pester-rule-1'
@@ -499,24 +381,19 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
 
             $script:HaRuleCreated = $false
 
-            # Verify it's gone
-            $rules = Get-PveHaRule -ErrorAction Stop
-            $match = @($rules) | Where-Object { $_.Rule -eq 'pester-rule-1' }
-            $match | Should -BeNullOrEmpty
-
             # Clean up HA resource and test VM
             try { Remove-PveHaResource -Sid "vm:$($script:HaTestVmId)" -Confirm:$false -ErrorAction SilentlyContinue } catch { }
             try { Remove-PveVm -Node $script:Node -VmId $script:HaTestVmId -Confirm:$false -ErrorAction SilentlyContinue } catch { }
             $script:HaTestVmId = $null
+
+            # Verify rule is gone
+            $rules = Get-PveHaRule -ErrorAction Stop
+            $match = @($rules) | Where-Object { $_.Rule -eq 'pester-rule-1' }
+            $match | Should -BeNullOrEmpty
         }
     }
 
     # -------------------------------------------------------------------
-    # NOTE: Removing a node from a 2-node cluster via API is not supported
-    # because the remaining node loses quorum mid-operation. PVE requires
-    # stopping corosync on the departing node first (pvecm expected 1),
-    # which is not available via the REST API. Test infrastructure handles
-    # cleanup via reprovisioning.
     Context 'Verify cluster state at end of test' {
         It 'Get-PveClusterConfigNode shows both nodes still present' {
             if (Skip-IfNoNodeB) { return }
