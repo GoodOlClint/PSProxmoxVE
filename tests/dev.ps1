@@ -237,7 +237,7 @@ if ($Integration) {
     Start-InfraContainer
 
     # Verify environment is ready (config file exists from provisioning)
-    $configCheck = docker exec $InfraContainer bash -c 'test -f /tmp/pve-integration/config.json && echo OK || echo MISSING'
+    $configCheck = docker exec $InfraContainer bash -c 'test -f "${CONFIG_FILE:-/opt/pve-isos/test-config.json}" && echo OK || echo MISSING'
     if ($configCheck.Trim() -eq 'MISSING' -and -not $Provision) {
         throw "Integration environment not ready. Run with -Provision first, or use -Provision -Integration together."
     }
