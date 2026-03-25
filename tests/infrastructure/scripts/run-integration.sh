@@ -54,6 +54,8 @@ PVE_VERSIONS="${PVE_VERSIONS:-9 8}"
 SKIP_PROVISION="${SKIP_PROVISION:-false}"
 STORAGE_ISCSI_IQN="${STORAGE_ISCSI_IQN:-iqn.2024-01.local.test:storage}"
 STORAGE_COMPOSE="$INFRA_DIR/docker-compose.storage.yml"
+# Store Terraform state on the shared mount so it persists across CI jobs
+TF_STATE_FILE="$WORK_DIR/terraform.tfstate"
 
 # ── Node config ───────────────────────────────────────────────────
 # Each version gets two nodes: a (primary) and b (secondary).
@@ -226,7 +228,7 @@ cmd_provision() {
     rm -f "$INFRA_DIR/terraform.tfvars"
 
     log "Running Terraform init..."
-    (cd "$INFRA_DIR" && terraform init -input=false)
+    (cd "$INFRA_DIR" && terraform init -input=false -reconfigure)
 
     # Always build tfvars for ALL versions to keep Terraform state consistent.
     # When provisioning a subset, we use -target to limit the apply.
@@ -296,7 +298,7 @@ cmd_provision() {
         TF_VAR_docker_host_ip="$storage_ip" \
         TF_VAR_answer_files_dir="$WORK_DIR/answers" \
         TF_VAR_default_answer_file="$WORK_DIR/default-answer.toml" \
-        terraform apply -auto-approve -input=false -var-file="$tfvars" $tf_targets)
+        terraform apply -auto-approve -input=false -state="$TF_STATE_FILE" -var-file="$tfvars" $tf_targets)
 
     # Wait for PVE instances to boot and discover IPs
     for node in $provision_nodes; do
@@ -584,7 +586,7 @@ cmd_cleanup() {
         TF_VAR_docker_host_ip="${storage_ip:-127.0.0.1}" \
         TF_VAR_answer_files_dir="${WORK_DIR}/answers" \
         TF_VAR_default_answer_file="${WORK_DIR}/default-answer.toml" \
-        terraform destroy -auto-approve -input=false -var-file="$tfvars" $tf_targets)
+        terraform destroy -auto-approve -input=false -state="$TF_STATE_FILE" -var-file="$tfvars" $tf_targets)
 
     # Clean up work directory when destroying all
     if [[ "$requested" == "all" ]]; then
@@ -633,10 +635,11 @@ cmd_force_cleanup() {
     docker rm -f pvetest-iscsi pvetest-nfs pvetest-answer-server 2>/dev/null || true
     docker volume rm pvetest-iscsi-data pvetest-nfs-data 2>/dev/null || true
 
-    # Remove Terraform state so next provision starts clean.
+    # Remove Terraform state (both local and shared mount) so next provision starts clean.
     # Keep .terraform.lock.hcl (provider version lock) for reproducibility.
     log "Removing Terraform state..."
     rm -f "$INFRA_DIR/terraform.tfstate" "$INFRA_DIR/terraform.tfstate.backup"
+    rm -f "$TF_STATE_FILE" "${TF_STATE_FILE}.backup"
     rm -rf "$INFRA_DIR/.terraform"
 
     # Remove work artifacts
@@ -658,20 +661,20 @@ cmd_taint() {
     fi
 
     log "Tainting PVE VMs for reprovisioning..."
-    (cd "$INFRA_DIR" && terraform init -input=false 2>/dev/null)
+    (cd "$INFRA_DIR" && terraform init -input=false -reconfigure 2>/dev/null)
 
     # Taint ISOs (keyed by version, e.g. "9")
     for v in $taint_versions; do
         log "  Tainting ISO: PVE $v"
         (cd "$INFRA_DIR" && \
-            terraform taint "proxmox_virtual_environment_file.auto_iso[\"$v\"]") 2>/dev/null || true
+            terraform taint -state="$TF_STATE_FILE" "proxmox_virtual_environment_file.auto_iso[\"$v\"]") 2>/dev/null || true
     done
 
     # Taint VMs (keyed by node, e.g. "9a")
     for node in $taint_nodes; do
         log "  Tainting VM: $node"
         (cd "$INFRA_DIR" && \
-            terraform taint "proxmox_virtual_environment_vm.nested_pve[\"$node\"]") 2>/dev/null || true
+            terraform taint -state="$TF_STATE_FILE" "proxmox_virtual_environment_vm.nested_pve[\"$node\"]") 2>/dev/null || true
     done
 
     log "Taint complete. Next 'provision' will recreate these VMs."

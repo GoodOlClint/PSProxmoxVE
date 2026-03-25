@@ -90,6 +90,10 @@ resource "proxmox_virtual_environment_vm" "nested_pve" {
 
   started = true
 
+  # VMs must not boot until the HTTP answer server is running,
+  # otherwise the PVE auto-installer can't fetch its answer file.
+  depends_on = [docker_container.answer_server]
+
   lifecycle {
     ignore_changes = [started, cdrom]
   }

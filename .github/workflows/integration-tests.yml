@@ -209,7 +209,9 @@ jobs:
           PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
           PVE_TARGET_NODE: ${{ vars.PVE_TARGET_NODE }}
           PVE_PASSWORD: ${{ secrets.PVE_TEST_PASSWORD }}
-        run: bash ${SCRIPTS_DIR}/run-integration.sh cleanup
+        # Always use force-cleanup in CI — handles corrupted state from
+        # cancelled runs, timeouts, or partial provisioning failures.
+        run: bash ${SCRIPTS_DIR}/run-integration.sh force-cleanup
 
   # ── Clean up old container images from GHCR ──────────────────────────
   cleanup-images:
