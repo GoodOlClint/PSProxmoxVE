@@ -1,15 +1,15 @@
 {
   "_schema_version": "1.0",
   "_description": "PSProxmoxVE stable findings ledger. IDs are permanent (F001, F002...). Resolved findings are never deleted — they are marked resolved with evidence. If a finding reappears, it is marked regressed and retains its original ID.",
-  "last_updated": "2026-03-24",
-  "last_scan_date": "2026-03-24",
+  "last_updated": "2026-03-25",
+  "last_scan_date": "2026-03-25",
   "counters": {
-    "next_id": 85,
+    "next_id": 86,
     "total_open": 10,
-    "total_resolved": 72,
+    "total_resolved": 73,
     "total_regressed": 1,
     "open": 10,
-    "resolved": 72,
+    "resolved": 73,
     "regressed": 1,
     "wont_fix": 1
   },
@@ -1560,7 +1560,7 @@
         "evidence": "Extracted to const string ApiTokenPrefix and CsrfHeaderName fields",
         "verified_by": "self-reported"
       },
-      "decisions_ref": "D013"
+      "decisions_ref": "D012"
     },
     {
       "id": "F050",
@@ -2696,6 +2696,42 @@
           "status": "new"
         }
       ]
+    },
+    {
+      "id": "F085",
+      "title": "PveClusterJoinInfo exposes Newtonsoft JArray/JObject properties",
+      "category": "type_safety",
+      "severity": "high",
+      "status": "resolved",
+      "first_detected": "2026-03-25",
+      "decisions_ref": "D013",
+      "files": [
+        "src/PSProxmoxVE.Core/Models/Cluster/PveClusterJoinInfo.cs",
+        "src/PSProxmoxVE/Cmdlets/Cluster/GetPveClusterJoinInfoCmdlet.cs"
+      ],
+      "description": "PveClusterJoinInfo.Nodelist is typed as JArray? and PveClusterJoinInfo.Totem is typed as JObject?. These Newtonsoft types are emitted directly to the PowerShell pipeline via Get-PveClusterJoinInfo, causing broken Get-Member, Format-Table, and Select-Object behavior. Nodelist should be List<Dictionary<string, object?>>? and Totem should be Dictionary<string, object?>?, with appropriate [JsonConverter] attributes for deserialization.",
+      "scan_history": [
+        {
+          "scan_date": "2026-03-25",
+          "local_id": "D013-scan-1",
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-03-25",
+          "local_id": "D013-scan-2",
+          "status": "confirmed_open"
+        },
+        {
+          "scan_date": "2026-03-25",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-03-25",
+        "evidence": "Replaced JArray? Nodelist with List<Dictionary<string, object?>>? + NativeListConverter, and JObject? Totem with Dictionary<string, object?>? + NativeDictionaryConverter. Removed Newtonsoft.Json.Linq dependency.",
+        "verified_by": "dotnet build + dotnet test (382 passed)"
+      }
     }
   ]
 }

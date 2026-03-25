@@ -71,7 +71,7 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetNodeConfig_ReturnsJObject()
+        public void GetNodeConfig_ReturnsDictionary()
         {
             // Arrange
             var json = @"{""data"": {""description"": ""Primary node"", ""wakeonlan"": ""AA:BB:CC:DD:EE:FF""}}";
@@ -84,6 +84,7 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Assert
             Assert.NotNull(config);
+            Assert.IsType<Dictionary<string, object?>>(config);
             Assert.Equal("Primary node", config["description"]?.ToString());
             Assert.Equal("AA:BB:CC:DD:EE:FF", config["wakeonlan"]?.ToString());
             mockClient.Verify(c => c.GetAsync("nodes/pve1/config"), Times.Once);
@@ -116,7 +117,7 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetNodeDns_ReturnsJObject()
+        public void GetNodeDns_ReturnsDictionary()
         {
             // Arrange
             var json = @"{""data"": {""dns1"": ""8.8.8.8"", ""dns2"": ""8.8.4.4"", ""search"": ""example.com""}}";
@@ -129,6 +130,7 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Assert
             Assert.NotNull(dns);
+            Assert.IsType<Dictionary<string, object?>>(dns);
             Assert.Equal("8.8.8.8", dns["dns1"]?.ToString());
             Assert.Equal("8.8.4.4", dns["dns2"]?.ToString());
             Assert.Equal("example.com", dns["search"]?.ToString());

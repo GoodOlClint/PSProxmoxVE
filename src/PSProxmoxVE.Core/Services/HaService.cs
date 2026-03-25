@@ -4,6 +4,7 @@ using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.HA;
+using PSProxmoxVE.Core.Utilities;
 
 namespace PSProxmoxVE.Core.Services
 {
@@ -357,7 +358,7 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Returns the full HA manager status as a raw JSON object.
         /// </summary>
-        public JObject GetManagerStatus(PveSession session)
+        public Dictionary<string, object?> GetManagerStatus(PveSession session)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
 
@@ -366,7 +367,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.GetAsync("cluster/ha/status/manager_status").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
-                return data as JObject ?? new JObject();
+                return JsonHelper.ToDictionary(data as JObject);
             }
             finally
             {

@@ -6,6 +6,7 @@ using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Nodes;
 using PSProxmoxVE.Core.Models.Vms;
+using PSProxmoxVE.Core.Utilities;
 
 namespace PSProxmoxVE.Core.Services
 {
@@ -78,7 +79,7 @@ namespace PSProxmoxVE.Core.Services
         /// </summary>
         /// <param name="session">The authenticated PVE session.</param>
         /// <param name="node">The cluster node name.</param>
-        public JObject GetNodeConfig(PveSession session, string node)
+        public Dictionary<string, object?> GetNodeConfig(PveSession session, string node)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
@@ -88,7 +89,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/config").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
-                return data as JObject ?? new JObject();
+                return JsonHelper.ToDictionary(data as JObject);
             }
             finally
             {
@@ -124,7 +125,7 @@ namespace PSProxmoxVE.Core.Services
         /// </summary>
         /// <param name="session">The authenticated PVE session.</param>
         /// <param name="node">The cluster node name.</param>
-        public JObject GetNodeDns(PveSession session, string node)
+        public Dictionary<string, object?> GetNodeDns(PveSession session, string node)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
@@ -134,7 +135,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/dns").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
-                return data as JObject ?? new JObject();
+                return JsonHelper.ToDictionary(data as JObject);
             }
             finally
             {

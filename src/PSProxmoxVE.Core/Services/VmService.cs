@@ -6,6 +6,7 @@ using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Nodes;
 using PSProxmoxVE.Core.Models.Vms;
+using PSProxmoxVE.Core.Utilities;
 
 namespace PSProxmoxVE.Core.Services
 {
@@ -624,7 +625,7 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Gets the status/result of a guest agent exec command by PID.
         /// </summary>
-        public JObject GetGuestExecStatus(PveSession session, string node, int vmid, int pid)
+        public Dictionary<string, object?> GetGuestExecStatus(PveSession session, string node, int vmid, int pid)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
@@ -634,7 +635,8 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/agent/exec-status?pid={pid}")
                     .GetAwaiter().GetResult();
-                return JObject.Parse(response)["data"] as JObject ?? new JObject();
+                var data = JObject.Parse(response)["data"];
+                return JsonHelper.ToDictionary(data as JObject);
             }
             finally
             {

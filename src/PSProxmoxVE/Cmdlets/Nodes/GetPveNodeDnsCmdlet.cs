@@ -28,9 +28,9 @@ namespace PSProxmoxVE.Cmdlets.Nodes
             var dns = service.GetNodeDns(session, Node);
 
             var psObj = new PSObject();
-            foreach (var prop in dns.Properties())
+            foreach (var kvp in dns)
             {
-                psObj.Properties.Add(new PSNoteProperty(prop.Name, prop.Value.ToString()));
+                psObj.Properties.Add(new PSNoteProperty(kvp.Key, kvp.Value));
             }
 
             WriteObject(psObj);

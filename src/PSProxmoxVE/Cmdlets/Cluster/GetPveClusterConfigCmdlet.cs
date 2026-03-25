@@ -1,5 +1,5 @@
+using System.Collections.Generic;
 using System.Management.Automation;
-using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Cluster
@@ -12,7 +12,7 @@ namespace PSProxmoxVE.Cmdlets.Cluster
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveClusterConfig")]
-    [OutputType(typeof(JObject))]
+    [OutputType(typeof(Dictionary<string, object>))]
     public sealed class GetPveClusterConfigCmdlet : PveCmdletBase
     {
         protected override void ProcessRecord()

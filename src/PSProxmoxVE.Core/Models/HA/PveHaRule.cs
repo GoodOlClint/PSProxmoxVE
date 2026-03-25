@@ -1,5 +1,6 @@
+using System.Collections.Generic;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using PSProxmoxVE.Core.Utilities;
 
 namespace PSProxmoxVE.Core.Models.HA;
 
@@ -43,7 +44,8 @@ public class PveHaRule
     /// Rule-specific properties that vary by rule type.
     /// </summary>
     [JsonProperty("properties")]
-    public JObject? Properties { get; set; }
+    [JsonConverter(typeof(NativeDictionaryConverter))]
+    public Dictionary<string, object?>? Properties { get; set; }
 
     /// <inheritdoc />
     public override string ToString()

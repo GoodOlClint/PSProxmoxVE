@@ -53,19 +53,19 @@ namespace PSProxmoxVE.Cmdlets.Vms
             // Poll for completion with timeout
             var sw = Stopwatch.StartNew();
             var deadline = TimeSpan.FromSeconds(Timeout);
-            Newtonsoft.Json.Linq.JObject result;
+            System.Collections.Generic.Dictionary<string, object?> result;
             do
             {
                 System.Threading.Thread.Sleep(1000);
                 if (sw.Elapsed >= deadline)
                     throw new TimeoutException($"Guest command did not complete within {Timeout} seconds.");
                 result = service.GetGuestExecStatus(session, Node, VmId, pid);
-            } while (result["exited"]?.ToObject<int>() != 1);
+            } while (!result.TryGetValue("exited", out var exited) || !Equals(exited, 1L));
 
             var output = new PSObject();
-            output.Properties.Add(new PSNoteProperty("ExitCode", result["exitcode"]?.ToObject<int>() ?? -1));
-            output.Properties.Add(new PSNoteProperty("Stdout", DecodeBase64(result["out-data"]?.ToString())));
-            output.Properties.Add(new PSNoteProperty("Stderr", DecodeBase64(result["err-data"]?.ToString())));
+            output.Properties.Add(new PSNoteProperty("ExitCode", result.TryGetValue("exitcode", out var ec) && ec is long ecl ? (int)ecl : -1));
+            output.Properties.Add(new PSNoteProperty("Stdout", DecodeBase64(result.TryGetValue("out-data", out var od) ? od?.ToString() : null)));
+            output.Properties.Add(new PSNoteProperty("Stderr", DecodeBase64(result.TryGetValue("err-data", out var ed) ? ed?.ToString() : null)));
             output.Properties.Add(new PSNoteProperty("Pid", pid));
 
             WriteObject(output);
