@@ -24,13 +24,14 @@ provider "docker" {
 }
 
 resource "proxmox_virtual_environment_file" "auto_iso" {
-  for_each     = var.pve_instances
+  for_each     = var.pve_isos
   content_type = "iso"
   datastore_id = var.iso_storage
   node_name    = var.target_node
+  overwrite    = true
 
   source_file {
-    path = each.value.iso_local_path
+    path = each.value
   }
 }
 
@@ -69,7 +70,7 @@ resource "proxmox_virtual_environment_vm" "nested_pve" {
   }
 
   cdrom {
-    file_id   = proxmox_virtual_environment_file.auto_iso[each.key].id
+    file_id   = proxmox_virtual_environment_file.auto_iso[each.value.pve_version].id
     interface = "ide2"
   }
 

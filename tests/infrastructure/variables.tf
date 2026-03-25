@@ -21,13 +21,19 @@ variable "target_node" {
 }
 
 variable "pve_instances" {
-  description = "Map of PVE instances to provision. Key is a label (e.g. 'pve9'), value defines the VM."
+  description = "Map of PVE instances to provision. Key is a node label (e.g. '9a'), value defines the VM."
   type = map(object({
-    iso_local_path = string
-    vm_id          = number
-    vm_name        = string
-    mac_address    = string
+    pve_version = string
+    vm_id       = number
+    vm_name     = string
+    mac_address = string
   }))
+}
+
+variable "pve_isos" {
+  description = "Map of PVE version to the local path of the generic HTTP auto-install ISO."
+  type        = map(string)
+  default     = {}
 }
 
 variable "cores" {

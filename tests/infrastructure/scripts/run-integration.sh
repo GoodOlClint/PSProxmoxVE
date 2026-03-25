@@ -228,30 +228,37 @@ cmd_provision() {
     # When provisioning a subset, we use -target to limit the apply.
     log "Building Terraform vars..."
     local tfvars="$WORK_DIR/instances.tfvars.json"
-    local instances='{}'
-    for node in $ALL_NODES; do
-        local v="${node%[ab]}"  # Extract version: "9a" -> "9"
+
+    # Build pve_isos map: version -> ISO path (one per version)
+    local isos='{}'
+    for v in $PVE_VERSIONS; do
         local iso_name
         iso_name="$(pve_iso "$v")"
         local iso_path="$WORK_DIR/${iso_name%.iso}-http-auto.iso"
-        local vm_id
+        isos="$(jq --arg key "$v" --arg path "$iso_path" \
+            '. + {($key): $path}' <<<"$isos")"
+    done
+
+    # Build pve_instances map: node -> VM config (references version, not ISO path)
+    local instances='{}'
+    for node in $ALL_NODES; do
+        local v="${node%[ab]}"
+        local vm_id vm_name mac
         vm_id="$(pve_vmid "$node")"
-        local vm_name
         vm_name="$(pve_vmname "$node")"
-        local mac
         mac="$(pve_mac "$node")"
         instances="$(jq \
             --arg key "$node" \
-            --arg iso_local_path "$iso_path" \
+            --arg pve_version "$v" \
             --arg vm_name "$vm_name" \
             --argjson vm_id "$vm_id" \
             --arg mac_address "$mac" \
-            '. + {($key): {iso_local_path: $iso_local_path, vm_id: $vm_id, vm_name: $vm_name, mac_address: $mac_address}}' \
+            '. + {($key): {pve_version: $pve_version, vm_id: $vm_id, vm_name: $vm_name, mac_address: $mac_address}}' \
             <<<"$instances")"
     done
 
-    jq -n --argjson pve_instances "$instances" \
-        '{pve_instances: $pve_instances}' > "$tfvars"
+    jq -n --argjson pve_instances "$instances" --argjson pve_isos "$isos" \
+        '{pve_instances: $pve_instances, pve_isos: $pve_isos}' > "$tfvars"
 
     log "Running Terraform apply (PVE nodes)..."
     # Build -target flags when provisioning a subset of versions.
@@ -259,8 +266,10 @@ cmd_provision() {
     # that exist in state but aren't in the filtered tfvars.
     local tf_targets=""
     if [[ "$requested" != "all" ]]; then
+        for v in $provision_versions; do
+            tf_targets="$tf_targets -target=proxmox_virtual_environment_file.auto_iso[\"$v\"]"
+        done
         for node in $provision_nodes; do
-            tf_targets="$tf_targets -target=proxmox_virtual_environment_file.auto_iso[\"$node\"]"
             tf_targets="$tf_targets -target=proxmox_virtual_environment_vm.nested_pve[\"$node\"]"
         done
         # Always include shared Docker storage and answer server resources
@@ -519,25 +528,26 @@ cmd_cleanup() {
     local tfvars="$WORK_DIR/instances.tfvars.json"
     if [[ ! -f "$tfvars" ]]; then
         # Generate minimal tfvars if none exist (cleanup without prior provision)
-        local instances='{}'
+        local instances='{}' isos='{}'
         for node in $ALL_NODES; do
-            local vm_id vm_name
+            local v="${node%[ab]}" vm_id vm_name mac
             vm_id="$(pve_vmid "$node")"
             vm_name="$(pve_vmname "$node")"
-            local mac
             mac="$(pve_mac "$node")"
             instances="$(jq \
                 --arg key "$node" \
+                --arg pve_version "$v" \
                 --arg vm_name "$vm_name" \
                 --argjson vm_id "$vm_id" \
-                --arg iso_local_path "/dev/null" \
                 --arg mac_address "$mac" \
-                '. + {($key): {iso_local_path: $iso_local_path, vm_id: $vm_id, vm_name: $vm_name, mac_address: $mac_address}}' \
+                '. + {($key): {pve_version: $pve_version, vm_id: $vm_id, vm_name: $vm_name, mac_address: $mac_address}}' \
                 <<<"$instances")"
+            isos="$(jq --arg key "$v" --arg path "/dev/null" \
+                '. + {($key): $path}' <<<"$isos")"
         done
         mkdir -p "$WORK_DIR"
-        jq -n --argjson pve_instances "$instances" \
-            '{pve_instances: $pve_instances}' > "$tfvars"
+        jq -n --argjson pve_instances "$instances" --argjson pve_isos "$isos" \
+            '{pve_instances: $pve_instances, pve_isos: $pve_isos}' > "$tfvars"
     fi
 
     (cd "$INFRA_DIR" && terraform init -input=false 2>/dev/null)
@@ -548,10 +558,10 @@ cmd_cleanup() {
         local cleanup_nodes=""
         for v in $requested; do
             cleanup_nodes="$cleanup_nodes ${v}a ${v}b"
+            tf_targets="$tf_targets -target=proxmox_virtual_environment_file.auto_iso[\"$v\"]"
         done
         for node in $cleanup_nodes; do
             tf_targets="$tf_targets -target=proxmox_virtual_environment_vm.nested_pve[\"$node\"]"
-            tf_targets="$tf_targets -target=proxmox_virtual_environment_file.auto_iso[\"$node\"]"
         done
         log "Destroying PVE $requested nodes only..."
     else
