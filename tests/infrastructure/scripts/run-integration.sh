@@ -707,12 +707,13 @@ main() {
         taint)        cmd_taint "$@" ;;
         all)          cmd_all "$@" ;;
         *)
-            echo "Usage: $(basename "$0") {provision|test|cleanup|taint|all} [8|9|all] [test-filter]"
+            echo "Usage: $(basename "$0") {provision|test|cleanup|force-cleanup|taint|all} [8|9|all] [test-filter]"
             echo ""
             echo "Subcommands:"
             echo "  provision [8|9|all]        Provision nested PVE VMs + storage containers"
             echo "  test [8|9|all] [filter]    Run integration tests (default: all versions, no filter)"
             echo "  cleanup [8|9|all]          Destroy resources via terraform destroy (default: all)"
+            echo "  force-cleanup [8|9|all]    Bypass Terraform — destroy via API + wipe state (recovery)"
             echo "  taint [8|9|all]            Mark VMs for recreation on next provision"
             echo "  all [8|9|all]              Full lifecycle: provision → test → cleanup"
             echo ""

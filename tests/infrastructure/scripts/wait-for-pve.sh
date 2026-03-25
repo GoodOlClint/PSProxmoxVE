@@ -22,7 +22,7 @@ echo "Waiting for guest agent on VM ${VM_ID} (node: ${PARENT_NODE})..."
 VM_IP=""
 elapsed=0
 while [ $elapsed -lt $MAX_WAIT ]; do
-    AGENT_RESPONSE=$(curl -sk \
+    AGENT_RESPONSE=$(curl -sk --connect-timeout 5 --max-time 10 \
         -H "Authorization: PVEAPIToken=${PARENT_TOKEN}" \
         "${PARENT_API}/nodes/${PARENT_NODE}/qemu/${VM_ID}/agent/network-get-interfaces" 2>/dev/null || true)
 

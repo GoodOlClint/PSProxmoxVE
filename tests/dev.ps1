@@ -114,9 +114,12 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# If no switches specified, default to -Shell
+# If no action switches specified, default to -Shell
 $anySwitchSet = $Shell -or $Build -or $Test -or $Provision -or $Integration -or $Cleanup -or $Stop -or $Rebuild
 if (-not $anySwitchSet) {
+    if ($Force -or $Reprovision) {
+        throw "-Force and -Reprovision are modifiers — combine with an action switch (e.g. -Cleanup -Force, -Provision -Reprovision)."
+    }
     $Shell = $true
 }
 

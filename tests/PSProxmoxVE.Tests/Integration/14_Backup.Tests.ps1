@@ -22,12 +22,12 @@ Describe 'Backup Jobs — Integration' -Tag 'Integration' {
 
     Context 'Backup Jobs' {
         It 'Should create a backup job' {
-            Skip-IfNoTarget
+            if (Skip-IfNoTarget) { return }
             { New-PveBackupJob -Schedule 'sat 03:00' -Storage $script:Storage -Mode snapshot -All -Comment 'pester-test-backup' -ErrorAction Stop } | Should -Not -Throw
         }
 
         It 'Should list backup jobs and find the test job' {
-            Skip-IfNoTarget
+            if (Skip-IfNoTarget) { return }
             $jobs = Get-PveBackupJob
             $testJob = $jobs | Where-Object { $_.Comment -eq 'pester-test-backup' }
             $testJob | Should -Not -BeNullOrEmpty
@@ -35,7 +35,7 @@ Describe 'Backup Jobs — Integration' -Tag 'Integration' {
         }
 
         It 'Should update the backup job' {
-            Skip-IfNoTarget
+            if (Skip-IfNoTarget) { return }
             if (-not $script:BackupTestJobId) {
                 Set-ItResult -Skipped -Because 'No test backup job was created'
             }
@@ -43,7 +43,7 @@ Describe 'Backup Jobs — Integration' -Tag 'Integration' {
         }
 
         It 'Should remove the backup job' {
-            Skip-IfNoTarget
+            if (Skip-IfNoTarget) { return }
             if (-not $script:BackupTestJobId) {
                 Set-ItResult -Skipped -Because 'No test backup job was created'
             }
@@ -51,7 +51,7 @@ Describe 'Backup Jobs — Integration' -Tag 'Integration' {
         }
 
         It 'Should verify the backup job was removed' {
-            Skip-IfNoTarget
+            if (Skip-IfNoTarget) { return }
             if (-not $script:BackupTestJobId) {
                 Set-ItResult -Skipped -Because 'No test backup job was created'
             }
