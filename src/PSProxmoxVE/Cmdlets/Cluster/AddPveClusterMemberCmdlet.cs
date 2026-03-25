@@ -1,7 +1,10 @@
 using System;
 using System.Management.Automation;
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Security;
+using PSProxmoxVE.Core.Authentication;
+using PSProxmoxVE.Core.Exceptions;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
 
@@ -80,7 +83,20 @@ namespace PSProxmoxVE.Cmdlets.Cluster
                 {
                     var nodeName = upid.Split(':').Length > 1 ? upid.Split(':')[1] : session.Hostname;
                     var taskService = new TaskService();
-                    task = taskService.WaitForTask(session, nodeName, upid);
+                    try
+                    {
+                        task = taskService.WaitForTask(session, nodeName, upid);
+                    }
+                    catch (PveApiException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+                    {
+                        // Cluster join restarts auth services on this node, invalidating
+                        // the ticket mid-poll. Re-authenticate and retry.
+                        WriteVerbose("Session expired during join — re-authenticating to poll task status...");
+                        var newSession = PveAuthenticator.AuthenticateWithCredentials(
+                            session.Hostname, session.Port, session.SkipCertificateCheck,
+                            "root@pam", plainPassword);
+                        task = taskService.WaitForTask(newSession, nodeName, upid);
+                    }
                 }
 
                 WriteObject(task);
