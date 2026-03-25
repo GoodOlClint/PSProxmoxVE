@@ -360,7 +360,7 @@ namespace PSProxmoxVE.Core.Tests.Services
         // ---------------------------------------------------------------
 
         [Fact]
-        public void GetNotBackedUp_ReturnsJArray()
+        public void GetNotBackedUp_ReturnsListOfDictionaries()
         {
             // Arrange
             var json = @"{
@@ -379,14 +379,14 @@ namespace PSProxmoxVE.Core.Tests.Services
             var result = service.GetNotBackedUp(CreateSession());
 
             // Assert
-            Assert.IsType<JArray>(result);
+            Assert.IsType<List<Dictionary<string, object?>>>(result);
             Assert.Equal(2, result.Count);
-            Assert.Equal(100, result[0]["vmid"]!.Value<int>());
-            Assert.Equal("webserver", result[0]["name"]!.Value<string>());
+            Assert.Equal(100L, result[0]["vmid"]);
+            Assert.Equal("webserver", result[0]["name"]);
         }
 
         [Fact]
-        public void GetNotBackedUp_EmptyData_ReturnsEmptyJArray()
+        public void GetNotBackedUp_EmptyData_ReturnsEmptyList()
         {
             // Arrange
             var json = @"{""data"": []}";

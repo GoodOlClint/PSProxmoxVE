@@ -1,5 +1,6 @@
+using System.Collections.Generic;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using PSProxmoxVE.Core.Utilities;
 
 namespace PSProxmoxVE.Core.Models.Cluster;
 
@@ -21,11 +22,12 @@ public class PvePool
     public string? Comment { get; set; }
 
     /// <summary>
-    /// The pool members (VMs, containers, storage). Returned as a raw array
+    /// The pool members (VMs, containers, storage). Returned as a list of dictionaries
     /// when querying a specific pool.
     /// </summary>
     [JsonProperty("members")]
-    public JArray? Members { get; set; }
+    [JsonConverter(typeof(NativeListConverter))]
+    public List<Dictionary<string, object?>>? Members { get; set; }
 
     /// <inheritdoc />
     public override string ToString()

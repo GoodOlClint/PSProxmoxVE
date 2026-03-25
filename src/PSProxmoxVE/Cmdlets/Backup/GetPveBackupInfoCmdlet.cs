@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Management.Automation;
 using PSProxmoxVE.Core.Services;
 
@@ -26,12 +27,9 @@ namespace PSProxmoxVE.Cmdlets.Backup
             foreach (var item in items)
             {
                 var pso = new PSObject();
-                if (item is Newtonsoft.Json.Linq.JObject jObj)
+                foreach (var kvp in item)
                 {
-                    foreach (var prop in jObj.Properties())
-                    {
-                        pso.Properties.Add(new PSNoteProperty(prop.Name, prop.Value?.ToObject<object>()));
-                    }
+                    pso.Properties.Add(new PSNoteProperty(kvp.Key, kvp.Value));
                 }
                 WriteObject(pso);
             }

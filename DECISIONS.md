@@ -358,3 +358,52 @@ extracted to `const string` fields for maintainability.
 Auth header names (`PVEAPIToken=`, `CSRFPreventionToken`) were inline string literals
 used in multiple places. Extracting to `const string ApiTokenPrefix` and
 `CsrfHeaderName` fields improves maintainability and reduces typo risk.
+
+---
+
+## D013 — Cmdlets must emit only native or module-defined types
+
+**Status**: Active
+**Finding refs**: F085
+**Resolved in scan**: 2026-03-25
+
+### Decision
+All cmdlet output types and public model properties must be native .NET types (`string`,
+`int`, `bool`, `Dictionary<string, object?>`, `List<T>`, `PSObject`, `void`) or types
+defined within the module itself (`Pve*` classes). Never expose third-party types like
+Newtonsoft's `JObject`, `JArray`, or `JToken` in public APIs.
+
+### Rationale
+PowerShell enumerates `JArray` unexpectedly and `JObject` properties are not discoverable
+via `Get-Member` or tab completion. Users piping module output into `Format-Table`,
+`Select-Object`, or `Where-Object` get confusing behavior when the underlying type is a
+Newtonsoft container. Native dictionaries and lists work naturally in PowerShell pipelines.
+
+### Anti-pattern (do not reintroduce)
+```csharp
+// Service returning Newtonsoft type
+public JObject GetNodeConfig(...) { ... }
+
+// Model exposing Newtonsoft type
+[JsonProperty("members")]
+public JArray? Members { get; set; }
+
+// Cmdlet OutputType referencing Newtonsoft type
+[OutputType(typeof(JObject))]
+```
+
+### Correct pattern
+```csharp
+// Service returns native dictionary
+public Dictionary<string, object?> GetNodeConfig(...) { ... }
+
+// Model uses native type with converter for deserialization
+[JsonProperty("members")]
+[JsonConverter(typeof(NativeListConverter))]
+public List<Dictionary<string, object?>>? Members { get; set; }
+
+// Cmdlet OutputType uses native or module type
+[OutputType(typeof(Dictionary<string, object>))]
+// or
+[OutputType(typeof(PSObject))]
+```

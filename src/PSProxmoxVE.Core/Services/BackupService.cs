@@ -5,6 +5,7 @@ using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Backup;
 using PSProxmoxVE.Core.Models.Vms;
+using PSProxmoxVE.Core.Utilities;
 
 namespace PSProxmoxVE.Core.Services
 {
@@ -173,7 +174,7 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Returns the list of guests not covered by any backup job.
         /// </summary>
-        public JArray GetNotBackedUp(PveSession session)
+        public List<Dictionary<string, object?>> GetNotBackedUp(PveSession session)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
 
@@ -183,7 +184,7 @@ namespace PSProxmoxVE.Core.Services
                 var response = client.GetAsync("cluster/backup-info/not-backed-up")
                     .GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
-                return data as JArray ?? new JArray();
+                return JsonHelper.ToListOfDictionaries(data as JArray);
             }
             finally
             {
