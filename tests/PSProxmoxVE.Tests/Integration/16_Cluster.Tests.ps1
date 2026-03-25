@@ -360,7 +360,7 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
                 return
             }
 
-            { Set-PveHaRule -Rule 'pester-rule-1' `
+            { Set-PveHaRule -Rule 'pester-rule-1' -Type 'node-affinity' `
                 -Comment 'Updated by Pester' `
                 -Confirm:$false `
                 -ErrorAction Stop } | Should -Not -Throw

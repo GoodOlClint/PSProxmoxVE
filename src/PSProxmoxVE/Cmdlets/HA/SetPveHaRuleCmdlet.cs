@@ -19,6 +19,11 @@ namespace PSProxmoxVE.Cmdlets.HA
             HelpMessage = "HA rule ID.")]
         public string Rule { get; set; } = string.Empty;
 
+        /// <summary>Rule type (required by PVE API on update).</summary>
+        [Parameter(Mandatory = true, Position = 1, HelpMessage = "HA rule type: node-affinity or resource-affinity.")]
+        [ValidateSet("node-affinity", "resource-affinity")]
+        public string Type { get; set; } = string.Empty;
+
         /// <summary>Rule state.</summary>
         [Parameter(Mandatory = false, HelpMessage = "Rule state: enabled or disabled.")]
         [ValidateSet("enabled", "disabled")]
@@ -42,7 +47,7 @@ namespace PSProxmoxVE.Cmdlets.HA
 
             var service = new HaService();
 
-            var data = new Dictionary<string, string>();
+            var data = new Dictionary<string, string> { ["type"] = Type };
             if (State != null) data["state"] = State;
             if (Comment != null) data["comment"] = Comment;
             if (Properties != null)

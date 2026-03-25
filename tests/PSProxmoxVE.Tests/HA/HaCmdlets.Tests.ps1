@@ -736,6 +736,15 @@ Describe 'Set-PveHaRule' -Tag 'Unit' {
             $isMandatory = $p.ParameterSets.Values | Where-Object { $_.IsMandatory }
             $isMandatory | Should -Not -BeNullOrEmpty
         }
+        It 'Should have mandatory Type parameter with ValidateSet' {
+            Skip-IfMissing 'Set-PveHaRule'
+            $p = $script:Cmd.Parameters['Type']
+            $p | Should -Not -BeNullOrEmpty
+            $isMandatory = $p.ParameterSets.Values | Where-Object { $_.IsMandatory }
+            $isMandatory | Should -Not -BeNullOrEmpty
+            $vsAttr = $p.Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] }
+            $vsAttr | Should -Not -BeNullOrEmpty
+        }
         It 'Should have optional State parameter with ValidateSet' {
             Skip-IfMissing 'Set-PveHaRule'
             $p = $script:Cmd.Parameters['State']
@@ -762,7 +771,7 @@ Describe 'Set-PveHaRule' -Tag 'Unit' {
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'Set-PveHaRule'
-            { Set-PveHaRule -Rule 'rule1' -ErrorAction Stop -Confirm:$false } |
+            { Set-PveHaRule -Rule 'rule1' -Type 'node-affinity' -ErrorAction Stop -Confirm:$false } |
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
