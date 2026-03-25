@@ -37,7 +37,7 @@ services:
     profiles: [infra]
     volumes:
       - ..:/repo
-      - /opt/pve-isos:/opt/pve-isos
+      - /opt/pve-integration:/opt/pve-integration
       # WARNING: Mounting the Docker socket grants this container root-equivalent
       # access to the host's Docker daemon. Only use on trusted, isolated machines.
       - /var/run/docker.sock:/var/run/docker.sock

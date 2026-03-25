@@ -1,9 +1,11 @@
 # ── Answer server container ──────────────────────────────────────────
 
 resource "docker_container" "answer_server" {
-  name       = "pvetest-answer-server"
-  image      = "slothcroissant/proxmox-auto-installer-server:latest"
-  restart    = "unless-stopped"
+  name     = "pvetest-answer-server"
+  image    = "slothcroissant/proxmox-auto-installer-server:latest"
+  restart  = "unless-stopped"
+  must_run = true
+  start    = true
 
   network_mode = "host"
 

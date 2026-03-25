@@ -46,8 +46,8 @@ INFRA_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$INFRA_DIR/../.." && pwd)"
 
 # ── Defaults ────────────────────────────────────────────────────────
-CACHE_DIR="${CACHE_DIR:-/opt/pve-isos}"
-WORK_DIR="${WORK_DIR:-${RUNNER_TEMP:-/tmp/pve-integration}}"
+CACHE_DIR="${CACHE_DIR:-/opt/pve-integration}"
+WORK_DIR="${WORK_DIR:-${RUNNER_TEMP:-$CACHE_DIR/work}}"
 CONFIG_FILE="${CONFIG_FILE:-$WORK_DIR/config.json}"
 MODULE_ARTIFACT="${MODULE_ARTIFACT:-$REPO_ROOT/publish/netstandard2.0}"
 PVE_VERSIONS="${PVE_VERSIONS:-9 8}"
