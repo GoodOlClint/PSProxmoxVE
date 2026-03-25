@@ -64,6 +64,7 @@ pve_iso() {
     case "$ver" in
         9) echo "${PVE9_ISO:-proxmox-ve_9.1-1.iso}" ;;
         8) echo "${PVE8_ISO:-proxmox-ve_8.4-1.iso}" ;;
+        *) echo "ERROR: unknown PVE version '$ver'" >&2; exit 1 ;;
     esac
 }
 
@@ -71,6 +72,7 @@ pve_vmid() {
     case "$1" in
         9a) echo "${PVE9A_VMID:-99091}" ;; 9b) echo "${PVE9B_VMID:-99092}" ;;
         8a) echo "${PVE8A_VMID:-99081}" ;; 8b) echo "${PVE8B_VMID:-99082}" ;;
+        *) echo "ERROR: unknown node '$1'" >&2; exit 1 ;;
     esac
 }
 
@@ -78,6 +80,7 @@ pve_vmname() {
     case "$1" in
         9a) echo "pve-test-9a" ;; 9b) echo "pve-test-9b" ;;
         8a) echo "pve-test-8a" ;; 8b) echo "pve-test-8b" ;;
+        *) echo "ERROR: unknown node '$1'" >&2; exit 1 ;;
     esac
 }
 
@@ -85,15 +88,16 @@ pve_fqdn() {
     case "$1" in
         9a) echo "pve9a.test.local" ;; 9b) echo "pve9b.test.local" ;;
         8a) echo "pve8a.test.local" ;; 8b) echo "pve8b.test.local" ;;
+        *) echo "ERROR: unknown node '$1'" >&2; exit 1 ;;
     esac
 }
 
-# Deterministic MAC addresses for each node.
-# Scheme: AA:BB:CC:00:<version-hex>:<node-hex>
+# Deterministic MAC addresses for each node (lowercase for answer server matching).
 pve_mac() {
     case "$1" in
-        9a) echo "AA:BB:CC:00:09:1A" ;; 9b) echo "AA:BB:CC:00:09:1B" ;;
-        8a) echo "AA:BB:CC:00:08:1A" ;; 8b) echo "AA:BB:CC:00:08:1B" ;;
+        9a) echo "aa:bb:cc:00:09:1a" ;; 9b) echo "aa:bb:cc:00:09:1b" ;;
+        8a) echo "aa:bb:cc:00:08:1a" ;; 8b) echo "aa:bb:cc:00:08:1b" ;;
+        *) echo "ERROR: unknown node '$1'" >&2; exit 1 ;;
     esac
 }
 
@@ -299,7 +303,7 @@ cmd_provision() {
         log "Waiting for $node to boot..."
         local output
         output=$(bash "$SCRIPT_DIR/wait-for-pve.sh" \
-            "$PVE_ENDPOINT" "$PVE_API_TOKEN" \
+            "$PVE_ENDPOINT" "$PVE_API_TOKEN" "$PVE_TARGET_NODE" \
             "$(pve_vmid "$node")" "$PVE_PASSWORD" 900)
         local ip node_name
         ip=$(echo "$output" | grep "^IP=" | cut -d= -f2)
@@ -551,6 +555,10 @@ cmd_cleanup() {
     fi
 
     (cd "$INFRA_DIR" && terraform init -input=false 2>/dev/null)
+
+    # Ensure answer file paths exist (terraform destroy validates host_path mounts)
+    mkdir -p "$WORK_DIR/answers"
+    touch "$WORK_DIR/default-answer.toml"
 
     # Build -target flags when destroying a subset
     local tf_targets=""

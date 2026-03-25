@@ -81,7 +81,7 @@ function script:Skip-IfNoOva {
 
 function script:Skip-IfNoNodeB {
     if (Skip-IfNoTarget) { return $true }
-    if (-not $script:HostB -or -not $script:Password) {
+    if (-not $script:HostB -or -not $script:PasswordB) {
         Set-ItResult -Skipped -Because 'Multi-node env vars not set (PVETEST_HOST_B, PVETEST_PASSWORD)'
         return $true
     }

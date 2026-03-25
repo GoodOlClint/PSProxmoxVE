@@ -103,6 +103,7 @@ param(
     [string[]] $Tests,
 
     [Alias('PveVersion')]
+    [ValidateSet('8', '9', 'all')]
     [string] $Version = 'all',
 
     [string] $DockerHost,
@@ -214,7 +215,7 @@ if ($Rebuild) {
 
 if ($Shell) {
     if ($DockerHost) {
-        Write-Warning "Interactive shell over remote Docker is not supported. Use: ssh $DockerHost 'docker exec -it $InfraContainer pwsh -NoProfile'"
+        Write-Warning "Interactive shell over remote Docker is not supported. Use: ssh $DockerHost 'docker exec -it $DevContainer pwsh -NoProfile'"
         return
     }
     Start-DevContainer
