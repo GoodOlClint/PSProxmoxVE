@@ -108,9 +108,13 @@ BeforeAll {
 }
 
 AfterAll {
-    # Best-effort cleanup of HA rules created during testing
+    # Best-effort cleanup of HA artifacts created during testing
     if ($script:HaRuleCreated) {
         try { Remove-PveHaRule -Rule 'pester-rule-1' -Confirm:$false -ErrorAction SilentlyContinue } catch { }
+    }
+    if ($script:HaTestVmId) {
+        try { Remove-PveHaResource -Sid "vm:$($script:HaTestVmId)" -Confirm:$false -ErrorAction SilentlyContinue } catch { }
+        try { Remove-PveVm -Node $script:Node -VmId $script:HaTestVmId -Confirm:$false -ErrorAction SilentlyContinue } catch { }
     }
 
     # Node removal from a 2-node cluster is not possible via API (quorum loss).
@@ -416,11 +420,22 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
             if (Skip-IfNoPve9) { return }
             if (Skip-IfNoCluster) { return }
 
-            # Create a node-affinity rule that pins a fake resource to node A
+            # HA rules require a managed resource — create a minimal VM and
+            # register it as an HA resource first
+            $script:HaTestVmId = Get-PveClusterNextId -ErrorAction Stop
+            New-PveVm -Node $script:Node -VmId $script:HaTestVmId `
+                -Name 'pester-ha-test' -Memory 128 -Cores 1 `
+                -Confirm:$false -ErrorAction Stop | Out-Null
+
+            New-PveHaResource -Sid "vm:$($script:HaTestVmId)" `
+                -State 'disabled' `
+                -Confirm:$false -ErrorAction Stop
+
+            # Now create a node-affinity rule for that resource
             { New-PveHaRule -Type 'node-affinity' `
                 -Properties @{
                     rule      = 'pester-rule-1'
-                    resources = 'vm:99999'
+                    resources = "vm:$($script:HaTestVmId)"
                     nodes     = $script:Node
                 } `
                 -Comment 'Pester test rule' `
@@ -488,6 +503,11 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
             $rules = Get-PveHaRule -ErrorAction Stop
             $match = @($rules) | Where-Object { $_.Rule -eq 'pester-rule-1' }
             $match | Should -BeNullOrEmpty
+
+            # Clean up HA resource and test VM
+            try { Remove-PveHaResource -Sid "vm:$($script:HaTestVmId)" -Confirm:$false -ErrorAction SilentlyContinue } catch { }
+            try { Remove-PveVm -Node $script:Node -VmId $script:HaTestVmId -Confirm:$false -ErrorAction SilentlyContinue } catch { }
+            $script:HaTestVmId = $null
         }
     }
 
