@@ -202,12 +202,8 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
             $result | Should -Not -BeNullOrEmpty
             $script:ClusterCreated = $true
 
-            # Reconnect with API token for remaining tests
-            Connect-PveServer `
-                -Server $script:Host_ `
-                -Port $script:Port `
-                -ApiToken $script:ApiToken `
-                -SkipCertificateCheck
+            # Allow corosync to fully stabilize after cluster creation
+            Start-Sleep -Seconds 5
         }
 
         It 'Get-PveClusterStatus shows cluster formed' {
@@ -278,11 +274,13 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
             # Brief pause for pmxcfs to sync after task completion
             Start-Sleep -Seconds 5
 
-            # Reconnect to node A for subsequent tests
+            # Reconnect to node A with root@pam for subsequent cluster operations
+            $secPwA = ConvertTo-SecureString $script:Password -AsPlainText -Force
+            $credA = New-Object System.Management.Automation.PSCredential('root@pam', $secPwA)
             Connect-PveServer `
                 -Server $script:Host_ `
                 -Port $script:Port `
-                -ApiToken $script:ApiToken `
+                -Credential $credA `
                 -SkipCertificateCheck
         }
 
@@ -317,11 +315,7 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
         It 'Set-PveClusterOption sets keyboard to en-us' {
             if (Skip-IfNoCluster) { return }
 
-            # Cluster options modification requires root@pam (Sys.Modify on /)
-            $secPw = ConvertTo-SecureString $script:Password -AsPlainText -Force
-            $cred = New-Object System.Management.Automation.PSCredential('root@pam', $secPw)
-            Connect-PveServer -Server $script:Host_ -Port $script:Port -Credential $cred -SkipCertificateCheck
-
+            # Already connected as root@pam from cluster creation context
             # Save original keyboard setting
             $options = Get-PveClusterOption -ErrorAction Stop
             $script:OriginalKeyboard = $options.Keyboard
@@ -349,9 +343,6 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
 
             $options = Get-PveClusterOption -ErrorAction Stop
             $options.Keyboard | Should -Be $script:OriginalKeyboard
-
-            # Reconnect with API token for remaining tests
-            Connect-PveServer -Server $script:Host_ -Port $script:Port -ApiToken $script:ApiToken -SkipCertificateCheck
         }
     }
 
