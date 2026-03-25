@@ -105,13 +105,10 @@ namespace PSProxmoxVE.Core.Services
         }
 
         /// <summary>
-        /// Triggers regeneration of the Cloud-Init ISO drive attached to the VM.
-        /// This is done by calling the cloudinit dump endpoint, then touching the config to
-        /// force PVE to rebuild the CD-ROM image on next start.
+        /// Regenerates the Cloud-Init ISO drive attached to the VM
+        /// (PUT /nodes/{node}/qemu/{vmid}/cloudinit).
         /// </summary>
-        /// <returns>
-        /// The raw Cloud-Init dump (user-data) string as reported by the PVE API.
-        /// </returns>
+        /// <returns>The UPID of the regeneration task.</returns>
         public string RegenerateCloudInitImage(PveSession session, string node, int vmid)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
@@ -120,10 +117,9 @@ namespace PSProxmoxVE.Core.Services
             IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
             try
             {
-                // Request a Cloud-Init dump (user-data section) — this causes PVE to rebuild the image
-                var dumpResponse = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/cloudinit/dump?type=user")
+                var response = client.PutAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/cloudinit", null)
                     .GetAwaiter().GetResult();
-                var data = JObject.Parse(dumpResponse)["data"];
+                var data = JObject.Parse(response)["data"];
                 return data?.ToString() ?? string.Empty;
             }
             finally
