@@ -62,7 +62,6 @@ Describe 'Linux VM — Integration' -Tag 'Integration' {
 
             $script:LinuxVmId = $vm.VmId
             $script:CreatedVmIds.Add($vm.VmId)
-            Register-TestResource -Name 'pester-linux-vm' -VmId $vm.VmId
         }
 
         It 'Should import cloud image disk (Import-PveVmDisk)' {

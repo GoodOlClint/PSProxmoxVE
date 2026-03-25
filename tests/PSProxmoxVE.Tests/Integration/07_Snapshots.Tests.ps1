@@ -4,13 +4,12 @@ BeforeAll {
     . $PSScriptRoot/_IntegrationHelper.ps1
     Connect-TestPve
 
-    # Find the test VM created by 06_VMs.Tests.ps1
-    $script:TestVmId = Find-TestVm
+    $script:SnapVmId = $null
 
-    function script:Skip-IfNoTestVm {
+    function script:Skip-IfNoSnapVm {
         if (Skip-IfNoTarget) { return $true }
-        if ($null -eq $script:TestVmId) {
-            Set-ItResult -Skipped -Because 'No test VM found (pester-test-vm must exist from 06_VMs)'
+        if ($null -eq $script:SnapVmId) {
+            Set-ItResult -Skipped -Because 'Snapshot test VM was not created'
             return $true
         }
         return $false
@@ -18,28 +17,49 @@ BeforeAll {
 }
 
 AfterAll {
-    # Snapshot cleanup is inline (remove within the test).
-    # No VM cleanup here — 06_VMs owns pester-test-vm.
+    if (-not $script:SkipReason -and $script:SnapVmId) {
+        try {
+            Stop-PveVm -Node $script:Node -VmId $script:SnapVmId -Wait -Timeout 30 -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
+        } catch { }
+        Start-Sleep -Seconds 2
+        try {
+            Remove-PveVm -Node $script:Node -VmId $script:SnapVmId -Force -Purge -Confirm:$false -ErrorAction SilentlyContinue
+        } catch { }
+    }
     Disconnect-TestPve
 }
 
 Describe 'Snapshots — Integration' -Tag 'Integration' {
+    Context 'Setup' {
+        It 'Should create a VM for snapshot tests' {
+            if (Skip-IfNoTarget) { return }
+
+            $task = New-PveVm `
+                -Node    $script:Node `
+                -Name    'pester-snap-vm' `
+                -Memory  128 `
+                -Cores   1 `
+                -Wait
+
+            $task | Should -Not -BeNullOrEmpty
+
+            $vm = Get-PveVm -Node $script:Node -Name 'pester-snap-vm' |
+                  Select-Object -First 1
+            $vm | Should -Not -BeNullOrEmpty
+            $script:SnapVmId = $vm.VmId
+        }
+    }
+
     Context 'Snapshots' {
         It 'Should create, list, and remove a snapshot' {
-            if (Skip-IfNoTestVm) { return }
-
-            # Ensure the VM is stopped for snapshot
-            $vm = Get-PveVm -Node $script:Node | Where-Object { $_.VmId -eq $script:TestVmId }
-            if ($vm.Status -eq 'running') {
-                Stop-PveVm -Node $script:Node -VmId $script:TestVmId -Wait -Timeout 30 -Confirm:$false | Out-Null
-            }
+            if (Skip-IfNoSnapVm) { return }
 
             $snapName = 'pester-snap'
 
             # Create
             $createTask = New-PveSnapshot `
                 -Node        $script:Node `
-                -VmId        $script:TestVmId `
+                -VmId        $script:SnapVmId `
                 -Name        $snapName `
                 -Description 'Created by Pester integration test' `
                 -Wait
@@ -47,14 +67,14 @@ Describe 'Snapshots — Integration' -Tag 'Integration' {
             $createTask | Should -Not -BeNullOrEmpty
 
             # List and verify
-            $snapshots = Get-PveSnapshot -Node $script:Node -VmId $script:TestVmId
+            $snapshots = Get-PveSnapshot -Node $script:Node -VmId $script:SnapVmId
             $snap = $snapshots | Where-Object { $_.Name -eq $snapName }
             $snap | Should -Not -BeNullOrEmpty
 
             # Restore
             { Restore-PveSnapshot `
                 -Node    $script:Node `
-                -VmId    $script:TestVmId `
+                -VmId    $script:SnapVmId `
                 -Name    $snapName `
                 -Confirm:$false `
                 -Wait } | Should -Not -Throw
@@ -62,7 +82,7 @@ Describe 'Snapshots — Integration' -Tag 'Integration' {
             # Remove
             $removeTask = Remove-PveSnapshot `
                 -Node    $script:Node `
-                -VmId    $script:TestVmId `
+                -VmId    $script:SnapVmId `
                 -Name    $snapName `
                 -Confirm:$false `
                 -Wait

@@ -17,8 +17,17 @@ BeforeAll {
 }
 
 AfterAll {
-    # Do NOT clean up pester-test-vm here — later test files (07_Snapshots,
-    # 09_CloudInit, 15_Tasks) depend on it. 99_Cleanup handles removal.
+    if (-not $script:SkipReason -and $script:TestVmId) {
+        foreach ($vmId in @($script:TestVmId, ($script:TestVmId + 1000))) {
+            try {
+                Stop-PveVm -Node $script:Node -VmId $vmId -Wait -Timeout 30 -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
+            } catch { }
+            Start-Sleep -Seconds 2
+            try {
+                Remove-PveVm -Node $script:Node -VmId $vmId -Force -Purge -Confirm:$false -ErrorAction SilentlyContinue
+            } catch { }
+        }
+    }
     Disconnect-TestPve
 }
 
@@ -49,7 +58,6 @@ Describe 'VMs — Integration' -Tag 'Integration' {
             $vm | Should -Not -BeNullOrEmpty
 
             $script:TestVmId = $vm.VmId
-            Register-TestResource -Name 'pester-test-vm' -VmId $vm.VmId
         }
 
         It 'Should get and set VM config' {
