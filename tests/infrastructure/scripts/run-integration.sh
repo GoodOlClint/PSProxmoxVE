@@ -535,6 +535,50 @@ cmd_cleanup() {
     log "Cleanup complete."
 }
 
+cmd_force_cleanup() {
+    local requested="${1:-all}"
+    local cleanup_nodes="$ALL_NODES"
+    if [[ "$requested" != "all" ]]; then
+        cleanup_nodes=""
+        for v in $requested; do
+            cleanup_nodes="$cleanup_nodes ${v}a ${v}b"
+        done
+    fi
+
+    log "Force cleanup — bypassing Terraform, using direct API calls..."
+
+    # Destroy VMs via the PVE API (works even with broken Terraform state)
+    for node in $cleanup_nodes; do
+        local vm_id
+        vm_id="$(pve_vmid "$node")"
+        local iso_name
+        iso_name="$(pve_iso "$node")"
+        log "Force cleaning $node (VMID $vm_id)..."
+        bash "$SCRIPT_DIR/preflight-cleanup.sh" \
+            "${PVE_ENDPOINT:-}" "${PVE_API_TOKEN:-}" \
+            "$vm_id" "${iso_name%.iso}-${node}-auto.iso" "$INFRA_DIR" \
+            || true
+    done
+
+    # Stop Docker storage containers
+    if [[ "$requested" == "all" ]]; then
+        log "Stopping storage containers..."
+        docker rm -f pvetest-iscsi pvetest-nfs 2>/dev/null || true
+        docker volume rm pvetest-iscsi-data pvetest-nfs-data 2>/dev/null || true
+    fi
+
+    # Remove Terraform state so next provision starts clean
+    log "Removing Terraform state..."
+    rm -f "$INFRA_DIR/terraform.tfstate" "$INFRA_DIR/terraform.tfstate.backup"
+    rm -f "$INFRA_DIR/.terraform.lock.hcl"
+    rm -rf "$INFRA_DIR/.terraform"
+
+    # Remove work artifacts
+    rm -f "$CONFIG_FILE" "$WORK_DIR"/instances.tfvars.json
+
+    log "Force cleanup complete. Next provision will start from scratch."
+}
+
 cmd_taint() {
     local requested="${1:-all}"
     local taint_nodes="$ALL_NODES"
@@ -585,6 +629,7 @@ main() {
         provision)    cmd_provision "$@" ;;
         test)         cmd_test "$@" ;;
         cleanup)      cmd_cleanup "$@" ;;
+        force-cleanup) cmd_force_cleanup "$@" ;;
         taint)        cmd_taint "$@" ;;
         all)          cmd_all "$@" ;;
         *)

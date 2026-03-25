@@ -44,6 +44,12 @@
     before applying, forcing them to be destroyed and recreated.
     Useful when the VMs are in a bad state (e.g. clustered, broken).
 
+.PARAMETER Force
+    When used with -Cleanup, bypasses Terraform and destroys VMs
+    directly via the PVE API. Useful when Terraform state is corrupted
+    (e.g. after an interrupted provision). Also removes Terraform
+    state files so the next provision starts clean.
+
 .PARAMETER Tests
     Filter integration tests by area name. Comma-separated list of test
     area names that match the numbered file prefixes. Examples:
@@ -92,6 +98,7 @@ param(
     [switch] $Stop,
     [switch] $Rebuild,
     [switch] $Reprovision,
+    [switch] $Force,
 
     [string[]] $Tests,
 
@@ -258,7 +265,11 @@ if ($Integration) {
 
 if ($Cleanup) {
     Start-InfraContainer
-    docker exec $InfraContainer bash $RunIntegration cleanup $Version
+    if ($Force) {
+        docker exec $InfraContainer bash $RunIntegration force-cleanup $Version
+    } else {
+        docker exec $InfraContainer bash $RunIntegration cleanup $Version
+    }
     if ($LASTEXITCODE -ne 0) { throw "Cleanup failed (exit code $LASTEXITCODE)" }
 }
 
