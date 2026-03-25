@@ -19,6 +19,7 @@ fi
 echo "deb http://download.proxmox.com/debian/pve ${SUITE} pve-no-subscription" > /etc/apt/sources.list.d/pve-no-subscription.list
 
 apt-get update -qq
+apt-get upgrade -y -qq
 apt-get install -y -qq qemu-guest-agent open-iscsi
 systemctl start qemu-guest-agent
 systemctl enable open-iscsi

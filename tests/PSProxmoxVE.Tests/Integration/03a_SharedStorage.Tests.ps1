@@ -17,40 +17,16 @@
 #>
 
 BeforeAll {
-    . $PSScriptRoot/../_TestHelper.ps1
-
-    # --- Base integration vars ---
-    $baseVars = @('PVETEST_HOST', 'PVETEST_PORT', 'PVETEST_APITOKEN', 'PVETEST_NODE')
-    $script:SkipReason = $null
-
-    foreach ($var in $baseVars) {
-        if (-not [System.Environment]::GetEnvironmentVariable($var)) {
-            $script:SkipReason = "No live Proxmox VE target configured. Set: $($baseVars -join ', ')"
-            break
-        }
-    }
+    . $PSScriptRoot/_IntegrationHelper.ps1
+    Connect-TestPve
 
     # --- Shared storage vars ---
-    $script:StorageVmIp = [System.Environment]::GetEnvironmentVariable('PVETEST_STORAGE_VM_IP')
-    $script:IscsiIqn    = [System.Environment]::GetEnvironmentVariable('PVETEST_ISCSI_IQN')
-    $script:NfsExport   = [System.Environment]::GetEnvironmentVariable('PVETEST_NFS_EXPORT')
-
-    $script:Host_    = [System.Environment]::GetEnvironmentVariable('PVETEST_HOST')
-    $portEnv = [System.Environment]::GetEnvironmentVariable('PVETEST_PORT')
-    $script:Port     = [int]$(if ($portEnv) { $portEnv } else { '8006' })
-    $script:ApiToken = [System.Environment]::GetEnvironmentVariable('PVETEST_APITOKEN')
-    $script:Node     = [System.Environment]::GetEnvironmentVariable('PVETEST_NODE')
+    $script:StorageVmIp = $env:PVETEST_STORAGE_VM_IP
+    $script:IscsiIqn    = $env:PVETEST_ISCSI_IQN
+    $script:NfsExport   = $env:PVETEST_NFS_EXPORT
 
     # Track created storages for cleanup
     $script:CreatedStorages = [System.Collections.Generic.List[string]]::new()
-
-    function script:Skip-IfNoTarget {
-        if ($script:SkipReason) {
-            Set-ItResult -Skipped -Because $script:SkipReason
-            return $true
-        }
-        return $false
-    }
 
     function script:Skip-IfNoSharedStorage {
         if (Skip-IfNoTarget) { return $true }
@@ -68,25 +44,10 @@ AfterAll {
         try { Remove-PveStorage -Storage $name -Confirm:$false -ErrorAction Stop }
         catch { Write-Warning "Cleanup: failed to remove storage '$name': $_" }
     }
+    Disconnect-TestPve
 }
 
 Describe 'Shared Storage — Integration' -Tag 'Integration' {
-
-    # -------------------------------------------------------------------
-    Context 'Connection' {
-        It 'Should connect to PVE node' {
-            if (Skip-IfNoTarget) { return }
-
-            $session = Connect-PveServer `
-                -Server $script:Host_ `
-                -Port $script:Port `
-                -ApiToken $script:ApiToken `
-                -SkipCertificateCheck `
-                -PassThru
-
-            $session | Should -Not -BeNullOrEmpty
-        }
-    }
 
     # -------------------------------------------------------------------
     Context 'NFS Storage' {

@@ -21,12 +21,19 @@ variable "target_node" {
 }
 
 variable "pve_instances" {
-  description = "Map of PVE instances to provision. Key is a label (e.g. 'pve9'), value defines the VM."
+  description = "Map of PVE instances to provision. Key is a node label (e.g. '9a'), value defines the VM."
   type = map(object({
-    iso_local_path = string
-    vm_id          = number
-    vm_name        = string
+    pve_version = string
+    vm_id       = number
+    vm_name     = string
+    mac_address = string
   }))
+}
+
+variable "pve_isos" {
+  description = "Map of PVE version to the local path of the generic HTTP auto-install ISO."
+  type        = map(string)
+  default     = {}
 }
 
 variable "cores" {
@@ -69,5 +76,32 @@ variable "test_vm_password" {
   description = "Root password for the nested PVE instances. Set via TF_VAR_test_vm_password env var."
   type        = string
   sensitive   = true
+}
+
+variable "storage_iscsi_iqn" {
+  description = "iSCSI target IQN for the test storage"
+  type        = string
+  default     = "iqn.2024-01.local.test:storage"
+}
+
+variable "storage_iscsi_lun_size" {
+  description = "Size of the iSCSI LUN backing file"
+  type        = string
+  default     = "10G"
+}
+
+variable "docker_host_ip" {
+  description = "IP of the Docker host, used by PVE nodes to reach storage containers"
+  type        = string
+}
+
+variable "answer_files_dir" {
+  description = "Host path to the directory containing per-MAC answer.toml files"
+  type        = string
+}
+
+variable "default_answer_file" {
+  description = "Host path to the default answer.toml file"
+  type        = string
 }
 

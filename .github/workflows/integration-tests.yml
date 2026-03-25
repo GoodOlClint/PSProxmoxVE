@@ -16,14 +16,13 @@ name: Integration Tests
 # Required repository secrets (for provisioning):
 #   PVE_ENDPOINT       - Parent PVE API URL (e.g. https://pve.example.com:8006)
 #   PVE_API_TOKEN      - Parent PVE API token (for Terraform + uploads)
-#   PVE_TEST_PASSWORD  - Root password for nested PVE instances
+#   PVE_TEST_PASSWORD  - Root password for nested PVE instances (used for both provision and tests)
 #
 # Required repository variables:
 #   PVE_TARGET_NODE    - Parent PVE node name (variable, not secret, to avoid log masking)
 #
 # Optional secrets (for skip_provision mode):
 #   PVETEST_HOST       - Hostname or IP of a pre-existing nested PVE
-#   PVETEST_APITOKEN   - API token for the pre-existing nested PVE
 #
 # WARNING: Integration tests create and destroy real resources on the target
 # node. Never run against production.
@@ -54,7 +53,7 @@ permissions:
 env:
   SCRIPTS_DIR: tests/infrastructure/scripts
   TEST_IMAGE: ghcr.io/goodolclint/psproxmoxve-integration
-  CACHE_DIR: /opt/pve-isos
+  CACHE_DIR: /opt/pve-integration
 
 jobs:
   # ── Build module artifact (GitHub-hosted) ────────────────────────────
@@ -118,7 +117,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
       volumes:
-        - /opt/pve-isos:/opt/pve-isos
+        - /opt/pve-integration:/opt/pve-integration
         # WARNING: The Docker socket is mounted to allow storage containers to be
         # managed from within the job container. This grants root-equivalent access
         # to the runner's Docker daemon. Only use on dedicated, isolated self-hosted
@@ -148,7 +147,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
       volumes:
-        - /opt/pve-isos:/opt/pve-isos
+        - /opt/pve-integration:/opt/pve-integration
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -171,7 +170,7 @@ jobs:
           MODULE_ARTIFACT: ./publish/netstandard2.0
           SKIP_PROVISION: ${{ inputs.skip_provision || 'false' }}
           PVETEST_HOST: ${{ secrets.PVETEST_HOST }}
-          PVETEST_APITOKEN: ${{ secrets.PVETEST_APITOKEN }}
+          PVETEST_PASSWORD: ${{ secrets.PVE_TEST_PASSWORD }}
         run: bash ${SCRIPTS_DIR}/run-integration.sh test ${{ matrix.pve_version }}
 
       - name: Upload test results
@@ -193,7 +192,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
       volumes:
-        - /opt/pve-isos:/opt/pve-isos
+        - /opt/pve-integration:/opt/pve-integration
         # WARNING: The Docker socket is mounted to allow storage containers to be
         # stopped from within the job container. This grants root-equivalent access
         # to the runner's Docker daemon. Only use on dedicated, isolated self-hosted
@@ -209,6 +208,7 @@ jobs:
           PVE_ENDPOINT: ${{ secrets.PVE_ENDPOINT }}
           PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
           PVE_TARGET_NODE: ${{ vars.PVE_TARGET_NODE }}
+          PVE_PASSWORD: ${{ secrets.PVE_TEST_PASSWORD }}
         run: bash ${SCRIPTS_DIR}/run-integration.sh cleanup
 
   # ── Clean up old container images from GHCR ──────────────────────────

@@ -42,12 +42,7 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
             var service = new CloudInitService();
             var upid = service.RegenerateCloudInitImage(session, Node, VmId);
 
-            var task = new PveTask
-            {
-                Node       = Node,
-                Status     = "stopped",
-                ExitStatus = "OK"
-            };
+            var task = new PveTask { Upid = upid, Node = Node, Status = "running" };
 
             if (Wait.IsPresent && !string.IsNullOrEmpty(upid))
             {

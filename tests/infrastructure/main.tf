@@ -5,6 +5,10 @@ terraform {
       source  = "bpg/proxmox"
       version = ">= 0.70.0"
     }
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = ">= 3.0.0"
+    }
   }
 }
 
@@ -14,14 +18,20 @@ provider "proxmox" {
   insecure  = var.proxmox_insecure
 }
 
+provider "docker" {
+  # Uses the Docker socket from the dev-infra container
+  # (mounted at /var/run/docker.sock)
+}
+
 resource "proxmox_virtual_environment_file" "auto_iso" {
-  for_each     = var.pve_instances
+  for_each     = var.pve_isos
   content_type = "iso"
   datastore_id = var.iso_storage
   node_name    = var.target_node
+  overwrite    = true
 
   source_file {
-    path = each.value.iso_local_path
+    path = each.value
   }
 }
 
@@ -60,13 +70,14 @@ resource "proxmox_virtual_environment_vm" "nested_pve" {
   }
 
   cdrom {
-    file_id   = proxmox_virtual_environment_file.auto_iso[each.key].id
+    file_id   = proxmox_virtual_environment_file.auto_iso[each.value.pve_version].id
     interface = "ide2"
   }
 
   network_device {
-    bridge = var.network_bridge
-    model  = "virtio"
+    bridge      = var.network_bridge
+    model       = "virtio"
+    mac_address = each.value.mac_address
   }
 
   operating_system {
