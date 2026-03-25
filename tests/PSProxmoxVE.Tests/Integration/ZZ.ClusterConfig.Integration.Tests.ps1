@@ -422,7 +422,6 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
                     rule      = 'pester-rule-1'
                     resources = 'vm:99999'
                     nodes     = $script:Node
-                    affinity  = 'positive'
                 } `
                 -Comment 'Pester test rule' `
                 -Confirm:$false `
