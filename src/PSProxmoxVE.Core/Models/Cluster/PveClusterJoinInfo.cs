@@ -1,5 +1,6 @@
+using System.Collections.Generic;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using PSProxmoxVE.Core.Utilities;
 
 namespace PSProxmoxVE.Core.Models.Cluster;
 
@@ -17,10 +18,10 @@ public class PveClusterJoinInfo
 
     /// <summary>
     /// The list of nodes in the cluster with their connection details.
-    /// This is a complex nested structure returned as a JArray.
     /// </summary>
     [JsonProperty("nodelist")]
-    public JArray? Nodelist { get; set; }
+    [JsonConverter(typeof(NativeListConverter))]
+    public List<Dictionary<string, object?>>? Nodelist { get; set; }
 
     /// <summary>
     /// The preferred node to connect to when joining.
@@ -29,10 +30,11 @@ public class PveClusterJoinInfo
     public string? PreferredNode { get; set; }
 
     /// <summary>
-    /// The Corosync totem configuration as a raw JSON object.
+    /// The Corosync totem configuration.
     /// </summary>
     [JsonProperty("totem")]
-    public JObject? Totem { get; set; }
+    [JsonConverter(typeof(NativeDictionaryConverter))]
+    public Dictionary<string, object?>? Totem { get; set; }
 
     /// <inheritdoc />
     public override string ToString()
