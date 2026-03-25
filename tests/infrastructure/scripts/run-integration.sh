@@ -230,6 +230,12 @@ cmd_provision() {
             tf_targets="$tf_targets -target=proxmox_virtual_environment_file.auto_iso[\"$node\"]"
             tf_targets="$tf_targets -target=proxmox_virtual_environment_vm.nested_pve[\"$node\"]"
         done
+        # Always include shared Docker storage resources
+        tf_targets="$tf_targets -target=docker_image.ubuntu"
+        tf_targets="$tf_targets -target=docker_container.iscsi_target"
+        tf_targets="$tf_targets -target=docker_container.nfs_server"
+        tf_targets="$tf_targets -target=docker_volume.iscsi_data"
+        tf_targets="$tf_targets -target=docker_volume.nfs_data"
         log "Terraform targets: $tf_targets"
     fi
 
