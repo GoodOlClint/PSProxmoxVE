@@ -100,12 +100,12 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void RegenerateCloudInitImage_CallsGetAsyncAndReturnsData()
+        public void RegenerateCloudInitImage_CallsPutAsyncAndReturnsUpid()
         {
             // Arrange
-            var json = @"{""data"": ""#cloud-config\nuser: ubuntu\npassword: secret\n""}";
+            var json = @"{""data"": ""UPID:pve1:00001234:00005678:12345678:cloudinit:100:root@pam:""}";
             var mockClient = new Mock<IPveHttpClient>();
-            mockClient.Setup(c => c.GetAsync("nodes/pve1/qemu/100/cloudinit/dump?type=user"))
+            mockClient.Setup(c => c.PutAsync("nodes/pve1/qemu/100/cloudinit", null))
                 .ReturnsAsync(json);
             var service = new CloudInitService(mockClient.Object);
 
@@ -113,9 +113,8 @@ namespace PSProxmoxVE.Core.Tests.Services
             var result = service.RegenerateCloudInitImage(CreateSession(), "pve1", 100);
 
             // Assert
-            Assert.Contains("#cloud-config", result);
-            Assert.Contains("ubuntu", result);
-            mockClient.Verify(c => c.GetAsync("nodes/pve1/qemu/100/cloudinit/dump?type=user"), Times.Once);
+            Assert.Contains("UPID:", result);
+            mockClient.Verify(c => c.PutAsync("nodes/pve1/qemu/100/cloudinit", null), Times.Once);
         }
 
         [Fact]
