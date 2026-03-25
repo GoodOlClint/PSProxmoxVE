@@ -33,7 +33,7 @@
 # Optional env vars:
 #   CACHE_DIR          ISO/image cache (default: /opt/pve-isos)
 #   WORK_DIR           Temp dir for build artifacts (default: $RUNNER_TEMP or /tmp/pve-integration)
-#   CONFIG_FILE        Test config JSON path (default: $CACHE_DIR/test-config.json)
+#   CONFIG_FILE        Test config JSON path (default: $WORK_DIR/config.json)
 #   MODULE_ARTIFACT    Path to built module DLLs (default: ./publish/netstandard2.0)
 #   PVE_VERSIONS       Space-separated versions to provision (default: "9 8")
 #   STORAGE_ISCSI_IQN  iSCSI IQN for storage target (default: iqn.2024-01.local.test:storage)
@@ -48,7 +48,7 @@ REPO_ROOT="$(cd "$INFRA_DIR/../.." && pwd)"
 # ── Defaults ────────────────────────────────────────────────────────
 CACHE_DIR="${CACHE_DIR:-/opt/pve-isos}"
 WORK_DIR="${WORK_DIR:-${RUNNER_TEMP:-/tmp/pve-integration}}"
-CONFIG_FILE="${CONFIG_FILE:-$CACHE_DIR/test-config.json}"
+CONFIG_FILE="${CONFIG_FILE:-$WORK_DIR/config.json}"
 MODULE_ARTIFACT="${MODULE_ARTIFACT:-$REPO_ROOT/publish/netstandard2.0}"
 PVE_VERSIONS="${PVE_VERSIONS:-9 8}"
 SKIP_PROVISION="${SKIP_PROVISION:-false}"
