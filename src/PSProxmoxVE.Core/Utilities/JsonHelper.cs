@@ -11,7 +11,7 @@ namespace PSProxmoxVE.Core.Utilities
     {
         /// <summary>
         /// Converts a JToken to a native .NET type recursively.
-        /// JObject becomes Dictionary&lt;string, object&gt;, JArray becomes List&lt;object&gt;, JValue becomes primitive.
+        /// JObject becomes Dictionary&lt;string, object?&gt;, JArray becomes List&lt;object?&gt;, JValue becomes its primitive value.
         /// </summary>
         public static object? ToNative(JToken? token)
         {
