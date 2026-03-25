@@ -180,6 +180,18 @@ cmd_provision() {
     # Terraform — remove any stale .tfvars from previous manual runs
     rm -f "$INFRA_DIR/terraform.tfvars"
 
+    # Discover Docker host IP before Terraform apply (needed for docker_host_ip var)
+    local storage_ip
+    storage_ip=$(docker run --rm --net=host alpine ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
+    if [ -z "$storage_ip" ]; then
+        storage_ip=$(docker info --format '{{.Swarm.NodeAddr}}' 2>/dev/null | cut -d: -f1)
+    fi
+    if [ -z "$storage_ip" ]; then
+        ci_error "Could not determine Docker host IP for storage services"
+        exit 1
+    fi
+    log "Docker host IP: $storage_ip"
+
     log "Running Terraform init..."
     (cd "$INFRA_DIR" && terraform init -input=false)
 
@@ -228,44 +240,22 @@ cmd_provision() {
         TF_VAR_proxmox_api_token="$PVE_API_TOKEN" \
         TF_VAR_target_node="$PVE_TARGET_NODE" \
         TF_VAR_test_vm_password="$PVE_PASSWORD" \
+        TF_VAR_docker_host_ip="$storage_ip" \
         terraform apply -auto-approve -input=false -var-file="$tfvars" $tf_targets)
 
-    # Start iSCSI/NFS storage containers on the Docker host
-    log "Starting storage containers (iSCSI + NFS)..."
-    # Get the Docker host's real IP (not the container's). The storage containers
-    # use host networking, so PVE nodes reach them via the host's IP.
-    local storage_ip
-    # Prefer the IP of the default route's interface on the Docker host.
-    storage_ip=$(docker run --rm --net=host alpine ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
-    if [ -z "$storage_ip" ]; then
-        # Fallback: use the local node address from Docker info (not RemoteManagers,
-        # which can return addresses of remote Swarm managers).
-        storage_ip=$(docker info --format '{{.Swarm.NodeAddr}}' 2>/dev/null | cut -d: -f1)
-    fi
-    if [ -z "$storage_ip" ]; then
-        ci_error "Could not determine Docker host IP for storage services"
-        exit 1
-    fi
-    ISCSI_IQN="$STORAGE_ISCSI_IQN" \
-        docker compose -f "$STORAGE_COMPOSE" up -d
-    log "Storage services ready at $storage_ip (iSCSI: $STORAGE_ISCSI_IQN)"
-
-    # Wait for PVE instances and create API tokens (per node)
+    # Wait for PVE instances to boot and discover IPs
     for node in $provision_nodes; do
-        log "Waiting for $node to boot and creating API token..."
+        log "Waiting for $node to boot..."
         local output
-        output=$(bash "$SCRIPT_DIR/create-api-token.sh" \
+        output=$(bash "$SCRIPT_DIR/wait-for-pve.sh" \
             "$PVE_ENDPOINT" "$PVE_API_TOKEN" \
             "$(pve_vmid "$node")" "$PVE_PASSWORD" 900)
-        local ip token
+        local ip node_name
         ip=$(echo "$output" | grep "^IP=" | cut -d= -f2)
-        token=$(echo "$output" | grep "^TOKEN=" | cut -d= -f2-)
-        # Node name = hostname portion of FQDN (e.g. pve9a.test.local -> pve9a)
-        local node_name
-        node_name="$(pve_fqdn "$node" | cut -d. -f1)"
+        node_name=$(echo "$output" | grep "^NODE=" | cut -d= -f2)
         log "$node ready at $ip (node: $node_name)"
-        jq -n --arg host "$ip" --arg token "$token" --arg node "$node_name" \
-            '{host: $host, token: $token, node: $node}' > "$WORK_DIR/${node}.json"
+        jq -n --arg host "$ip" --arg node "$node_name" \
+            '{host: $host, node: $node}' > "$WORK_DIR/${node}.json"
     done
 
     # Prepare test environments on provisioned PVE nodes
@@ -354,15 +344,13 @@ cmd_test() {
         # Set env vars from config or from environment
         if [[ "$SKIP_PROVISION" == "true" ]]; then
             : "${PVETEST_HOST:?Set PVETEST_HOST when using SKIP_PROVISION}"
-            : "${PVETEST_APITOKEN:?Set PVETEST_APITOKEN when using SKIP_PROVISION}"
+            : "${PVETEST_PASSWORD:?Set PVETEST_PASSWORD when using SKIP_PROVISION}"
             export PVETEST_PORT="${PVETEST_PORT:-8006}"
             export PVETEST_NODE="${PVETEST_NODE:-pve}"
             export PVETEST_STORAGE="${PVETEST_STORAGE:-local}"
             export PVETEST_CLOUD_IMAGE_PATH="${PVETEST_CLOUD_IMAGE_PATH:-}"
             export PVETEST_OVA_PATH="${PVETEST_OVA_PATH:-}"
-            # Secondary node and storage VM may not be available in skip mode
             export PVETEST_HOST_B="${PVETEST_HOST_B:-}"
-            export PVETEST_APITOKEN_B="${PVETEST_APITOKEN_B:-}"
             export PVETEST_STORAGE_VM_IP="${PVETEST_STORAGE_VM_IP:-}"
             export PVETEST_ISCSI_IQN="${PVETEST_ISCSI_IQN:-}"
             export PVETEST_NFS_EXPORT="${PVETEST_NFS_EXPORT:-}"
@@ -373,7 +361,6 @@ cmd_test() {
             fi
             # Primary node (a)
             export PVETEST_HOST=$(jq -r ".pve${v}.nodes.a.host" "$CONFIG_FILE")
-            export PVETEST_APITOKEN=$(jq -r ".pve${v}.nodes.a.token" "$CONFIG_FILE")
             export PVETEST_PORT=8006
             export PVETEST_NODE=$(jq -r ".pve${v}.nodes.a.node" "$CONFIG_FILE")
             export PVETEST_STORAGE=local
@@ -381,7 +368,6 @@ cmd_test() {
             export PVETEST_OVA_PATH=$(jq -r '.ova_path' "$CONFIG_FILE")
             # Secondary node (b)
             export PVETEST_HOST_B=$(jq -r ".pve${v}.nodes.b.host" "$CONFIG_FILE")
-            export PVETEST_APITOKEN_B=$(jq -r ".pve${v}.nodes.b.token" "$CONFIG_FILE")
             # Storage services (Docker on runner)
             export PVETEST_STORAGE_VM_IP=$(jq -r '.storage.ip' "$CONFIG_FILE")
             export PVETEST_ISCSI_IQN=$(jq -r '.storage.iscsi_iqn' "$CONFIG_FILE")
@@ -392,12 +378,12 @@ cmd_test() {
         export PVETEST_PVE_VERSION="$v"
         export PVETEST_PASSWORD="${PVETEST_PASSWORD:-${PVE_PASSWORD:-}}"
 
-        # Verify API reachable (node A)
+        # Verify API reachable (node A) using ticket auth
         log "Verifying PVE $v node A API at $PVETEST_HOST:$PVETEST_PORT..."
         if ! curl -sk --connect-timeout 10 \
-            -H "Authorization: PVEAPIToken=${PVETEST_APITOKEN}" \
-            "https://${PVETEST_HOST}:${PVETEST_PORT}/api2/json/nodes" | grep -q '"node"'; then
-            ci_error "Cannot reach PVE $v node A API at ${PVETEST_HOST}:${PVETEST_PORT}"
+            -d "username=root@pam&password=${PVETEST_PASSWORD}" \
+            "https://${PVETEST_HOST}:${PVETEST_PORT}/api2/json/access/ticket" | grep -q '"ticket"'; then
+            ci_error "Cannot authenticate to PVE $v node A at ${PVETEST_HOST}:${PVETEST_PORT}"
             overall_exit=3
             continue
         fi
@@ -406,9 +392,9 @@ cmd_test() {
         if [[ -n "${PVETEST_HOST_B:-}" ]]; then
             log "Verifying PVE $v node B API at $PVETEST_HOST_B:$PVETEST_PORT..."
             if ! curl -sk --connect-timeout 10 \
-                -H "Authorization: PVEAPIToken=${PVETEST_APITOKEN_B}" \
-                "https://${PVETEST_HOST_B}:${PVETEST_PORT}/api2/json/nodes" | grep -q '"node"'; then
-                ci_error "Cannot reach PVE $v node B API at ${PVETEST_HOST_B}:${PVETEST_PORT}"
+                -d "username=root@pam&password=${PVETEST_PASSWORD}" \
+                "https://${PVETEST_HOST_B}:${PVETEST_PORT}/api2/json/access/ticket" | grep -q '"ticket"'; then
+                ci_error "Cannot authenticate to PVE $v node B at ${PVETEST_HOST_B}:${PVETEST_PORT}"
                 overall_exit=3
                 continue
             fi
@@ -474,33 +460,97 @@ cmd_test() {
 
 cmd_cleanup() {
     local requested="${1:-all}"
-    local cleanup_nodes="$ALL_NODES"
+    log "Starting cleanup..."
+
+    require_env PVE_ENDPOINT
+    require_env PVE_API_TOKEN
+    require_env PVE_TARGET_NODE
+
+    # Discover Docker host IP for the docker_host_ip variable
+    local storage_ip
+    storage_ip=$(docker run --rm --net=host alpine ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
+    if [ -z "$storage_ip" ]; then
+        storage_ip=$(docker info --format '{{.Swarm.NodeAddr}}' 2>/dev/null | cut -d: -f1)
+    fi
+
+    # Build tfvars for all versions (Terraform needs the full variable map)
+    local tfvars="$WORK_DIR/instances.tfvars.json"
+    if [[ ! -f "$tfvars" ]]; then
+        # Generate minimal tfvars if none exist (cleanup without prior provision)
+        local instances='{}'
+        for node in $ALL_NODES; do
+            local vm_id vm_name
+            vm_id="$(pve_vmid "$node")"
+            vm_name="$(pve_vmname "$node")"
+            instances="$(jq \
+                --arg key "$node" \
+                --arg vm_name "$vm_name" \
+                --argjson vm_id "$vm_id" \
+                --arg iso_local_path "/dev/null" \
+                '. + {($key): {iso_local_path: $iso_local_path, vm_id: $vm_id, vm_name: $vm_name}}' \
+                <<<"$instances")"
+        done
+        mkdir -p "$WORK_DIR"
+        jq -n --argjson pve_instances "$instances" \
+            '{pve_instances: $pve_instances}' > "$tfvars"
+    fi
+
+    (cd "$INFRA_DIR" && terraform init -input=false 2>/dev/null)
+
+    # Build -target flags when destroying a subset
+    local tf_targets=""
     if [[ "$requested" != "all" ]]; then
-        cleanup_nodes=""
+        local cleanup_nodes=""
         for v in $requested; do
             cleanup_nodes="$cleanup_nodes ${v}a ${v}b"
         done
+        for node in $cleanup_nodes; do
+            tf_targets="$tf_targets -target=proxmox_virtual_environment_vm.nested_pve[\"$node\"]"
+            tf_targets="$tf_targets -target=proxmox_virtual_environment_file.auto_iso[\"$node\"]"
+        done
+        log "Destroying PVE $requested nodes only..."
+    else
+        log "Destroying all resources..."
     fi
-    log "Starting cleanup..."
 
-    # Clean up PVE nodes
-    for node in $cleanup_nodes; do
-        local iso_name
-        iso_name="$(pve_iso "$node")"
-        log "Cleaning up $node (VMID $(pve_vmid "$node"))..."
-        bash "$SCRIPT_DIR/preflight-cleanup.sh" \
-            "${PVE_ENDPOINT:-}" "${PVE_API_TOKEN:-}" \
-            "$(pve_vmid "$node")" "${iso_name%.iso}-${node}-auto.iso" "$INFRA_DIR" \
-            || true
-    done
+    (cd "$INFRA_DIR" && \
+        TF_VAR_proxmox_endpoint="$PVE_ENDPOINT" \
+        TF_VAR_proxmox_api_token="$PVE_API_TOKEN" \
+        TF_VAR_target_node="$PVE_TARGET_NODE" \
+        TF_VAR_test_vm_password="${PVE_PASSWORD:-placeholder}" \
+        TF_VAR_docker_host_ip="${storage_ip:-127.0.0.1}" \
+        terraform destroy -auto-approve -input=false -var-file="$tfvars" $tf_targets) || true
 
-    # Stop storage containers only when cleaning all versions
+    # Clean up work directory when destroying all
     if [[ "$requested" == "all" ]]; then
-        log "Stopping storage containers..."
-        docker compose -f "$STORAGE_COMPOSE" down -v 2>/dev/null || true
+        rm -f "$CONFIG_FILE" "$WORK_DIR"/instances.tfvars.json
     fi
 
     log "Cleanup complete."
+}
+
+cmd_taint() {
+    local requested="${1:-all}"
+    local taint_nodes="$ALL_NODES"
+    if [[ "$requested" != "all" ]]; then
+        taint_nodes=""
+        for v in $requested; do
+            taint_nodes="$taint_nodes ${v}a ${v}b"
+        done
+    fi
+
+    log "Tainting PVE VMs for reprovisioning..."
+    (cd "$INFRA_DIR" && terraform init -input=false 2>/dev/null)
+
+    for node in $taint_nodes; do
+        log "  Tainting VM: $node"
+        (cd "$INFRA_DIR" && \
+            terraform taint "proxmox_virtual_environment_vm.nested_pve[\"$node\"]") 2>/dev/null || true
+        (cd "$INFRA_DIR" && \
+            terraform taint "proxmox_virtual_environment_file.auto_iso[\"$node\"]") 2>/dev/null || true
+    done
+
+    log "Taint complete. Next 'provision' will recreate these VMs."
 }
 
 cmd_all() {
@@ -529,14 +579,16 @@ main() {
         provision)    cmd_provision "$@" ;;
         test)         cmd_test "$@" ;;
         cleanup)      cmd_cleanup "$@" ;;
+        taint)        cmd_taint "$@" ;;
         all)          cmd_all "$@" ;;
         *)
-            echo "Usage: $(basename "$0") {provision|test|cleanup|all} [8|9|all] [test-filter]"
+            echo "Usage: $(basename "$0") {provision|test|cleanup|taint|all} [8|9|all] [test-filter]"
             echo ""
             echo "Subcommands:"
-            echo "  provision [8|9|all]        Provision nested PVE VMs + start storage containers"
+            echo "  provision [8|9|all]        Provision nested PVE VMs + storage containers"
             echo "  test [8|9|all] [filter]    Run integration tests (default: all versions, no filter)"
-            echo "  cleanup [8|9|all]          Destroy provisioned VMs (default: all)"
+            echo "  cleanup [8|9|all]          Destroy resources via terraform destroy (default: all)"
+            echo "  taint [8|9|all]            Mark VMs for recreation on next provision"
             echo "  all [8|9|all]              Full lifecycle: provision → test → cleanup"
             echo ""
             echo "Test filter: comma-separated area names matching test filenames."

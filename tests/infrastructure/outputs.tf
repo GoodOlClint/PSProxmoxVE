@@ -7,3 +7,18 @@ output "pve_test_node_name" {
   value       = "pve"
   description = "Default node name inside a fresh PVE install"
 }
+
+output "storage_ip" {
+  description = "IP address where storage services are reachable"
+  value       = var.docker_host_ip
+}
+
+output "storage_iscsi_iqn" {
+  description = "iSCSI target IQN"
+  value       = var.storage_iscsi_iqn
+}
+
+output "storage_nfs_export" {
+  description = "NFS export path"
+  value       = "${var.docker_host_ip}:/srv/nfs/shared"
+}

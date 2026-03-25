@@ -39,6 +39,11 @@
 .PARAMETER Rebuild
     Rebuild container images from scratch.
 
+.PARAMETER Reprovision
+    When used with -Provision, taints the PVE VMs in Terraform state
+    before applying, forcing them to be destroyed and recreated.
+    Useful when the VMs are in a bad state (e.g. clustered, broken).
+
 .PARAMETER Tests
     Filter integration tests by area name. Comma-separated list of test
     area names that match the numbered file prefixes. Examples:
@@ -86,6 +91,7 @@ param(
     [switch] $Cleanup,
     [switch] $Stop,
     [switch] $Rebuild,
+    [switch] $Reprovision,
 
     [string[]] $Tests,
 
@@ -229,6 +235,10 @@ if ($Test) {
 
 if ($Provision) {
     Start-InfraContainer
+    if ($Reprovision) {
+        docker exec $InfraContainer bash $RunIntegration taint $Version
+        if ($LASTEXITCODE -ne 0) { throw "Taint failed (exit code $LASTEXITCODE)" }
+    }
     docker exec $InfraContainer bash $RunIntegration provision $Version
     if ($LASTEXITCODE -ne 0) { throw "Provisioning failed (exit code $LASTEXITCODE)" }
 }

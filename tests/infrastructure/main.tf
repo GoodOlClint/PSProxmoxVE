@@ -5,6 +5,10 @@ terraform {
       source  = "bpg/proxmox"
       version = ">= 0.70.0"
     }
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = ">= 3.0.0"
+    }
   }
 }
 
@@ -12,6 +16,11 @@ provider "proxmox" {
   endpoint  = var.proxmox_endpoint
   api_token = var.proxmox_api_token
   insecure  = var.proxmox_insecure
+}
+
+provider "docker" {
+  # Uses the Docker socket from the dev-infra container
+  # (mounted at /var/run/docker.sock)
 }
 
 resource "proxmox_virtual_environment_file" "auto_iso" {

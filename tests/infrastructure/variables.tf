@@ -71,3 +71,20 @@ variable "test_vm_password" {
   sensitive   = true
 }
 
+variable "storage_iscsi_iqn" {
+  description = "iSCSI target IQN for the test storage"
+  type        = string
+  default     = "iqn.2024-01.local.test:storage"
+}
+
+variable "storage_iscsi_lun_size" {
+  description = "Size of the iSCSI LUN backing file"
+  type        = string
+  default     = "10G"
+}
+
+variable "docker_host_ip" {
+  description = "IP of the Docker host, used by PVE nodes to reach storage containers"
+  type        = string
+}
+
