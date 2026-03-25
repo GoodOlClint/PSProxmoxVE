@@ -209,6 +209,8 @@ jobs:
           PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
           PVE_TARGET_NODE: ${{ vars.PVE_TARGET_NODE }}
           PVE_PASSWORD: ${{ secrets.PVE_TEST_PASSWORD }}
+        # Terraform state is stored on the shared mount (/opt/pve-integration/work/)
+        # so it persists between CI jobs.
         run: bash ${SCRIPTS_DIR}/run-integration.sh cleanup
 
   # ── Clean up old container images from GHCR ──────────────────────────
