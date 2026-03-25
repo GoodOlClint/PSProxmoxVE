@@ -393,43 +393,44 @@ cmd_test() {
             log "Test filter: $test_filter"
         fi
 
-        pwsh -NoProfile -Command '
-            param($PveVersion, $TestFilter)
+        pwsh -NoProfile -Command "
+            \$PveVersion = '$v'
+            \$TestFilter = '$pester_filter_arg'
             Import-Module Pester -MinimumVersion 5.0
-            $config = New-PesterConfiguration
+            \$config = New-PesterConfiguration
 
-            if ($TestFilter) {
+            if (\$TestFilter) {
                 # Build list of matching test files
-                $integrationDir = "tests/PSProxmoxVE.Tests/Integration"
-                $areas = $TestFilter -split ","
-                $paths = @()
-                foreach ($area in $areas) {
-                    $area = $area.Trim()
-                    $matches = Get-ChildItem "$integrationDir/*${area}*.Tests.ps1" -ErrorAction SilentlyContinue
-                    if ($matches) {
-                        $paths += $matches.FullName
+                \$integrationDir = 'tests/PSProxmoxVE.Tests/Integration'
+                \$areas = \$TestFilter -split ','
+                \$paths = @()
+                foreach (\$area in \$areas) {
+                    \$area = \$area.Trim()
+                    \$matched = Get-ChildItem \"\$integrationDir/*\${area}*.Tests.ps1\" -ErrorAction SilentlyContinue
+                    if (\$matched) {
+                        \$paths += \$matched.FullName
                     } else {
-                        Write-Warning "No test files matched filter: $area"
+                        Write-Warning \"No test files matched filter: \$area\"
                     }
                 }
-                if ($paths.Count -eq 0) {
-                    Write-Error "No test files matched any filter in: $TestFilter"
+                if (\$paths.Count -eq 0) {
+                    Write-Error \"No test files matched any filter in: \$TestFilter\"
                     exit 1
                 }
-                $config.Run.Path = $paths
-                Write-Host "Running $($paths.Count) test file(s):"
-                $paths | ForEach-Object { Write-Host "  $_" }
+                \$config.Run.Path = \$paths
+                Write-Host \"Running \$(\$paths.Count) test file(s):\"
+                \$paths | ForEach-Object { Write-Host \"  \$_\" }
             } else {
-                $config.Run.Path = "tests/PSProxmoxVE.Tests/Integration"
+                \$config.Run.Path = 'tests/PSProxmoxVE.Tests/Integration'
             }
 
-            $config.Filter.Tag = "Integration"
-            $config.Output.Verbosity = "Detailed"
-            $config.TestResult.Enabled = $true
-            $config.TestResult.OutputFormat = "NUnitXml"
-            $config.TestResult.OutputPath = "TestResults/integration-results-pve${PveVersion}.xml"
-            Invoke-Pester -Configuration $config
-        ' -- "$v" "$pester_filter_arg" || test_exit=$?
+            \$config.Filter.Tag = 'Integration'
+            \$config.Output.Verbosity = 'Detailed'
+            \$config.TestResult.Enabled = \$true
+            \$config.TestResult.OutputFormat = 'NUnitXml'
+            \$config.TestResult.OutputPath = \"TestResults/integration-results-pve\${PveVersion}.xml\"
+            Invoke-Pester -Configuration \$config
+        " || test_exit=$?
 
         if [[ $test_exit -ne 0 ]]; then
             ci_error "PVE $v integration tests failed (exit code $test_exit)"
