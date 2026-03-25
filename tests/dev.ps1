@@ -266,7 +266,10 @@ if ($Integration) {
 if ($Cleanup) {
     Start-InfraContainer
     if ($Force) {
-        docker exec $InfraContainer bash $RunIntegration force-cleanup $Version
+        if ($Version -ne 'all') {
+            throw "-Force cannot be combined with -Version. Force cleanup destroys all resources and wipes Terraform state."
+        }
+        docker exec $InfraContainer bash $RunIntegration force-cleanup
     } else {
         docker exec $InfraContainer bash $RunIntegration cleanup $Version
     }
