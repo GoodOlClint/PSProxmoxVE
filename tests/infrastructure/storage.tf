@@ -25,7 +25,9 @@ resource "docker_container" "answer_server" {
 # ── Docker images & volumes ──────────────────────────────────────────
 
 resource "docker_image" "ubuntu" {
-  name = "ubuntu:24.04"
+  # Pin to digest for reproducibility. Update:
+  #   docker pull ubuntu:24.04 && docker inspect ubuntu:24.04 --format '{{index .RepoDigests 0}}'
+  name = "ubuntu@sha256:186072bba1b2f436cbb91ef2567abca677337cfc786c86e107d25b7072feef0c"
 }
 
 resource "docker_volume" "iscsi_data" {
@@ -85,7 +87,9 @@ resource "docker_container" "iscsi_target" {
 
 resource "docker_container" "nfs_server" {
   name       = "pvetest-nfs"
-  image      = "erichough/nfs-server:2.2.1"
+  # Pin to digest for reproducibility. Update:
+  #   docker pull erichough/nfs-server:2.2.1 && docker inspect erichough/nfs-server:2.2.1 --format '{{index .RepoDigests 0}}'
+  image      = "erichough/nfs-server@sha256:1efd4ece380c5ba27479417585224ef857006daa46ab84560a28c1224bc71e9e"
   privileged = true
   restart    = "unless-stopped"
 

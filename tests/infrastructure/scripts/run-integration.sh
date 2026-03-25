@@ -27,12 +27,12 @@
 #
 # Required env vars (test with pre-existing PVE):
 #   PVETEST_HOST       PVE host IP (node A)
-#   PVETEST_APITOKEN   PVE API token (node A)
+#   PVETEST_PASSWORD   Root password for the PVE instances
 #   Set SKIP_PROVISION=true
 #
 # Optional env vars:
-#   CACHE_DIR          ISO/image cache (default: /opt/pve-isos)
-#   WORK_DIR           Temp dir for build artifacts (default: $RUNNER_TEMP or /tmp/pve-integration)
+#   CACHE_DIR          ISO/image cache (default: /opt/pve-integration)
+#   WORK_DIR           Temp dir for build artifacts (default: $CACHE_DIR/work)
 #   CONFIG_FILE        Test config JSON path (default: $WORK_DIR/config.json)
 #   MODULE_ARTIFACT    Path to built module DLLs (default: ./publish/netstandard2.0)
 #   PVE_VERSIONS       Space-separated versions to provision (default: "9 8")
@@ -584,7 +584,7 @@ cmd_cleanup() {
         TF_VAR_docker_host_ip="${storage_ip:-127.0.0.1}" \
         TF_VAR_answer_files_dir="${WORK_DIR}/answers" \
         TF_VAR_default_answer_file="${WORK_DIR}/default-answer.toml" \
-        terraform destroy -auto-approve -input=false -var-file="$tfvars" $tf_targets) || true
+        terraform destroy -auto-approve -input=false -var-file="$tfvars" $tf_targets)
 
     # Clean up work directory when destroying all
     if [[ "$requested" == "all" ]]; then
@@ -633,10 +633,10 @@ cmd_force_cleanup() {
     docker rm -f pvetest-iscsi pvetest-nfs pvetest-answer-server 2>/dev/null || true
     docker volume rm pvetest-iscsi-data pvetest-nfs-data 2>/dev/null || true
 
-    # Remove Terraform state so next provision starts clean
+    # Remove Terraform state so next provision starts clean.
+    # Keep .terraform.lock.hcl (provider version lock) for reproducibility.
     log "Removing Terraform state..."
     rm -f "$INFRA_DIR/terraform.tfstate" "$INFRA_DIR/terraform.tfstate.backup"
-    rm -f "$INFRA_DIR/.terraform.lock.hcl"
     rm -rf "$INFRA_DIR/.terraform"
 
     # Remove work artifacts
@@ -681,9 +681,9 @@ cmd_all() {
     local test_versions="${1:-all}"
     local test_exit=0
 
-    trap 'log "Running cleanup after test run..."; cmd_cleanup || true' EXIT
+    trap 'log "Running cleanup after test run..."; cmd_cleanup "$test_versions" || true' EXIT
 
-    cmd_provision
+    cmd_provision "$test_versions"
     cmd_test "$test_versions" || test_exit=$?
 
     if [[ $test_exit -ne 0 ]]; then
