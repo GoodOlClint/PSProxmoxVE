@@ -609,12 +609,11 @@ cmd_force_cleanup() {
             || true
     done
 
-    # Stop Docker storage and answer server containers
-    if [[ "$requested" == "all" ]]; then
-        log "Stopping storage and answer server containers..."
-        docker rm -f pvetest-iscsi pvetest-nfs pvetest-answer-server 2>/dev/null || true
-        docker volume rm pvetest-iscsi-data pvetest-nfs-data 2>/dev/null || true
-    fi
+    # Always stop Docker containers in force mode — leaving them causes
+    # Terraform to fail on next provision (container already exists).
+    log "Stopping storage and answer server containers..."
+    docker rm -f pvetest-iscsi pvetest-nfs pvetest-answer-server 2>/dev/null || true
+    docker volume rm pvetest-iscsi-data pvetest-nfs-data 2>/dev/null || true
 
     # Remove Terraform state so next provision starts clean
     log "Removing Terraform state..."
