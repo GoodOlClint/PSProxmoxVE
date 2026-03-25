@@ -58,6 +58,7 @@ BeforeAll {
     $script:ClusterCreated = $false
     $script:JoinInfo       = $null
     $script:NodeBName      = $null
+    $script:HaRuleCreated  = $false
 
     # --- Skip helpers ---
     function script:Skip-IfNoTarget {
@@ -107,6 +108,11 @@ BeforeAll {
 }
 
 AfterAll {
+    # Best-effort cleanup of HA rules created during testing
+    if ($script:HaRuleCreated) {
+        try { Remove-PveHaRule -Rule 'pester-rule-1' -Confirm:$false -ErrorAction SilentlyContinue } catch { }
+    }
+
     # Node removal from a 2-node cluster is not possible via API (quorum loss).
     # Test infrastructure handles cleanup via reprovisioning.
     try { Disconnect-PveServer -ErrorAction SilentlyContinue } catch { }
@@ -398,12 +404,91 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
     }
 
     # -------------------------------------------------------------------
-    Context 'HA rules (PVE 9.0+)' {
+    Context 'HA rules CRUD (PVE 9.0+)' {
         It 'Get-PveHaRule returns rules list without throwing' {
             if (Skip-IfNoPve9) { return }
 
             # May return an empty list on a fresh cluster — that is fine
             { Get-PveHaRule -ErrorAction Stop } | Should -Not -Throw
+        }
+
+        It 'New-PveHaRule creates a node-affinity rule' {
+            if (Skip-IfNoPve9) { return }
+            if (Skip-IfNoCluster) { return }
+
+            # Create a node-affinity rule that pins a fake resource to node A
+            { New-PveHaRule -Type 'node-affinity' `
+                -Properties @{
+                    rule      = 'pester-rule-1'
+                    resources = 'vm:99999'
+                    nodes     = $script:Node
+                    affinity  = 'positive'
+                } `
+                -Comment 'Pester test rule' `
+                -Confirm:$false `
+                -ErrorAction Stop } | Should -Not -Throw
+
+            $script:HaRuleCreated = $true
+        }
+
+        It 'Get-PveHaRule lists the created rule' {
+            if (Skip-IfNoPve9) { return }
+            if (-not $script:HaRuleCreated) {
+                Set-ItResult -Skipped -Because 'HA rule was not created'
+                return
+            }
+
+            $rules = Get-PveHaRule -ErrorAction Stop
+            $rules | Should -Not -BeNullOrEmpty
+            $match = @($rules) | Where-Object { $_.Rule -eq 'pester-rule-1' }
+            $match | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Get-PveHaRule returns specific rule by ID' {
+            if (Skip-IfNoPve9) { return }
+            if (-not $script:HaRuleCreated) {
+                Set-ItResult -Skipped -Because 'HA rule was not created'
+                return
+            }
+
+            $rule = Get-PveHaRule -Rule 'pester-rule-1' -ErrorAction Stop
+            $rule | Should -Not -BeNullOrEmpty
+            $rule.Rule | Should -Be 'pester-rule-1'
+            $rule.Comment | Should -Be 'Pester test rule'
+        }
+
+        It 'Set-PveHaRule updates the comment' {
+            if (Skip-IfNoPve9) { return }
+            if (-not $script:HaRuleCreated) {
+                Set-ItResult -Skipped -Because 'HA rule was not created'
+                return
+            }
+
+            { Set-PveHaRule -Rule 'pester-rule-1' `
+                -Comment 'Updated by Pester' `
+                -Confirm:$false `
+                -ErrorAction Stop } | Should -Not -Throw
+
+            $rule = Get-PveHaRule -Rule 'pester-rule-1' -ErrorAction Stop
+            $rule.Comment | Should -Be 'Updated by Pester'
+        }
+
+        It 'Remove-PveHaRule deletes the rule' {
+            if (Skip-IfNoPve9) { return }
+            if (-not $script:HaRuleCreated) {
+                Set-ItResult -Skipped -Because 'HA rule was not created'
+                return
+            }
+
+            { Remove-PveHaRule -Rule 'pester-rule-1' -Confirm:$false -ErrorAction Stop } |
+                Should -Not -Throw
+
+            $script:HaRuleCreated = $false
+
+            # Verify it's gone
+            $rules = Get-PveHaRule -ErrorAction Stop
+            $match = @($rules) | Where-Object { $_.Rule -eq 'pester-rule-1' }
+            $match | Should -BeNullOrEmpty
         }
     }
 
