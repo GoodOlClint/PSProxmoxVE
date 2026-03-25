@@ -8,10 +8,16 @@
 # Docker containers on the runner host for iSCSI/NFS shared storage.
 #
 # Usage:
-#   run-integration.sh provision          Provision nested PVE VMs + start storage containers
-#   run-integration.sh test [8|9|all]     Run integration tests (default: all)
-#   run-integration.sh cleanup            Destroy provisioned VMs
-#   run-integration.sh all [8|9|all]      Full lifecycle: provision → test → cleanup
+#   run-integration.sh provision                  Provision nested PVE VMs + start storage containers
+#   run-integration.sh test [8|9|all] [filter]    Run integration tests (default: all, no filter)
+#   run-integration.sh cleanup                    Destroy provisioned VMs
+#   run-integration.sh all [8|9|all]              Full lifecycle: provision → test → cleanup
+#
+#   The optional [filter] is a comma-separated list of test area names.
+#   Each name is matched against integration test filenames (case-insensitive).
+#   Examples:
+#     run-integration.sh test 9 Connection,VMs    # Run Connection + VMs tests for PVE 9
+#     run-integration.sh test all Cluster          # Run Cluster tests for all PVE versions
 #
 # Required env vars (provision/cleanup):
 #   PVE_ENDPOINT       Parent PVE API URL (e.g. https://pve.example.com:8006)
@@ -280,6 +286,7 @@ cmd_provision() {
 
 cmd_test() {
     local requested="${1:-all}"
+    local test_filter="${2:-}"
     local versions_to_test
 
     if [[ "$requested" == "all" ]]; then
@@ -380,17 +387,49 @@ cmd_test() {
 
         # Run Pester
         local test_exit=0
+        local pester_filter_arg=""
+        if [[ -n "$test_filter" ]]; then
+            pester_filter_arg="$test_filter"
+            log "Test filter: $test_filter"
+        fi
+
         pwsh -NoProfile -Command '
+            param($PveVersion, $TestFilter)
             Import-Module Pester -MinimumVersion 5.0
             $config = New-PesterConfiguration
-            $config.Run.Path = "tests/PSProxmoxVE.Tests/Integration"
+
+            if ($TestFilter) {
+                # Build list of matching test files
+                $integrationDir = "tests/PSProxmoxVE.Tests/Integration"
+                $areas = $TestFilter -split ","
+                $paths = @()
+                foreach ($area in $areas) {
+                    $area = $area.Trim()
+                    $matches = Get-ChildItem "$integrationDir/*${area}*.Tests.ps1" -ErrorAction SilentlyContinue
+                    if ($matches) {
+                        $paths += $matches.FullName
+                    } else {
+                        Write-Warning "No test files matched filter: $area"
+                    }
+                }
+                if ($paths.Count -eq 0) {
+                    Write-Error "No test files matched any filter in: $TestFilter"
+                    exit 1
+                }
+                $config.Run.Path = $paths
+                Write-Host "Running $($paths.Count) test file(s):"
+                $paths | ForEach-Object { Write-Host "  $_" }
+            } else {
+                $config.Run.Path = "tests/PSProxmoxVE.Tests/Integration"
+            }
+
             $config.Filter.Tag = "Integration"
             $config.Output.Verbosity = "Detailed"
             $config.TestResult.Enabled = $true
             $config.TestResult.OutputFormat = "NUnitXml"
-            $config.TestResult.OutputPath = "TestResults/integration-results-pve'"$v"'.xml"
+            $config.TestResult.OutputPath = "TestResults/integration-results-pve${PveVersion}.xml"
             Invoke-Pester -Configuration $config
-        ' || test_exit=$?
+        ' -- "$v" "$pester_filter_arg" || test_exit=$?
 
         if [[ $test_exit -ne 0 ]]; then
             ci_error "PVE $v integration tests failed (exit code $test_exit)"
@@ -452,13 +491,16 @@ main() {
         cleanup)      cmd_cleanup "$@" ;;
         all)          cmd_all "$@" ;;
         *)
-            echo "Usage: $(basename "$0") {provision|test|cleanup|all} [8|9|all]"
+            echo "Usage: $(basename "$0") {provision|test|cleanup|all} [8|9|all] [test-filter]"
             echo ""
             echo "Subcommands:"
-            echo "  provision          Provision nested PVE VMs + start storage containers"
-            echo "  test [8|9|all]     Run integration tests (default: all versions)"
-            echo "  cleanup            Destroy all provisioned VMs"
-            echo "  all [8|9|all]      Full lifecycle: provision → test → cleanup"
+            echo "  provision                  Provision nested PVE VMs + start storage containers"
+            echo "  test [8|9|all] [filter]    Run integration tests (default: all versions, no filter)"
+            echo "  cleanup                    Destroy all provisioned VMs"
+            echo "  all [8|9|all]              Full lifecycle: provision → test → cleanup"
+            echo ""
+            echo "Test filter: comma-separated area names matching test filenames."
+            echo "  Examples: Connection,VMs   Cluster   Storage,Network"
             exit 1
             ;;
     esac
