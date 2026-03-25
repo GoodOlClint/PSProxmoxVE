@@ -2,7 +2,9 @@
 
 resource "docker_container" "answer_server" {
   name     = "pvetest-answer-server"
-  image    = "slothcroissant/proxmox-auto-installer-server:latest"
+  # Pin to digest for reproducibility. Update by pulling latest and running:
+  #   docker inspect slothcroissant/proxmox-auto-installer-server:latest --format '{{index .RepoDigests 0}}'
+  image    = "slothcroissant/proxmox-auto-installer-server@sha256:0f45d7bfe6e3cc76aa00fc578e40b80b9054e377db18a79122866fe5522bc7ed"
   restart  = "unless-stopped"
   must_run = true
   start    = true

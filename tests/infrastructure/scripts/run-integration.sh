@@ -639,10 +639,12 @@ cmd_force_cleanup() {
 
 cmd_taint() {
     local requested="${1:-all}"
+    local taint_versions="$PVE_VERSIONS"
     local taint_nodes="$ALL_NODES"
     if [[ "$requested" != "all" ]]; then
+        taint_versions="$requested"
         taint_nodes=""
-        for v in $requested; do
+        for v in $taint_versions; do
             taint_nodes="$taint_nodes ${v}a ${v}b"
         done
     fi
@@ -650,12 +652,18 @@ cmd_taint() {
     log "Tainting PVE VMs for reprovisioning..."
     (cd "$INFRA_DIR" && terraform init -input=false 2>/dev/null)
 
+    # Taint ISOs (keyed by version, e.g. "9")
+    for v in $taint_versions; do
+        log "  Tainting ISO: PVE $v"
+        (cd "$INFRA_DIR" && \
+            terraform taint "proxmox_virtual_environment_file.auto_iso[\"$v\"]") 2>/dev/null || true
+    done
+
+    # Taint VMs (keyed by node, e.g. "9a")
     for node in $taint_nodes; do
         log "  Tainting VM: $node"
         (cd "$INFRA_DIR" && \
             terraform taint "proxmox_virtual_environment_vm.nested_pve[\"$node\"]") 2>/dev/null || true
-        (cd "$INFRA_DIR" && \
-            terraform taint "proxmox_virtual_environment_file.auto_iso[\"$node\"]") 2>/dev/null || true
     done
 
     log "Taint complete. Next 'provision' will recreate these VMs."
