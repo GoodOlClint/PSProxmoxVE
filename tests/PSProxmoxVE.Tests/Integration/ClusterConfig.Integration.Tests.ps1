@@ -238,13 +238,12 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
             $script:JoinInfo = Get-PveClusterJoinInfo -ErrorAction Stop
             $script:JoinInfo | Should -Not -BeNullOrEmpty
 
-            # Nodelist is a Newtonsoft JArray — use .Item() for reliable indexing in PowerShell
-            $nodelist = $script:JoinInfo.Nodelist
+            # Nodelist is a Newtonsoft JArray — convert to native array for PowerShell compatibility
+            $nodelistJson = $script:JoinInfo.Nodelist.ToString()
+            $nodelist = $nodelistJson | ConvertFrom-Json
             $nodelist | Should -Not -BeNullOrEmpty
-            $firstNode = $nodelist.Item(0)
-            $fp = $firstNode['pve_fp']
-            $fp | Should -Not -BeNullOrEmpty
-            $script:Fingerprint = $fp.ToString()
+            $script:Fingerprint = $nodelist[0].pve_fp
+            $script:Fingerprint | Should -Not -BeNullOrEmpty
         }
 
         It 'Add-PveClusterMember joins node B to cluster' {
@@ -318,6 +317,11 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
         It 'Set-PveClusterOption sets keyboard to en-us' {
             if (Skip-IfNoCluster) { return }
 
+            # Cluster options modification requires root@pam (Sys.Modify on /)
+            $secPw = ConvertTo-SecureString $script:Password -AsPlainText -Force
+            $cred = New-Object System.Management.Automation.PSCredential('root@pam', $secPw)
+            Connect-PveServer -Server $script:Host_ -Port $script:Port -Credential $cred -SkipCertificateCheck
+
             # Save original keyboard setting
             $options = Get-PveClusterOption -ErrorAction Stop
             $script:OriginalKeyboard = $options.Keyboard
@@ -345,6 +349,9 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
 
             $options = Get-PveClusterOption -ErrorAction Stop
             $options.Keyboard | Should -Be $script:OriginalKeyboard
+
+            # Reconnect with API token for remaining tests
+            Connect-PveServer -Server $script:Host_ -Port $script:Port -ApiToken $script:ApiToken -SkipCertificateCheck
         }
     }
 
