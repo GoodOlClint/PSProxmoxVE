@@ -117,13 +117,19 @@ require_env() {
 
 cmd_provision() {
     local requested="${1:-all}"
+    # Determine which versions/nodes to prepare and which to target
+    local provision_versions="$PVE_VERSIONS"
+    local provision_nodes="$ALL_NODES"
     if [[ "$requested" != "all" ]]; then
-        PVE_VERSIONS="$requested"
-        ALL_NODES="$(expand_nodes)"
+        provision_versions="$requested"
+        provision_nodes=""
+        for v in $provision_versions; do
+            provision_nodes="$provision_nodes ${v}a ${v}b"
+        done
     fi
     log "Starting provisioning..."
-    log "  Versions: $PVE_VERSIONS"
-    log "  Nodes: $ALL_NODES"
+    log "  Versions: $provision_versions"
+    log "  Nodes:$provision_nodes"
     log "  Storage: Docker containers (iSCSI + NFS)"
     require_env PVE_ENDPOINT
     require_env PVE_API_TOKEN
@@ -134,7 +140,7 @@ cmd_provision() {
     mkdir -p "$WORK_DIR" "$CACHE_DIR"
 
     # Ensure base ISOs (one per version, not per node)
-    for v in $PVE_VERSIONS; do
+    for v in $provision_versions; do
         log "Ensuring base ISO for PVE $v..."
         bash "$SCRIPT_DIR/ensure-base-iso.sh" "$(pve_iso "$v")" "$CACHE_DIR"
     done
@@ -150,7 +156,7 @@ cmd_provision() {
     log "Generating answer files..."
     local escaped_pve_password
     escaped_pve_password=$(printf '%s' "$PVE_PASSWORD" | sed 's/[\/&\\]/\\&/g')
-    for node in $ALL_NODES; do
+    for node in $provision_nodes; do
         local fqdn
         fqdn="$(pve_fqdn "$node")"
         sed -e "s/\${root_password}/${escaped_pve_password}/" \
@@ -159,7 +165,7 @@ cmd_provision() {
     done
 
     # Prepare auto-install ISOs (one per node — each has unique answer file)
-    for node in $ALL_NODES; do
+    for node in $provision_nodes; do
         local iso_name
         iso_name="$(pve_iso "$node")"
         log "Preparing auto-install ISO for $node..."
@@ -177,6 +183,8 @@ cmd_provision() {
     log "Running Terraform init..."
     (cd "$INFRA_DIR" && terraform init -input=false)
 
+    # Always build tfvars for ALL versions to keep Terraform state consistent.
+    # When provisioning a subset, we use -target to limit the apply.
     log "Building Terraform vars..."
     local tfvars="$WORK_DIR/instances.tfvars.json"
     local instances='{}'
@@ -201,6 +209,18 @@ cmd_provision() {
         '{pve_instances: $pve_instances}' > "$tfvars"
 
     log "Running Terraform apply (PVE nodes)..."
+    # Build -target flags when provisioning a subset of versions.
+    # This prevents Terraform from destroying VMs for other versions
+    # that exist in state but aren't in the filtered tfvars.
+    local tf_targets=""
+    if [[ "$requested" != "all" ]]; then
+        for node in $provision_nodes; do
+            tf_targets="$tf_targets -target=proxmox_virtual_environment_file.auto_iso[\"$node\"]"
+            tf_targets="$tf_targets -target=proxmox_virtual_environment_vm.nested_pve[\"$node\"]"
+        done
+        log "Terraform targets: $tf_targets"
+    fi
+
     # TMPDIR: use work dir to avoid filling the container's /tmp with multi-GB ISO uploads.
     (cd "$INFRA_DIR" && \
         TMPDIR="$WORK_DIR" \
@@ -208,7 +228,7 @@ cmd_provision() {
         TF_VAR_proxmox_api_token="$PVE_API_TOKEN" \
         TF_VAR_target_node="$PVE_TARGET_NODE" \
         TF_VAR_test_vm_password="$PVE_PASSWORD" \
-        terraform apply -auto-approve -input=false -var-file="$tfvars")
+        terraform apply -auto-approve -input=false -var-file="$tfvars" $tf_targets)
 
     # Start iSCSI/NFS storage containers on the Docker host
     log "Starting storage containers (iSCSI + NFS)..."
@@ -231,7 +251,7 @@ cmd_provision() {
     log "Storage services ready at $storage_ip (iSCSI: $STORAGE_ISCSI_IQN)"
 
     # Wait for PVE instances and create API tokens (per node)
-    for node in $ALL_NODES; do
+    for node in $provision_nodes; do
         log "Waiting for $node to boot and creating API token..."
         local output
         output=$(bash "$SCRIPT_DIR/create-api-token.sh" \
@@ -248,19 +268,23 @@ cmd_provision() {
             '{host: $host, token: $token, node: $node}' > "$WORK_DIR/${node}.json"
     done
 
-    # Prepare test environments on all PVE nodes
-    for node in $ALL_NODES; do
+    # Prepare test environments on provisioned PVE nodes
+    for node in $provision_nodes; do
         local ip
         ip=$(jq -r .host "$WORK_DIR/${node}.json")
         log "Preparing test environment on $node ($ip)..."
         bash "$SCRIPT_DIR/prepare-test-environment.sh" "$ip" "$PVE_PASSWORD"
     done
 
-    # Write test config
+    # Write test config — merge with existing config to preserve entries
+    # from previously provisioned versions
     log "Writing test config to $CONFIG_FILE..."
     local config='{}'
+    if [[ -f "$CONFIG_FILE" ]]; then
+        config=$(cat "$CONFIG_FILE")
+    fi
 
-    for v in $PVE_VERSIONS; do
+    for v in $provision_versions; do
         local node_a="${v}a"
         local node_b="${v}b"
         local version_config
@@ -450,14 +474,17 @@ cmd_test() {
 
 cmd_cleanup() {
     local requested="${1:-all}"
+    local cleanup_nodes="$ALL_NODES"
     if [[ "$requested" != "all" ]]; then
-        PVE_VERSIONS="$requested"
-        ALL_NODES="$(expand_nodes)"
+        cleanup_nodes=""
+        for v in $requested; do
+            cleanup_nodes="$cleanup_nodes ${v}a ${v}b"
+        done
     fi
     log "Starting cleanup..."
 
     # Clean up PVE nodes
-    for node in $ALL_NODES; do
+    for node in $cleanup_nodes; do
         local iso_name
         iso_name="$(pve_iso "$node")"
         log "Cleaning up $node (VMID $(pve_vmid "$node"))..."
@@ -467,9 +494,11 @@ cmd_cleanup() {
             || true
     done
 
-    # Stop storage containers
-    log "Stopping storage containers..."
-    docker compose -f "$STORAGE_COMPOSE" down -v 2>/dev/null || true
+    # Stop storage containers only when cleaning all versions
+    if [[ "$requested" == "all" ]]; then
+        log "Stopping storage containers..."
+        docker compose -f "$STORAGE_COMPOSE" down -v 2>/dev/null || true
+    fi
 
     log "Cleanup complete."
 }
