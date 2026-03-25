@@ -2,6 +2,7 @@ using System;
 using System.Management.Automation;
 using System.Runtime.InteropServices;
 using System.Security;
+using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Cluster
@@ -16,7 +17,7 @@ namespace PSProxmoxVE.Cmdlets.Cluster
     /// </summary>
     [Cmdlet(VerbsCommon.Add, "PveClusterMember", SupportsShouldProcess = true,
         ConfirmImpact = ConfirmImpact.High)]
-    [OutputType(typeof(string))]
+    [OutputType(typeof(PveTask))]
     public sealed class AddPveClusterMemberCmdlet : PveCmdletBase
     {
         /// <summary>Hostname or IP of an existing cluster member.</summary>
@@ -49,6 +50,10 @@ namespace PSProxmoxVE.Cmdlets.Cluster
         [Parameter(Mandatory = false, HelpMessage = "Corosync link addresses as key=value strings (e.g. 'link0=10.0.0.1').")]
         public string[]? Links { get; set; }
 
+        /// <summary>Wait for the join task to complete.</summary>
+        [Parameter(Mandatory = false, HelpMessage = "Wait for the join task to complete before returning.")]
+        public SwitchParameter Wait { get; set; }
+
         protected override void ProcessRecord()
         {
             if (!ShouldProcess($"this node to cluster via '{Hostname}'", "Join cluster"))
@@ -68,7 +73,17 @@ namespace PSProxmoxVE.Cmdlets.Cluster
                 WriteVerbose($"Joining cluster via '{Hostname}'...");
                 var upid = service.JoinCluster(session, Hostname, Fingerprint, plainPassword,
                     linkDict, NodeId, Votes, Force.IsPresent ? true : (bool?)null);
-                WriteObject(upid);
+
+                var task = new PveTask { Upid = upid, Status = "running" };
+
+                if (Wait.IsPresent && !string.IsNullOrEmpty(upid))
+                {
+                    var nodeName = upid.Split(':').Length > 1 ? upid.Split(':')[1] : session.Hostname;
+                    var taskService = new TaskService();
+                    task = taskService.WaitForTask(session, nodeName, upid);
+                }
+
+                WriteObject(task);
             }
             finally
             {

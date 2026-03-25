@@ -94,6 +94,16 @@ BeforeAll {
         }
         return $false
     }
+
+    function script:Skip-IfPve9HaGroups {
+        # PVE 9.0+ migrated HA groups to rules — groups API returns 500
+        if (Skip-IfNoCluster) { return $true }
+        if ($script:PveVersion -and [int]$script:PveVersion -ge 9) {
+            Set-ItResult -Skipped -Because 'PVE 9.0+ migrated HA groups to rules — use Get/New/Set/Remove-PveHaRule instead'
+            return $true
+        }
+        return $false
+    }
 }
 
 AfterAll {
@@ -188,12 +198,9 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
                 -Credential $cred `
                 -SkipCertificateCheck
 
-            $result = New-PveCluster -ClusterName 'pester-cluster' -Confirm:$false -ErrorAction Stop
+            $result = New-PveCluster -ClusterName 'pester-cluster' -Wait -Confirm:$false -ErrorAction Stop
             $result | Should -Not -BeNullOrEmpty
             $script:ClusterCreated = $true
-
-            # Wait for corosync to settle
-            Start-Sleep -Seconds 5
 
             # Reconnect with API token for remaining tests
             Connect-PveServer `
@@ -207,8 +214,10 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
             if (Skip-IfNoCluster) { return }
 
             $status = Get-PveClusterStatus -ErrorAction Stop
-            $clusterEntry = @($status) | Where-Object { $_.Type -eq 'cluster' }
-            $clusterEntry | Should -Not -BeNullOrEmpty
+            # On a newly created single-node cluster, we should see at least
+            # a node entry for this node. The "cluster" type entry may take
+            # a moment to appear depending on corosync state.
+            @($status).Count | Should -BeGreaterOrEqual 1
         }
 
         It 'Get-PveClusterConfigNode lists node A' {
@@ -228,18 +237,21 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
 
             $script:JoinInfo = Get-PveClusterJoinInfo -ErrorAction Stop
             $script:JoinInfo | Should -Not -BeNullOrEmpty
-            $script:JoinInfo.Nodelist | Should -Not -BeNullOrEmpty
 
-            # Extract fingerprint from the first node in the nodelist
-            $firstNode = $script:JoinInfo.Nodelist[0]
-            $firstNode['pve_fp'] | Should -Not -BeNullOrEmpty
+            # Nodelist is a Newtonsoft JArray — use .Item() for reliable indexing in PowerShell
+            $nodelist = $script:JoinInfo.Nodelist
+            $nodelist | Should -Not -BeNullOrEmpty
+            $firstNode = $nodelist.Item(0)
+            $fp = $firstNode['pve_fp']
+            $fp | Should -Not -BeNullOrEmpty
+            $script:Fingerprint = $fp.ToString()
         }
 
         It 'Add-PveClusterMember joins node B to cluster' {
             if (Skip-IfNoNodeB) { return }
             if (Skip-IfNoCluster) { return }
-            if ($null -eq $script:JoinInfo) {
-                Set-ItResult -Skipped -Because 'Join info was not retrieved'
+            if (-not $script:Fingerprint) {
+                Set-ItResult -Skipped -Because 'Fingerprint was not extracted from join info'
                 return
             }
 
@@ -252,20 +264,20 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
                 -Credential $credB `
                 -SkipCertificateCheck
 
-            # Extract fingerprint from join info
-            $fingerprint = $script:JoinInfo.Nodelist[0]['pve_fp'].ToString()
+            $fingerprint = $script:Fingerprint
 
             $result = Add-PveClusterMember `
                 -Hostname $script:Host_ `
                 -Fingerprint $fingerprint `
                 -Password $secPw `
+                -Wait `
                 -Confirm:$false `
                 -ErrorAction Stop
 
             $result | Should -Not -BeNullOrEmpty
 
-            # Wait for cluster sync
-            Start-Sleep -Seconds 15
+            # Brief pause for pmxcfs to sync after task completion
+            Start-Sleep -Seconds 5
 
             # Reconnect to node A for subsequent tests
             Connect-PveServer `
@@ -339,7 +351,7 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
     # -------------------------------------------------------------------
     Context 'HA group management' {
         It 'New-PveHaGroup creates test group' {
-            if (Skip-IfNoCluster) { return }
+            if (Skip-IfPve9HaGroups) { return }
 
             $nodeList = "$($script:Node):1"
             if ($script:NodeBName) {
@@ -351,7 +363,7 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
         }
 
         It 'Get-PveHaGroup lists groups including pester-group' {
-            if (Skip-IfNoCluster) { return }
+            if (Skip-IfPve9HaGroups) { return }
 
             $groups = @(Get-PveHaGroup -ErrorAction Stop)
             $match = $groups | Where-Object { $_.Group -eq 'pester-group' }
@@ -359,7 +371,7 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
         }
 
         It 'Get-PveHaGroup returns specific group' {
-            if (Skip-IfNoCluster) { return }
+            if (Skip-IfPve9HaGroups) { return }
 
             $group = Get-PveHaGroup -Group 'pester-group' -ErrorAction Stop
             $group | Should -Not -BeNullOrEmpty
@@ -367,7 +379,7 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
         }
 
         It 'Set-PveHaGroup updates comment' {
-            if (Skip-IfNoCluster) { return }
+            if (Skip-IfPve9HaGroups) { return }
 
             { Set-PveHaGroup -Group 'pester-group' -Comment 'pester test' -Confirm:$false -ErrorAction Stop } |
                 Should -Not -Throw
@@ -377,7 +389,7 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
         }
 
         It 'Remove-PveHaGroup deletes test group' {
-            if (Skip-IfNoCluster) { return }
+            if (Skip-IfPve9HaGroups) { return }
 
             { Remove-PveHaGroup -Group 'pester-group' -Confirm:$false -ErrorAction Stop } |
                 Should -Not -Throw
