@@ -103,7 +103,7 @@ jobs:
       - name: Publish to PSGallery
         shell: pwsh
         env:
-          NUGET_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: |
           Publish-Module -Path ./publish/netstandard2.0 -NuGetApiKey $env:NUGET_API_KEY -Verbose
 
