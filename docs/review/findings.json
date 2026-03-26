@@ -1,16 +1,16 @@
 {
   "_schema_version": "1.0",
   "_description": "PSProxmoxVE stable findings ledger. IDs are permanent (F001, F002...). Resolved findings are never deleted — they are marked resolved with evidence. If a finding reappears, it is marked regressed and retains its original ID.",
-  "last_updated": "2026-03-25",
-  "last_scan_date": "2026-03-25",
+  "last_updated": "2026-03-26",
+  "last_scan_date": "2026-03-26",
   "counters": {
     "next_id": 86,
-    "total_open": 10,
-    "total_resolved": 73,
-    "total_regressed": 1,
-    "open": 10,
-    "resolved": 73,
-    "regressed": 1,
+    "total_open": 7,
+    "total_resolved": 77,
+    "total_regressed": 0,
+    "open": 7,
+    "resolved": 77,
+    "regressed": 0,
     "wont_fix": 1
   },
   "findings": [
@@ -640,6 +640,11 @@
           "scan_date": "2026-03-23",
           "local_id": null,
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-26",
+          "local_id": null,
+          "status": "open"
         }
       ]
     },
@@ -1187,7 +1192,7 @@
       "title": "Bare catch blocks in PveHttpClient, PveCmdletBase, VmService, ContainerService, GetPveVmCmdlet",
       "category": "code_quality",
       "severity": "medium",
-      "status": "regressed",
+      "status": "resolved",
       "first_detected": "2026-03-21",
       "files": [
         "src/PSProxmoxVE.Core/Services/VmService.cs",
@@ -1209,12 +1214,18 @@
           "scan_date": "2026-03-24",
           "local_id": null,
           "status": "regressed"
+        },
+        {
+          "scan_date": "2026-03-26",
+          "local_id": null,
+          "status": "fixed"
         }
       ],
       "resolution": {
-        "scan_date": "2026-03-22",
-        "evidence": "All bare catches replaced with filtered catch (Exception ex) when (...) clauses that exclude OOM/SOE and are specific to PveApiException/HttpRequestException where appropriate",
-        "verified_by": "self-reported"
+        "scan_date": "2026-03-26",
+        "report_id": "scan-9",
+        "evidence": "VmService.PingGuestAgent (line 554) now catches PveApiException specifically. ImportPveOvaCmdlet (line 108) catches Exception but calls ThrowTerminatingError (correct PS pattern). ImportPveOvaCmdlet line 279 catches PveApiException with StatusCode filter. grep for 'catch {' and 'catch (Exception)' with no filter finds zero bare catches in src/.",
+        "verified_by": "scan"
       },
       "regression_history": [
         {
@@ -1452,6 +1463,11 @@
           "scan_date": "2026-03-23",
           "local_id": null,
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-26",
+          "local_id": null,
+          "status": "open"
         }
       ]
     },
@@ -1679,9 +1695,12 @@
       "title": "HA subsystem 0% coverage",
       "category": "api_coverage",
       "severity": "low",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-21",
-      "files": [],
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/HA/",
+        "src/PSProxmoxVE.Core/Services/HaService.cs"
+      ],
       "description": "21 HA endpoints + 5 new PVE 9.0 endpoints. Essential for production clusters. Resources, groups, status, and rules.",
       "scan_history": [
         {
@@ -1703,8 +1722,19 @@
           "scan_date": "2026-03-23",
           "local_id": null,
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-26",
+          "local_id": null,
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "scan_date": "2026-03-26",
+        "report_id": "scan-9",
+        "verified_by": "scan",
+        "evidence": "14 HA cmdlets implemented: Get/New/Set/Remove-PveHaResource, Move-PveHaResource, Get/New/Set/Remove-PveHaGroup, Get-PveHaStatus, Get/New/Set/Remove-PveHaRule (PVE 9.0+). HaService.cs (493 lines) covers resources, groups, status, and rules endpoints."
+      }
     },
     {
       "id": "F054",
@@ -1733,6 +1763,11 @@
         },
         {
           "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
+        },
+        {
+          "scan_date": "2026-03-26",
           "local_id": null,
           "status": "open"
         }
@@ -1911,9 +1946,12 @@
       "title": "Cluster config 0% coverage",
       "category": "api_coverage",
       "severity": "medium",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-22",
-      "files": [],
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Cluster/",
+        "src/PSProxmoxVE.Core/Services/ClusterConfigService.cs"
+      ],
       "description": "10 endpoints for cluster create/join/node management. Fundamental for multi-node cluster automation.",
       "scan_history": [
         {
@@ -1930,18 +1968,31 @@
           "scan_date": "2026-03-23",
           "local_id": null,
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-26",
+          "local_id": null,
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "scan_date": "2026-03-26",
+        "report_id": "scan-9",
+        "verified_by": "scan",
+        "evidence": "12 cluster cmdlets implemented: Get-PveClusterResource, Get-PveClusterStatus, Get-PveClusterNextId, Get/Set-PveClusterOption, Get-PveClusterConfig, Get/Add/Remove-PveClusterConfigNode, Get-PveClusterJoinInfo, Add-PveClusterMember, New-PveCluster. ClusterConfigService.cs (412 lines) covers create, join, node CRUD, and options."
+      }
     },
     {
       "id": "F061",
-      "title": "PVE 9.0 endpoints 0% coverage",
+      "title": "PVE 9.0 endpoints partially covered (5/42)",
       "category": "api_drift",
       "severity": "medium",
       "status": "open",
       "first_detected": "2026-03-22",
-      "files": [],
-      "description": "42 new PVE 9.0 endpoints available (HA rules, SDN fabrics, bulk actions, OCI registry). None implemented.",
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/HA/"
+      ],
+      "description": "42 new PVE 9.0 endpoints available. 5 HA rules endpoints are now implemented via Get/New/Set/Remove-PveHaRule. Remaining 37 unimplemented: SDN fabrics (14), bulk actions (6), SDN lock/rollback (3), node SDN views (8), OCI registry (2), LXC migrate GET (1), VM dbus-vmstate (1), node capabilities (2).",
       "scan_history": [
         {
           "scan_date": "2026-03-22",
@@ -1957,8 +2008,14 @@
           "scan_date": "2026-03-23",
           "local_id": null,
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-26",
+          "local_id": null,
+          "status": "open"
         }
-      ]
+      ],
+      "notes": "Improved from 0/42 to 5/42 (12%) with HA rules implementation. SDN fabrics (14 endpoints) are the next highest-value gap."
     },
     {
       "id": "F062",
@@ -2142,6 +2199,11 @@
           "scan_date": "2026-03-23",
           "local_id": null,
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-26",
+          "local_id": null,
+          "status": "open"
         }
       ]
     },
@@ -2169,6 +2231,11 @@
           "scan_date": "2026-03-23",
           "local_id": null,
           "status": "open"
+        },
+        {
+          "scan_date": "2026-03-26",
+          "local_id": null,
+          "status": "open"
         }
       ]
     },
@@ -2194,6 +2261,11 @@
         },
         {
           "scan_date": "2026-03-23",
+          "local_id": null,
+          "status": "open"
+        },
+        {
+          "scan_date": "2026-03-26",
           "local_id": null,
           "status": "open"
         }
@@ -2682,7 +2754,7 @@
       "title": "PveSession exposes auth secrets in default pipeline output",
       "category": "security",
       "severity": "medium",
-      "status": "open",
+      "status": "resolved",
       "first_detected": "2026-03-24",
       "files": [
         "src/PSProxmoxVE.Core/Authentication/PveSession.cs",
@@ -2694,8 +2766,19 @@
           "scan_date": "2026-03-24",
           "local_id": null,
           "status": "new"
+        },
+        {
+          "scan_date": "2026-03-26",
+          "local_id": null,
+          "status": "fixed"
         }
-      ]
+      ],
+      "resolution": {
+        "scan_date": "2026-03-26",
+        "report_id": "scan-9",
+        "verified_by": "scan",
+        "evidence": "PSProxmoxVE.format.ps1xml contains a PveSession TableControl view (line 1359-1408) that displays only Hostname, Port, AuthMode, Expired (via ScriptBlock), and Version. Sensitive properties (Ticket, ApiToken, CsrfToken) are hidden from default table output. Note: Format-List * still shows all public properties — this is inherent to PowerShell and cannot be prevented without making properties internal (which would break the HTTP client)."
+      }
     },
     {
       "id": "F085",
