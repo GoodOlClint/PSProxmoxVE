@@ -65,11 +65,12 @@ namespace PSProxmoxVE.Cmdlets.Cluster
             var upid = service.AddConfigNode(session, Node, NewNodeIp, linkDict, NodeId, Votes,
                 Force.IsPresent ? true : (bool?)null, ApiVersion);
 
-            var task = new PveTask { Upid = upid, Status = "running" };
+            var nodeName = GetNodeFromUpid(upid, session.Hostname);
+
+            var task = new PveTask { Upid = upid, Status = "running", Node = nodeName };
 
             if (Wait.IsPresent && !string.IsNullOrEmpty(upid))
             {
-                var nodeName = upid.Split(':').Length > 1 ? upid.Split(':')[1] : session.Hostname;
                 var taskService = new TaskService();
                 task = taskService.WaitForTask(session, nodeName, upid);
             }

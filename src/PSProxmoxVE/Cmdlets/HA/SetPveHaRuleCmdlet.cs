@@ -20,8 +20,7 @@ namespace PSProxmoxVE.Cmdlets.HA
         public string Rule { get; set; } = string.Empty;
 
         /// <summary>Rule type (required by PVE API on update).</summary>
-        [Parameter(Mandatory = true, Position = 1, HelpMessage = "HA rule type: node-affinity or resource-affinity.")]
-        [ValidateSet("node-affinity", "resource-affinity")]
+        [Parameter(Mandatory = true, Position = 1, HelpMessage = "HA rule type (as defined in PVE, e.g. node-affinity, resource-affinity, location, colocation).")]
         public string Type { get; set; } = string.Empty;
 
         /// <summary>Rule state.</summary>
