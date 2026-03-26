@@ -70,7 +70,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: module-netstandard2.0
-          path: ./publish/netstandard2.0/
+          path: ./publish/PSProxmoxVE/
 
       - name: Extract version from tag
         id: version
@@ -79,7 +79,7 @@ jobs:
       - name: Update module version in manifest
         shell: pwsh
         run: |
-          $manifestPath = './publish/netstandard2.0/PSProxmoxVE.psd1'
+          $manifestPath = './publish/PSProxmoxVE/PSProxmoxVE.psd1'
           $version = '${{ steps.version.outputs.version }}'
           # Strip prerelease suffix for ModuleVersion (must be X.Y.Z)
           $moduleVersion = ($version -split '-')[0]
@@ -92,7 +92,7 @@ jobs:
         run: |
           $modulePath = "$HOME/.local/share/powershell/Modules/PSProxmoxVE"
           New-Item -ItemType Directory -Path $modulePath -Force | Out-Null
-          Copy-Item -Path ./publish/netstandard2.0/* -Destination $modulePath -Recurse -Force
+          Copy-Item -Path ./publish/PSProxmoxVE/* -Destination $modulePath -Recurse -Force
           Import-Module PSProxmoxVE -Force -ErrorAction Stop
           $commands = Get-Command -Module PSProxmoxVE
           Write-Host "Module loaded with $($commands.Count) commands"
@@ -105,7 +105,7 @@ jobs:
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: |
-          Publish-Module -Path ./publish/netstandard2.0 -NuGetApiKey $env:NUGET_API_KEY -Verbose
+          Publish-Module -Path ./publish/PSProxmoxVE -NuGetApiKey $env:NUGET_API_KEY -Verbose
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
