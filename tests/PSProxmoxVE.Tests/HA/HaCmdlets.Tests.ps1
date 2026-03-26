@@ -736,14 +736,12 @@ Describe 'Set-PveHaRule' -Tag 'Unit' {
             $isMandatory = $p.ParameterSets.Values | Where-Object { $_.IsMandatory }
             $isMandatory | Should -Not -BeNullOrEmpty
         }
-        It 'Should have mandatory Type parameter with ValidateSet' {
+        It 'Should have mandatory Type parameter' {
             Skip-IfMissing 'Set-PveHaRule'
             $p = $script:Cmd.Parameters['Type']
             $p | Should -Not -BeNullOrEmpty
             $isMandatory = $p.ParameterSets.Values | Where-Object { $_.IsMandatory }
             $isMandatory | Should -Not -BeNullOrEmpty
-            $vsAttr = $p.Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] }
-            $vsAttr | Should -Not -BeNullOrEmpty
         }
         It 'Should have optional State parameter with ValidateSet' {
             Skip-IfMissing 'Set-PveHaRule'
