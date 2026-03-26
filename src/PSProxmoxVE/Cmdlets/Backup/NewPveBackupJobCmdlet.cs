@@ -51,7 +51,7 @@ namespace PSProxmoxVE.Cmdlets.Backup
         /// <para type="description">The compression algorithm to use.</para>
         /// </summary>
         [Parameter(Mandatory = false, HelpMessage = "The compression algorithm.")]
-        [ValidateSet("zstd", "lzo", "gzip", "none")]
+        [ValidateSet("zstd", "lzo", "gzip", "0")]
         public string? Compress { get; set; }
 
         /// <summary>

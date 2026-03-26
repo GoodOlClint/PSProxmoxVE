@@ -25,7 +25,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
         /// <summary>The storage type (e.g., "dir", "nfs", "lvm", "zfspool", "cephfs", "rbd").</summary>
         [Parameter(Mandatory = true, Position = 1, HelpMessage = "The storage type (e.g. dir, nfs, lvm, zfspool).")]
         [ValidateSet("dir", "nfs", "lvm", "lvmthin", "zfspool", "zfs", "cephfs", "rbd",
-                     "iscsi", "iscsidirect", "glusterfs", "cifs", "pbs", IgnoreCase = true)]
+                     "iscsi", "iscsidirect", "cifs", "pbs", "btrfs", "esxi", IgnoreCase = true)]
         public string Type { get; set; } = string.Empty;
 
         /// <summary>Comma-separated list of content types to support (e.g., "iso,vztmpl,backup").</summary>
