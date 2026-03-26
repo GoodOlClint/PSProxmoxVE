@@ -1,4 +1,5 @@
 using System.Management.Automation;
+using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Cluster
@@ -13,7 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Cluster
     /// </summary>
     [Cmdlet(VerbsCommon.New, "PveCluster", SupportsShouldProcess = true,
         ConfirmImpact = ConfirmImpact.High)]
-    [OutputType(typeof(string))]
+    [OutputType(typeof(PveTask))]
     public sealed class NewPveClusterCmdlet : PveCmdletBase
     {
         /// <summary>The name for the new cluster.</summary>
@@ -35,6 +36,10 @@ namespace PSProxmoxVE.Cmdlets.Cluster
         [Parameter(Mandatory = false, HelpMessage = "Corosync link addresses as key=value strings (e.g. 'link0=10.0.0.1').")]
         public string[]? Links { get; set; }
 
+        /// <summary>Wait for the cluster creation task to complete.</summary>
+        [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
+        public SwitchParameter Wait { get; set; }
+
         protected override void ProcessRecord()
         {
             if (!ShouldProcess($"cluster '{ClusterName}'", "Create new cluster"))
@@ -47,7 +52,18 @@ namespace PSProxmoxVE.Cmdlets.Cluster
 
             WriteVerbose($"Creating cluster '{ClusterName}'...");
             var upid = service.CreateCluster(session, ClusterName, linkDict, NodeId, Votes);
-            WriteObject(upid);
+
+            var node = GetNodeFromUpid(upid, session.Hostname);
+
+            var task = new PveTask { Upid = upid, Status = "running", Node = node };
+
+            if (Wait.IsPresent && !string.IsNullOrEmpty(upid))
+            {
+                var taskService = new TaskService();
+                task = taskService.WaitForTask(session, node, upid);
+            }
+
+            WriteObject(task);
         }
     }
 }

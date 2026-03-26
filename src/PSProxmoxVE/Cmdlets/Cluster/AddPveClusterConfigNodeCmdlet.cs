@@ -1,4 +1,5 @@
 using System.Management.Automation;
+using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Cluster
@@ -13,7 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Cluster
     /// </summary>
     [Cmdlet(VerbsCommon.Add, "PveClusterConfigNode", SupportsShouldProcess = true,
         ConfirmImpact = ConfirmImpact.High)]
-    [OutputType(typeof(string))]
+    [OutputType(typeof(PveTask))]
     public sealed class AddPveClusterConfigNodeCmdlet : PveCmdletBase
     {
         /// <summary>The name of the node to add.</summary>
@@ -46,6 +47,10 @@ namespace PSProxmoxVE.Cmdlets.Cluster
         [Parameter(Mandatory = false, HelpMessage = "Corosync link addresses as key=value strings (e.g. 'link0=10.0.0.1').")]
         public string[]? Links { get; set; }
 
+        /// <summary>Wait for the task to complete.</summary>
+        [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
+        public SwitchParameter Wait { get; set; }
+
         protected override void ProcessRecord()
         {
             if (!ShouldProcess($"node '{Node}'", "Add to cluster configuration"))
@@ -59,7 +64,18 @@ namespace PSProxmoxVE.Cmdlets.Cluster
             WriteVerbose($"Adding node '{Node}' to cluster configuration...");
             var upid = service.AddConfigNode(session, Node, NewNodeIp, linkDict, NodeId, Votes,
                 Force.IsPresent ? true : (bool?)null, ApiVersion);
-            WriteObject(upid);
+
+            var nodeName = GetNodeFromUpid(upid, session.Hostname);
+
+            var task = new PveTask { Upid = upid, Status = "running", Node = nodeName };
+
+            if (Wait.IsPresent && !string.IsNullOrEmpty(upid))
+            {
+                var taskService = new TaskService();
+                task = taskService.WaitForTask(session, nodeName, upid);
+            }
+
+            WriteObject(task);
         }
     }
 }

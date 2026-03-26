@@ -99,7 +99,7 @@ namespace PSProxmoxVE.Core.Client
         {
             var request = BuildRequest(HttpMethod.Post, resource, mutating: true);
             if (data != null)
-                request.Content = new FormUrlEncodedContent(data);
+                request.Content = BuildFormContent(data);
             return await SendAsync(request, resource, "POST").ConfigureAwait(false);
         }
 
@@ -111,7 +111,7 @@ namespace PSProxmoxVE.Core.Client
         {
             var request = BuildRequest(HttpMethod.Put, resource, mutating: true);
             if (data != null)
-                request.Content = new FormUrlEncodedContent(data);
+                request.Content = BuildFormContent(data);
             return await SendAsync(request, resource, "PUT").ConfigureAwait(false);
         }
 
@@ -122,6 +122,52 @@ namespace PSProxmoxVE.Core.Client
         {
             var request = BuildRequest(HttpMethod.Delete, resource, mutating: true);
             return await SendAsync(request, resource, "DELETE").ConfigureAwait(false);
+        }
+
+        // -------------------------------------------------------------------------
+        // Form body encoding
+        // -------------------------------------------------------------------------
+
+        /// <summary>
+        /// Builds form-encoded content using minimal encoding that matches curl behavior.
+        /// .NET's <see cref="FormUrlEncodedContent"/> over-encodes characters like
+        /// <c>:</c> and <c>!</c> which PVE's internal API consumers (e.g. cluster join)
+        /// do not properly URL-decode.
+        /// </summary>
+        private static StringContent BuildFormContent(Dictionary<string, string> data)
+        {
+            var sb = new StringBuilder();
+            foreach (var kvp in data)
+            {
+                if (sb.Length > 0) sb.Append('&');
+                sb.Append(EncodeFormValue(kvp.Key));
+                sb.Append('=');
+                sb.Append(EncodeFormValue(kvp.Value));
+            }
+            return new StringContent(sb.ToString(), Encoding.UTF8, "application/x-www-form-urlencoded");
+        }
+
+        /// <summary>
+        /// Encodes a form value with minimal percent-encoding — only characters that
+        /// would break form parsing are encoded. This matches curl's <c>-d</c> behavior
+        /// and avoids over-encoding that PVE does not handle correctly.
+        /// </summary>
+        private static string EncodeFormValue(string value)
+        {
+            var sb = new StringBuilder(value.Length);
+            foreach (char c in value)
+            {
+                switch (c)
+                {
+                    case '&': sb.Append("%26"); break;
+                    case '=': sb.Append("%3D"); break;
+                    case '+': sb.Append("%2B"); break;
+                    case ' ': sb.Append('+'); break;
+                    case '%': sb.Append("%25"); break;
+                    default: sb.Append(c); break;
+                }
+            }
+            return sb.ToString();
         }
 
         // -------------------------------------------------------------------------
