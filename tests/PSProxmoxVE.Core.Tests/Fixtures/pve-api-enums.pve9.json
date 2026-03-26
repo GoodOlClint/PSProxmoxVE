@@ -1,4 +1,5 @@
 {
+  "pve_version": 9,
   "paths": {
     "/cluster": {
       "get": {
@@ -807,13 +808,13 @@
           "dow": {
             "enum": null,
             "x-enum-values": [
-              "mon",
-              "tue",
-              "wed",
-              "thu",
               "fri",
+              "mon",
               "sat",
-              "sun"
+              "sun",
+              "thu",
+              "tue",
+              "wed"
             ],
             "type": "string"
           },
@@ -872,13 +873,13 @@
           "dow": {
             "enum": null,
             "x-enum-values": [
-              "mon",
-              "tue",
-              "wed",
-              "thu",
               "fri",
+              "mon",
               "sat",
-              "sun"
+              "sun",
+              "thu",
+              "tue",
+              "wed"
             ],
             "type": "string"
           },
@@ -7325,12 +7326,6 @@
           "content": {
             "enum": null,
             "x-enum-values": [
-              "images",
-              "rootdir",
-              "vztmpl",
-              "backup",
-              "iso",
-              "snippets",
               "import"
             ],
             "type": "string"
@@ -7397,12 +7392,6 @@
         "params": {
           "content": {
             "enum": [
-              "images",
-              "rootdir",
-              "vztmpl",
-              "backup",
-              "iso",
-              "snippets",
               "import"
             ],
             "x-enum-values": null,
@@ -8452,12 +8441,6 @@
           "content": {
             "enum": null,
             "x-enum-values": [
-              "images",
-              "rootdir",
-              "vztmpl",
-              "backup",
-              "iso",
-              "snippets",
               "import"
             ],
             "type": "string"
@@ -8540,12 +8523,6 @@
           "content": {
             "enum": null,
             "x-enum-values": [
-              "images",
-              "rootdir",
-              "vztmpl",
-              "backup",
-              "iso",
-              "snippets",
               "import"
             ],
             "type": "string"
@@ -8744,8 +8721,8 @@
               "VM.Backup",
               "VM.Clone",
               "VM.Config.CDROM",
-              "VM.Config.Cloudinit",
               "VM.Config.CPU",
+              "VM.Config.Cloudinit",
               "VM.Config.Disk",
               "VM.Config.HWType",
               "VM.Config.Memory",
@@ -8758,7 +8735,6 @@
               "VM.GuestAgent.FileWrite",
               "VM.GuestAgent.Unrestricted",
               "VM.Migrate",
-              "VM.Monitor",
               "VM.PowerMgmt",
               "VM.Replicate",
               "VM.Snapshot",
@@ -8855,8 +8831,8 @@
               "VM.Backup",
               "VM.Clone",
               "VM.Config.CDROM",
-              "VM.Config.Cloudinit",
               "VM.Config.CPU",
+              "VM.Config.Cloudinit",
               "VM.Config.Disk",
               "VM.Config.HWType",
               "VM.Config.Memory",
@@ -8869,7 +8845,6 @@
               "VM.GuestAgent.FileWrite",
               "VM.GuestAgent.Unrestricted",
               "VM.Migrate",
-              "VM.Monitor",
               "VM.PowerMgmt",
               "VM.Replicate",
               "VM.Snapshot",
@@ -9069,8 +9044,8 @@
               "VM.Backup",
               "VM.Clone",
               "VM.Config.CDROM",
-              "VM.Config.Cloudinit",
               "VM.Config.CPU",
+              "VM.Config.Cloudinit",
               "VM.Config.Disk",
               "VM.Config.HWType",
               "VM.Config.Memory",
@@ -9083,7 +9058,6 @@
               "VM.GuestAgent.FileWrite",
               "VM.GuestAgent.Unrestricted",
               "VM.Migrate",
-              "VM.Monitor",
               "VM.PowerMgmt",
               "VM.Replicate",
               "VM.Snapshot",
@@ -9135,8 +9109,8 @@
               "VM.Backup",
               "VM.Clone",
               "VM.Config.CDROM",
-              "VM.Config.Cloudinit",
               "VM.Config.CPU",
+              "VM.Config.Cloudinit",
               "VM.Config.Disk",
               "VM.Config.HWType",
               "VM.Config.Memory",
@@ -9149,7 +9123,6 @@
               "VM.GuestAgent.FileWrite",
               "VM.GuestAgent.Unrestricted",
               "VM.Migrate",
-              "VM.Monitor",
               "VM.PowerMgmt",
               "VM.Replicate",
               "VM.Snapshot",
@@ -9209,8 +9182,5 @@
         ]
       }
     }
-  },
-  "meta": {
-    "generated_at": "2026-03-26T20:08:30.474Z"
   }
 }

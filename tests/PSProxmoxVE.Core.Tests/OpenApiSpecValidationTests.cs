@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -10,79 +9,181 @@ namespace PSProxmoxVE.Core.Tests
 {
     /// <summary>
     /// Validates that the module's hardcoded enum values (ValidateSet, privilege names, etc.)
-    /// match what the PVE API actually accepts, as defined by the OpenAPI spec.
+    /// match what the PVE API actually accepts, as defined by per-version OpenAPI specs.
     ///
-    /// The fixture pve-api-enums.json is extracted from the full OpenAPI spec at
-    /// ~/Source/pve_api/tools/pve-api-parser/pve-openapi.json and contains only
-    /// parameter enum values and response field names.
+    /// Fixtures pve-api-enums.pve{7,8,9}.json are extracted from the full OpenAPI specs at
+    /// ~/Source/pve_api/tools/pve-api-parser/ and contain parameter enum values per PVE version.
+    ///
+    /// PVE 7 = best-effort support, PVE 8 + 9 = fully supported.
     /// </summary>
     public class OpenApiSpecValidationTests
     {
-        private static readonly Lazy<JObject> _spec = new Lazy<JObject>(() =>
-            JObject.Parse(TestHelper.LoadFixture("pve-api-enums.json")));
+        private static readonly Lazy<JObject> _specPve7 = new Lazy<JObject>(() =>
+            JObject.Parse(TestHelper.LoadFixture("pve-api-enums.pve7.json")));
+        private static readonly Lazy<JObject> _specPve8 = new Lazy<JObject>(() =>
+            JObject.Parse(TestHelper.LoadFixture("pve-api-enums.pve8.json")));
+        private static readonly Lazy<JObject> _specPve9 = new Lazy<JObject>(() =>
+            JObject.Parse(TestHelper.LoadFixture("pve-api-enums.pve9.json")));
 
-        private static JObject Spec => _spec.Value;
+        private static JObject SpecPve7 => _specPve7.Value;
+        private static JObject SpecPve8 => _specPve8.Value;
+        private static JObject SpecPve9 => _specPve9.Value;
 
-        private static HashSet<string> GetEnumValues(string path, string method, string paramName)
+        private static HashSet<string> GetEnumValues(JObject spec, string path, string method, string paramName)
         {
-            var pathData = Spec["paths"]?[path]?[method]?["params"]?[paramName];
+            var pathData = spec["paths"]?[path]?[method]?["params"]?[paramName];
             if (pathData == null) return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             var values = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            var enumArray = pathData["enum"] as JArray;
-            if (enumArray != null)
-            {
+            if (pathData["enum"] is JArray enumArray)
                 foreach (var v in enumArray)
                     values.Add(v.ToString());
-            }
 
-            var xEnumArray = pathData["x-enum-values"] as JArray;
-            if (xEnumArray != null)
-            {
+            if (pathData["x-enum-values"] is JArray xEnumArray)
                 foreach (var v in xEnumArray)
                     values.Add(v.ToString());
-            }
 
             return values;
+        }
+
+        /// <summary>
+        /// Asserts that a value is valid in at least one of the supported PVE versions.
+        /// Returns which versions accept/reject it for diagnostic purposes.
+        /// </summary>
+        private static void AssertValidInAnyVersion(string path, string method, string paramName, string value)
+        {
+            var pve7 = GetEnumValues(SpecPve7, path, method, paramName);
+            var pve8 = GetEnumValues(SpecPve8, path, method, paramName);
+            var pve9 = GetEnumValues(SpecPve9, path, method, paramName);
+
+            Assert.True(
+                pve7.Contains(value) || pve8.Contains(value) || pve9.Contains(value),
+                $"'{value}' not valid in any PVE version for {method.ToUpper()} {path} param '{paramName}'. " +
+                $"PVE 7: [{string.Join(", ", pve7)}], PVE 8: [{string.Join(", ", pve8)}], PVE 9: [{string.Join(", ", pve9)}]");
+        }
+
+        /// <summary>
+        /// Asserts that a value is valid in ALL fully-supported PVE versions (8 + 9).
+        /// </summary>
+        private static void AssertValidInAllSupported(string path, string method, string paramName, string value)
+        {
+            var pve8 = GetEnumValues(SpecPve8, path, method, paramName);
+            var pve9 = GetEnumValues(SpecPve9, path, method, paramName);
+
+            var missing = new List<string>();
+            if (!pve8.Contains(value)) missing.Add("PVE 8");
+            if (!pve9.Contains(value)) missing.Add("PVE 9");
+
+            Assert.True(missing.Count == 0,
+                $"'{value}' not valid in: {string.Join(", ", missing)} for {method.ToUpper()} {path} param '{paramName}'. " +
+                $"PVE 8: [{string.Join(", ", pve8)}], PVE 9: [{string.Join(", ", pve9)}]");
         }
 
         // ── Privileges ──────────────────────────────────────────────────────
 
         [Fact]
-        public void Privileges_AllKnownValuesAcceptedByApi()
+        public void Privileges_AllPve8And9Common()
         {
-            var apiPrivileges = GetEnumValues("/access/roles", "post", "privs");
-            Assert.NotEmpty(apiPrivileges);
+            var pve8 = GetEnumValues(SpecPve8, "/access/roles", "post", "privs");
+            var pve9 = GetEnumValues(SpecPve9, "/access/roles", "post", "privs");
+            Assert.NotEmpty(pve8);
+            Assert.NotEmpty(pve9);
 
-            // These are privilege names used in tests and documentation
-            var modulePrivileges = new[]
+            var common = pve8.Intersect(pve9, StringComparer.Ordinal).OrderBy(p => p).ToList();
+            Assert.True(common.Count > 30, $"Expected >30 common privileges, got {common.Count}");
+        }
+
+        [Fact]
+        public void Privileges_VmMonitor_OnlyPve7And8()
+        {
+            var pve7 = GetEnumValues(SpecPve7, "/access/roles", "post", "privs");
+            var pve8 = GetEnumValues(SpecPve8, "/access/roles", "post", "privs");
+            var pve9 = GetEnumValues(SpecPve9, "/access/roles", "post", "privs");
+
+            Assert.Contains("VM.Monitor", pve7);
+            Assert.Contains("VM.Monitor", pve8);
+            Assert.DoesNotContain("VM.Monitor", pve9);
+        }
+
+        [Fact]
+        public void Privileges_Pve9Only()
+        {
+            var pve8 = GetEnumValues(SpecPve8, "/access/roles", "post", "privs");
+            var pve9 = GetEnumValues(SpecPve9, "/access/roles", "post", "privs");
+
+            // These privileges were added in PVE 9
+            var guestAgentPrivs = new[]
             {
-                "VM.Allocate", "VM.Audit", "VM.Backup", "VM.Clone",
-                "VM.Config.CDROM", "VM.Config.Cloudinit", "VM.Config.CPU",
-                "VM.Config.Disk", "VM.Config.HWType", "VM.Config.Memory",
-                "VM.Config.Network", "VM.Config.Options", "VM.Console",
-                "VM.Migrate", "VM.Monitor", "VM.PowerMgmt", "VM.Snapshot",
-                "VM.Snapshot.Rollback",
-                "Datastore.Allocate", "Datastore.AllocateSpace",
-                "Datastore.AllocateTemplate", "Datastore.Audit",
-                "Sys.Audit", "Sys.Console", "Sys.Modify", "Sys.PowerMgmt",
-                "Sys.Syslog", "Sys.AccessNetwork", "Sys.Incoming",
-                "SDN.Allocate", "SDN.Audit", "SDN.Use",
-                "User.Modify", "Permissions.Modify",
-                "Pool.Allocate", "Pool.Audit",
-                "Group.Allocate",
-                "Realm.Allocate", "Realm.AllocateUser",
-                "Mapping.Audit", "Mapping.Modify", "Mapping.Use",
-                "VM.GuestAgent.Audit", "VM.GuestAgent.FileRead",
-                "VM.GuestAgent.FileWrite", "VM.GuestAgent.FileSystemMgmt",
-                "VM.GuestAgent.Unrestricted", "VM.Replicate"
+                "VM.GuestAgent.Audit", "VM.GuestAgent.FileRead", "VM.GuestAgent.FileWrite",
+                "VM.GuestAgent.FileSystemMgmt", "VM.GuestAgent.Unrestricted",
+                "VM.Replicate"
             };
 
-            var invalid = modulePrivileges.Where(p => !apiPrivileges.Contains(p)).ToList();
-            Assert.True(invalid.Count == 0,
-                $"Invalid privilege name(s) not accepted by PVE API: {string.Join(", ", invalid)}. " +
-                $"Valid privileges: {string.Join(", ", apiPrivileges.OrderBy(p => p))}");
+            foreach (var priv in guestAgentPrivs)
+            {
+                Assert.DoesNotContain(priv, pve8);
+                Assert.Contains(priv, pve9);
+            }
+        }
+
+        [Theory]
+        [InlineData("VM.Allocate")]
+        [InlineData("VM.Audit")]
+        [InlineData("VM.Backup")]
+        [InlineData("VM.Clone")]
+        [InlineData("VM.Config.CDROM")]
+        [InlineData("VM.Config.Cloudinit")]
+        [InlineData("VM.Config.CPU")]
+        [InlineData("VM.Config.Disk")]
+        [InlineData("VM.Config.HWType")]
+        [InlineData("VM.Config.Memory")]
+        [InlineData("VM.Config.Network")]
+        [InlineData("VM.Config.Options")]
+        [InlineData("VM.Console")]
+        [InlineData("VM.Migrate")]
+        [InlineData("VM.PowerMgmt")]
+        [InlineData("VM.Snapshot")]
+        [InlineData("VM.Snapshot.Rollback")]
+        [InlineData("Datastore.Allocate")]
+        [InlineData("Datastore.AllocateSpace")]
+        [InlineData("Datastore.AllocateTemplate")]
+        [InlineData("Datastore.Audit")]
+        [InlineData("Sys.Audit")]
+        [InlineData("Sys.Console")]
+        [InlineData("Sys.Modify")]
+        [InlineData("Sys.PowerMgmt")]
+        [InlineData("Sys.Syslog")]
+        [InlineData("Sys.AccessNetwork")]
+        [InlineData("Sys.Incoming")]
+        [InlineData("SDN.Allocate")]
+        [InlineData("SDN.Audit")]
+        [InlineData("SDN.Use")]
+        [InlineData("User.Modify")]
+        [InlineData("Permissions.Modify")]
+        [InlineData("Pool.Allocate")]
+        [InlineData("Pool.Audit")]
+        [InlineData("Group.Allocate")]
+        [InlineData("Realm.Allocate")]
+        [InlineData("Realm.AllocateUser")]
+        public void Privilege_ValidInAllSupportedVersions(string privilege)
+        {
+            AssertValidInAllSupported("/access/roles", "post", "privs", privilege);
+        }
+
+        [Theory]
+        [InlineData("Mapping.Audit")]
+        [InlineData("Mapping.Modify")]
+        [InlineData("Mapping.Use")]
+        public void Privilege_Pve8AndAbove(string privilege)
+        {
+            var pve7 = GetEnumValues(SpecPve7, "/access/roles", "post", "privs");
+            var pve8 = GetEnumValues(SpecPve8, "/access/roles", "post", "privs");
+            var pve9 = GetEnumValues(SpecPve9, "/access/roles", "post", "privs");
+
+            Assert.DoesNotContain(privilege, pve7);
+            Assert.Contains(privilege, pve8);
+            Assert.Contains(privilege, pve9);
         }
 
         // ── Storage Types ───────────────────────────────────────────────────
@@ -100,16 +201,35 @@ namespace PSProxmoxVE.Core.Tests
         [InlineData("iscsidirect")]
         [InlineData("cifs")]
         [InlineData("pbs")]
+        public void StorageType_ValidInAllSupportedVersions(string storageType)
+        {
+            AssertValidInAllSupported("/storage", "post", "type", storageType);
+        }
+
+        [Theory]
         [InlineData("btrfs")]
         [InlineData("esxi")]
-        // Note: "glusterfs" was removed in PVE 9.0 — replaced by btrfs/esxi.
-        // The module's ValidateSet still includes it.
-        // See: NewPveStorageCmdlet.cs line 27-28
-        public void StorageType_IsValidInApi(string storageType)
+        public void StorageType_ValidAcrossAllVersions(string storageType)
         {
-            var apiTypes = GetEnumValues("/storage", "post", "type");
-            Assert.True(apiTypes.Contains(storageType),
-                $"Storage type '{storageType}' not in API enum: {string.Join(", ", apiTypes)}");
+            var pve7 = GetEnumValues(SpecPve7, "/storage", "post", "type");
+            var pve8 = GetEnumValues(SpecPve8, "/storage", "post", "type");
+            var pve9 = GetEnumValues(SpecPve9, "/storage", "post", "type");
+            Assert.Contains(storageType, pve7);
+            Assert.Contains(storageType, pve8);
+            Assert.Contains(storageType, pve9);
+        }
+
+        [Fact]
+        public void StorageType_GlusterfsNotInAnyVersion()
+        {
+            // glusterfs was removed before PVE 7 — should not be in any ValidateSet
+            var pve7 = GetEnumValues(SpecPve7, "/storage", "post", "type");
+            var pve8 = GetEnumValues(SpecPve8, "/storage", "post", "type");
+            var pve9 = GetEnumValues(SpecPve9, "/storage", "post", "type");
+
+            Assert.DoesNotContain("glusterfs", pve7);
+            Assert.DoesNotContain("glusterfs", pve8);
+            Assert.DoesNotContain("glusterfs", pve9);
         }
 
         // ── Backup Modes ────────────────────────────────────────────────────
@@ -118,11 +238,9 @@ namespace PSProxmoxVE.Core.Tests
         [InlineData("snapshot")]
         [InlineData("suspend")]
         [InlineData("stop")]
-        public void BackupMode_IsValidInApi(string mode)
+        public void BackupMode_ValidInAllSupportedVersions(string mode)
         {
-            var apiModes = GetEnumValues("/nodes/{node}/vzdump", "post", "mode");
-            Assert.True(apiModes.Contains(mode),
-                $"Backup mode '{mode}' not in API enum: {string.Join(", ", apiModes)}");
+            AssertValidInAllSupported("/nodes/{node}/vzdump", "post", "mode", mode);
         }
 
         // ── Backup Compression ──────────────────────────────────────────────
@@ -131,15 +249,10 @@ namespace PSProxmoxVE.Core.Tests
         [InlineData("zstd")]
         [InlineData("lzo")]
         [InlineData("gzip")]
-        // Note: "none" is NOT valid — PVE uses "0" for no compression.
-        // The module's ValidateSet includes "none" which may cause API errors.
-        // See: NewPveBackupCmdlet.cs line 51, NewPveBackupJobCmdlet.cs line 54
         [InlineData("0")]
-        public void BackupCompression_IsValidInApi(string compress)
+        public void BackupCompression_ValidInAllSupportedVersions(string compress)
         {
-            var apiValues = GetEnumValues("/nodes/{node}/vzdump", "post", "compress");
-            Assert.True(apiValues.Contains(compress),
-                $"Compression '{compress}' not in API enum: {string.Join(", ", apiValues)}");
+            AssertValidInAllSupported("/nodes/{node}/vzdump", "post", "compress", compress);
         }
 
         // ── Disk Formats ────────────────────────────────────────────────────
@@ -148,11 +261,9 @@ namespace PSProxmoxVE.Core.Tests
         [InlineData("raw")]
         [InlineData("qcow2")]
         [InlineData("vmdk")]
-        public void DiskFormat_IsValidInApi(string format)
+        public void DiskFormat_ValidInAllSupportedVersions(string format)
         {
-            var apiFormats = GetEnumValues("/nodes/{node}/qemu/{vmid}/move_disk", "post", "format");
-            Assert.True(apiFormats.Contains(format),
-                $"Disk format '{format}' not in API enum: {string.Join(", ", apiFormats)}");
+            AssertValidInAllSupported("/nodes/{node}/qemu/{vmid}/move_disk", "post", "format", format);
         }
 
         // ── HA Resource States ──────────────────────────────────────────────
@@ -162,11 +273,9 @@ namespace PSProxmoxVE.Core.Tests
         [InlineData("stopped")]
         [InlineData("disabled")]
         [InlineData("ignored")]
-        public void HaResourceState_IsValidInApi(string state)
+        public void HaResourceState_ValidInAllSupportedVersions(string state)
         {
-            var apiStates = GetEnumValues("/cluster/ha/resources", "post", "state");
-            Assert.True(apiStates.Contains(state),
-                $"HA state '{state}' not in API enum: {string.Join(", ", apiStates)}");
+            AssertValidInAllSupported("/cluster/ha/resources", "post", "state", state);
         }
 
         // ── SDN Zone Types ──────────────────────────────────────────────────
@@ -177,11 +286,9 @@ namespace PSProxmoxVE.Core.Tests
         [InlineData("evpn")]
         [InlineData("simple")]
         [InlineData("qinq")]
-        public void SdnZoneType_IsValidInApi(string zoneType)
+        public void SdnZoneType_ValidInAllSupportedVersions(string zoneType)
         {
-            var apiTypes = GetEnumValues("/cluster/sdn/zones", "post", "type");
-            Assert.True(apiTypes.Contains(zoneType),
-                $"SDN zone type '{zoneType}' not in API enum: {string.Join(", ", apiTypes)}");
+            AssertValidInAllSupported("/cluster/sdn/zones", "post", "type", zoneType);
         }
 
         // ── SDN Controller Types ────────────────────────────────────────────
@@ -189,11 +296,9 @@ namespace PSProxmoxVE.Core.Tests
         [Theory]
         [InlineData("evpn")]
         [InlineData("bgp")]
-        public void SdnControllerType_IsValidInApi(string controllerType)
+        public void SdnControllerType_ValidInAllSupportedVersions(string controllerType)
         {
-            var apiTypes = GetEnumValues("/cluster/sdn/controllers", "post", "type");
-            Assert.True(apiTypes.Contains(controllerType),
-                $"SDN controller type '{controllerType}' not in API enum: {string.Join(", ", apiTypes)}");
+            AssertValidInAllSupported("/cluster/sdn/controllers", "post", "type", controllerType);
         }
 
         // ── SDN IPAM Types ──────────────────────────────────────────────────
@@ -202,22 +307,18 @@ namespace PSProxmoxVE.Core.Tests
         [InlineData("pve")]
         [InlineData("netbox")]
         [InlineData("phpipam")]
-        public void SdnIpamType_IsValidInApi(string ipamType)
+        public void SdnIpamType_ValidInAllSupportedVersions(string ipamType)
         {
-            var apiTypes = GetEnumValues("/cluster/sdn/ipams", "post", "type");
-            Assert.True(apiTypes.Contains(ipamType),
-                $"SDN IPAM type '{ipamType}' not in API enum: {string.Join(", ", apiTypes)}");
+            AssertValidInAllSupported("/cluster/sdn/ipams", "post", "type", ipamType);
         }
 
         // ── SDN DNS Types ───────────────────────────────────────────────────
 
         [Theory]
         [InlineData("powerdns")]
-        public void SdnDnsType_IsValidInApi(string dnsType)
+        public void SdnDnsType_ValidInAllSupportedVersions(string dnsType)
         {
-            var apiTypes = GetEnumValues("/cluster/sdn/dns", "post", "type");
-            Assert.True(apiTypes.Contains(dnsType),
-                $"SDN DNS type '{dnsType}' not in API enum: {string.Join(", ", apiTypes)}");
+            AssertValidInAllSupported("/cluster/sdn/dns", "post", "type", dnsType);
         }
 
         // ── Firewall Actions ────────────────────────────────────────────────
@@ -240,11 +341,9 @@ namespace PSProxmoxVE.Core.Tests
         [InlineData("in")]
         [InlineData("out")]
         [InlineData("group")]
-        public void FirewallDirection_IsValidInApi(string direction)
+        public void FirewallDirection_ValidInAllSupportedVersions(string direction)
         {
-            var apiDirections = GetEnumValues("/cluster/firewall/rules", "post", "type");
-            Assert.True(apiDirections.Contains(direction),
-                $"Firewall direction '{direction}' not in API enum: {string.Join(", ", apiDirections)}");
+            AssertValidInAllSupported("/cluster/firewall/rules", "post", "type", direction);
         }
 
         // ── Auth Domain Types ───────────────────────────────────────────────
@@ -255,11 +354,9 @@ namespace PSProxmoxVE.Core.Tests
         [InlineData("ad")]
         [InlineData("ldap")]
         [InlineData("openid")]
-        public void AuthDomainType_IsValidInApi(string domainType)
+        public void AuthDomainType_ValidInAllSupportedVersions(string domainType)
         {
-            var apiTypes = GetEnumValues("/access/domains", "post", "type");
-            Assert.True(apiTypes.Contains(domainType),
-                $"Auth domain type '{domainType}' not in API enum: {string.Join(", ", apiTypes)}");
+            AssertValidInAllSupported("/access/domains", "post", "type", domainType);
         }
 
         // ── Cluster Resource Types ──────────────────────────────────────────
@@ -269,14 +366,9 @@ namespace PSProxmoxVE.Core.Tests
         [InlineData("node")]
         [InlineData("storage")]
         [InlineData("sdn")]
-        // Note: "lxc" is NOT a valid type filter — PVE uses "vm" for both QEMU and LXC.
-        // The module's ValidateSet includes "lxc" which may cause API errors.
-        // See: GetPveClusterResourceCmdlet.cs line 23
-        public void ClusterResourceType_IsValidInApi(string resourceType)
+        public void ClusterResourceType_ValidInAllSupportedVersions(string resourceType)
         {
-            var apiTypes = GetEnumValues("/cluster/resources", "get", "type");
-            Assert.True(apiTypes.Contains(resourceType),
-                $"Cluster resource type '{resourceType}' not in API enum: {string.Join(", ", apiTypes)}");
+            AssertValidInAllSupported("/cluster/resources", "get", "type", resourceType);
         }
 
         // ── Content Types (Upload) ──────────────────────────────────────────
@@ -284,11 +376,9 @@ namespace PSProxmoxVE.Core.Tests
         [Theory]
         [InlineData("iso")]
         [InlineData("vztmpl")]
-        public void UploadContentType_IsValidInApi(string contentType)
+        public void UploadContentType_ValidInAllSupportedVersions(string contentType)
         {
-            var apiTypes = GetEnumValues("/nodes/{node}/storage/{storage}/upload", "post", "content");
-            Assert.True(apiTypes.Contains(contentType),
-                $"Upload content type '{contentType}' not in API enum: {string.Join(", ", apiTypes)}");
+            AssertValidInAllSupported("/nodes/{node}/storage/{storage}/upload", "post", "content", contentType);
         }
 
         // ── Console Viewer Types ────────────────────────────────────────────
@@ -298,11 +388,10 @@ namespace PSProxmoxVE.Core.Tests
         [InlineData("vv")]
         [InlineData("html5")]
         [InlineData("xtermjs")]
-        public void ConsoleViewer_IsValidInApi(string viewer)
+        public void ConsoleViewer_ValidInAnyVersion(string viewer)
         {
-            var apiViewers = GetEnumValues("/cluster/options", "put", "console");
-            Assert.True(apiViewers.Contains(viewer),
-                $"Console viewer '{viewer}' not in API enum: {string.Join(", ", apiViewers)}");
+            // 'applet' was removed in later versions — validate across any
+            AssertValidInAnyVersion("/cluster/options", "put", "console", viewer);
         }
 
         // ── Network Interface Types ─────────────────────────────────────────
@@ -317,11 +406,29 @@ namespace PSProxmoxVE.Core.Tests
         [InlineData("OVSBond")]
         [InlineData("OVSPort")]
         [InlineData("OVSIntPort")]
-        public void NetworkInterfaceType_IsValidInApi(string ifaceType)
+        public void NetworkInterfaceType_ValidInAllSupportedVersions(string ifaceType)
         {
-            var apiTypes = GetEnumValues("/nodes/{node}/network", "post", "type");
-            Assert.True(apiTypes.Contains(ifaceType),
-                $"Network interface type '{ifaceType}' not in API enum: {string.Join(", ", apiTypes)}");
+            AssertValidInAllSupported("/nodes/{node}/network", "post", "type", ifaceType);
+        }
+
+        // ── Version Progression ─────────────────────────────────────────────
+
+        [Fact]
+        public void Pve9_HasMorePrivilegesThanPve8()
+        {
+            var pve8 = GetEnumValues(SpecPve8, "/access/roles", "post", "privs");
+            var pve9 = GetEnumValues(SpecPve9, "/access/roles", "post", "privs");
+            Assert.True(pve9.Count > pve8.Count,
+                $"Expected PVE 9 ({pve9.Count}) to have more privileges than PVE 8 ({pve8.Count})");
+        }
+
+        [Fact]
+        public void Pve9_HasMorePathsThanPve8()
+        {
+            var pve8Paths = SpecPve8["paths"]?.Children().Count() ?? 0;
+            var pve9Paths = SpecPve9["paths"]?.Children().Count() ?? 0;
+            Assert.True(pve9Paths > pve8Paths,
+                $"Expected PVE 9 ({pve9Paths}) to have more paths than PVE 8 ({pve8Paths})");
         }
     }
 }
