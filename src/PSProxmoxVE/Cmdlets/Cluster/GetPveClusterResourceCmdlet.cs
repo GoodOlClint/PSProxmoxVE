@@ -19,8 +19,8 @@ namespace PSProxmoxVE.Cmdlets.Cluster
         /// <summary>
         /// <para type="description">Filter by resource type.</para>
         /// </summary>
-        [Parameter(Mandatory = false, Position = 0, HelpMessage = "Filter by resource type (vm, lxc, node, storage, sdn).")]
-        [ValidateSet("vm", "lxc", "node", "storage", "sdn")]
+        [Parameter(Mandatory = false, Position = 0, HelpMessage = "Filter by resource type (vm, node, storage, sdn).")]
+        [ValidateSet("vm", "node", "storage", "sdn")]
         public string? Type { get; set; }
 
         /// <summary>
