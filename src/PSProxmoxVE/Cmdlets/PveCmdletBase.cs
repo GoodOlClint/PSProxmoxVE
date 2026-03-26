@@ -161,6 +161,21 @@ namespace PSProxmoxVE.Cmdlets
         }
 
         /// <summary>
+        /// Extracts the node name from a UPID string (format: UPID:node:...).
+        /// Falls back to <paramref name="fallback"/> if the UPID is empty or cannot be parsed.
+        /// </summary>
+        protected static string GetNodeFromUpid(string? upid, string fallback)
+        {
+            if (upid != null && upid.Length > 0)
+            {
+                var parts = upid.Split(':');
+                if (parts.Length > 1 && !string.IsNullOrWhiteSpace(parts[1]))
+                    return parts[1];
+            }
+            return fallback;
+        }
+
+        /// <summary>
         /// Parses an array of Corosync link strings (e.g. "link0=10.0.0.1") into a dictionary.
         /// Emits a warning for entries that do not match the expected "key=value" format.
         /// </summary>

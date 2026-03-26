@@ -53,12 +53,12 @@ namespace PSProxmoxVE.Cmdlets.Cluster
             WriteVerbose($"Creating cluster '{ClusterName}'...");
             var upid = service.CreateCluster(session, ClusterName, linkDict, NodeId, Votes);
 
-            var task = new PveTask { Upid = upid, Status = "running" };
+            var node = GetNodeFromUpid(upid, session.Hostname);
+
+            var task = new PveTask { Upid = upid, Status = "running", Node = node };
 
             if (Wait.IsPresent && !string.IsNullOrEmpty(upid))
             {
-                // Extract node name from UPID (format: UPID:node:...)
-                var node = upid.Split(':').Length > 1 ? upid.Split(':')[1] : session.Hostname;
                 var taskService = new TaskService();
                 task = taskService.WaitForTask(session, node, upid);
             }

@@ -81,7 +81,8 @@ namespace PSProxmoxVE.Cmdlets.Cluster
                 var upid = service.JoinCluster(session, Hostname, Fingerprint, plainPassword,
                     linkDict, NodeId, Votes, Force.IsPresent ? true : (bool?)null);
 
-                var task = new PveTask { Upid = upid, Status = "running" };
+                var node = GetNodeFromUpid(upid, session.Hostname);
+                var task = new PveTask { Upid = upid, Status = "running", Node = node };
 
                 if (Wait.IsPresent && !string.IsNullOrEmpty(upid))
                 {
