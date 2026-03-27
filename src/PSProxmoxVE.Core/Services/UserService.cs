@@ -642,6 +642,7 @@ namespace PSProxmoxVE.Core.Services
         /// <param name="roles">Comma-separated role IDs.</param>
         /// <param name="users">Comma-separated user IDs.</param>
         /// <param name="groups">Comma-separated group names.</param>
+        /// <param name="tokens">Comma-separated API token IDs (user@realm!tokenid).</param>
         /// <param name="propagate">Whether to propagate the permission to sub-paths.</param>
         /// <param name="delete">If true, removes the specified ACL entries.</param>
         public void SetPermission(
@@ -650,6 +651,7 @@ namespace PSProxmoxVE.Core.Services
             string roles,
             string? users = null,
             string? groups = null,
+            string? tokens = null,
             bool propagate = true,
             bool delete = false)
         {
@@ -666,6 +668,7 @@ namespace PSProxmoxVE.Core.Services
             };
             if (!string.IsNullOrEmpty(users)) formData["users"] = users!;
             if (!string.IsNullOrEmpty(groups)) formData["groups"] = groups!;
+            if (!string.IsNullOrEmpty(tokens)) formData["tokens"] = tokens!;
 
             IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
             try

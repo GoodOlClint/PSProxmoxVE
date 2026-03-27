@@ -27,9 +27,10 @@ namespace PSProxmoxVE.Cmdlets.Users
         [Parameter(Mandatory = true, Position = 2, HelpMessage = "The role to assign (e.g. Administrator).")]
         public string Role { get; set; } = string.Empty;
 
-        /// <summary>The ACL entry type: "user" or "group".</summary>
-        [Parameter(Mandatory = false, HelpMessage = "ACL entry type: user or group.")]
-        [ValidateSet("user", "group", IgnoreCase = true)]
+        /// <summary>The ACL entry type: "user", "token", or "group". When set to "user", API tokens
+        /// (UgId containing "!") are automatically detected and sent as the "tokens" parameter.</summary>
+        [Parameter(Mandatory = false, HelpMessage = "ACL entry type: user, token, or group.")]
+        [ValidateSet("user", "token", "group", IgnoreCase = true)]
         public string Type { get; set; } = "user";
 
         /// <summary>Whether to propagate this ACL to child paths.</summary>
@@ -58,6 +59,8 @@ namespace PSProxmoxVE.Cmdlets.Users
 
             if (string.Equals(Type, "group", System.StringComparison.OrdinalIgnoreCase))
                 data["groups"] = UgId;
+            else if (string.Equals(Type, "token", System.StringComparison.OrdinalIgnoreCase) || UgId.Contains("!"))
+                data["tokens"] = UgId;
             else
                 data["users"] = UgId;
 
