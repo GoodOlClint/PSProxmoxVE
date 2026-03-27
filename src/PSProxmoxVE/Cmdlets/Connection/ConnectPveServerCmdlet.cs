@@ -48,9 +48,13 @@ namespace PSProxmoxVE.Cmdlets.Connection
         [Parameter(Mandatory = false, HelpMessage = "Skip TLS certificate validation.")]
         public SwitchParameter SkipCertificateCheck { get; set; }
 
-        /// <summary>When specified, writes the resulting PveSession object to the pipeline.</summary>
-        [Parameter(Mandatory = false, HelpMessage = "Output the session object to the pipeline.")]
+        /// <summary>Deprecated — session is now always output. Kept for backwards compatibility.</summary>
+        [Parameter(Mandatory = false, DontShow = true)]
         public SwitchParameter PassThru { get; set; }
+
+        /// <summary>When specified, suppresses the session object from the pipeline output.</summary>
+        [Parameter(Mandatory = false, HelpMessage = "Do not output the session object to the pipeline.")]
+        public SwitchParameter Quiet { get; set; }
 
         protected override void ProcessRecord()
         {
@@ -122,7 +126,7 @@ namespace PSProxmoxVE.Cmdlets.Connection
 
             WriteVerbose($"Connected to {Server}:{Port} as {session.AuthMode} (PVE {session.ServerVersion}).");
 
-            if (PassThru.IsPresent)
+            if (!Quiet.IsPresent)
                 WriteObject(session);
         }
     }

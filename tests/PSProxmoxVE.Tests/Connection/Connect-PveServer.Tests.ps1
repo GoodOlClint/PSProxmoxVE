@@ -94,9 +94,15 @@ Describe 'Connect-PveServer' {
                 Should -Be ([System.Management.Automation.SwitchParameter])
         }
 
-        It 'Should have a PassThru switch parameter' {
+        It 'Should have a PassThru switch parameter (deprecated, hidden)' {
             $script:Cmd.Parameters.ContainsKey('PassThru') | Should -BeTrue
             $script:Cmd.Parameters['PassThru'].ParameterType |
+                Should -Be ([System.Management.Automation.SwitchParameter])
+        }
+
+        It 'Should have a Quiet switch parameter' {
+            $script:Cmd.Parameters.ContainsKey('Quiet') | Should -BeTrue
+            $script:Cmd.Parameters['Quiet'].ParameterType |
                 Should -Be ([System.Management.Automation.SwitchParameter])
         }
 

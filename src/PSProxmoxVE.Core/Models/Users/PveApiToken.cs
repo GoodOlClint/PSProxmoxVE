@@ -23,10 +23,20 @@ public class PveApiToken
 
     /// <summary>
     /// The full token identifier in "user@realm!tokenid" format, e.g., "admin@pam!automation".
-    /// Only populated by New-PveApiToken; not returned by the list/get endpoints.
+    /// Computed from UserId and TokenId. The "full-tokenid" JSON field from New-PveApiToken
+    /// is captured by <see cref="RawFullTokenId"/> for deserialization, but this property
+    /// always returns a computed value so it works for list/get endpoints too.
+    /// </summary>
+    public string FullTokenId =>
+        string.IsNullOrEmpty(UserId) || string.IsNullOrEmpty(TokenId)
+            ? RawFullTokenId ?? string.Empty
+            : $"{UserId}!{TokenId}";
+
+    /// <summary>
+    /// Raw "full-tokenid" value from the API (only present on token creation responses).
     /// </summary>
     [JsonProperty("full-tokenid")]
-    public string? FullTokenId { get; set; }
+    public string? RawFullTokenId { get; set; }
 
     /// <summary>
     /// The token secret UUID. <b>Only present on creation</b> — store it immediately,
