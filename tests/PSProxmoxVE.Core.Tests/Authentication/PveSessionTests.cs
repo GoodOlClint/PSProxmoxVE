@@ -100,5 +100,14 @@ namespace PSProxmoxVE.Core.Tests.Authentication
 
             Assert.True(session.SkipCertificateCheck);
         }
+
+        [Fact]
+        public void Timeout_DefaultIs100Seconds()
+        {
+            var session = new PveSession(TestHostname, TestPort, false,
+                "root@pam!mytoken=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+
+            Assert.Equal(TimeSpan.FromSeconds(100), session.Timeout);
+        }
     }
 }

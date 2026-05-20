@@ -154,6 +154,20 @@ Describe 'Send-PveFile' {
             if (-not $script:CmdExists) { Set-ItResult -Skipped -Because 'Not yet compiled'; return }
             $script:Cmd.Parameters.ContainsKey('Session') | Should -BeTrue
         }
+
+        It 'Should have TimeoutSeconds parameter' {
+            if (-not $script:CmdExists) { Set-ItResult -Skipped -Because 'Not yet compiled'; return }
+            $script:Cmd.Parameters.ContainsKey('TimeoutSeconds') | Should -BeTrue
+        }
+
+        It 'TimeoutSeconds should reject negative values' {
+            if (-not $script:CmdExists) { Set-ItResult -Skipped -Because 'Not yet compiled'; return }
+            $tmpIso = [System.IO.Path]::GetTempFileName()
+            try {
+                { Send-PveFile -Node 'n' -Storage 's' -Path $tmpIso -TimeoutSeconds -1 -Confirm:$false -ErrorAction Stop } |
+                    Should -Throw
+            } finally { Remove-Item $tmpIso -ErrorAction SilentlyContinue }
+        }
     }
 
     Context 'Without active session' {

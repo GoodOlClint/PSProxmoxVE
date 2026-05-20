@@ -112,5 +112,17 @@ Describe 'Connect-PveServer' {
             $overlap    = $credSets | Where-Object { $tokenSets -contains $_ }
             $overlap | Should -BeNullOrEmpty
         }
+
+        It 'Should have a TimeoutSeconds parameter' {
+            $script:Cmd.Parameters.ContainsKey('TimeoutSeconds') | Should -BeTrue
+        }
+
+        It 'TimeoutSeconds should reject negative values' {
+            $securePass = ConvertTo-SecureString 'hunter2' -AsPlainText -Force
+            $cred = [System.Management.Automation.PSCredential]::new('root@pam', $securePass)
+            {
+                Connect-PveServer -Server 'pve.example.com' -Credential $cred -TimeoutSeconds -1 -ErrorAction Stop
+            } | Should -Throw
+        }
     }
 }

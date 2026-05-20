@@ -37,7 +37,12 @@ namespace PSProxmoxVE.Core.Client
         /// Creates an HTTP client authenticated with the specified PVE session.
         /// </summary>
         /// <param name="session">The authenticated PVE session providing credentials and base URL.</param>
-        public PveHttpClient(PveSession session)
+        /// <param name="timeoutOverride">
+        ///   Optional per-instance timeout override. When supplied, takes precedence over
+        ///   <see cref="PveSession.Timeout"/>. Pass <see cref="System.Threading.Timeout.InfiniteTimeSpan"/>
+        ///   to disable the timeout entirely (useful for multi-GB uploads/downloads).
+        /// </param>
+        public PveHttpClient(PveSession session, TimeSpan? timeoutOverride = null)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
             _baseUrl = session.BaseUrl;
@@ -49,6 +54,7 @@ namespace PSProxmoxVE.Core.Client
                     (HttpRequestMessage _, X509Certificate2 _, X509Chain _, SslPolicyErrors _) => true;
             }
             _httpClient = new HttpClient(handler);
+            _httpClient.Timeout = timeoutOverride ?? session.Timeout;
 
             _httpClient.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json"));
@@ -58,7 +64,7 @@ namespace PSProxmoxVE.Core.Client
         /// Creates a bare HTTP client for pre-session use (e.g. initial authentication).
         /// No auth headers are added to requests made with this constructor.
         /// </summary>
-        internal PveHttpClient(string hostname, int port, bool skipCertificateCheck)
+        internal PveHttpClient(string hostname, int port, bool skipCertificateCheck, TimeSpan? timeout = null)
         {
             if (string.IsNullOrWhiteSpace(hostname))
                 throw new ArgumentException("Hostname cannot be null or empty.", nameof(hostname));
@@ -73,6 +79,8 @@ namespace PSProxmoxVE.Core.Client
                     (HttpRequestMessage _, X509Certificate2 _, X509Chain _, SslPolicyErrors _) => true;
             }
             _httpClient = new HttpClient(handler);
+            if (timeout.HasValue)
+                _httpClient.Timeout = timeout.Value;
 
             _httpClient.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json"));
@@ -344,6 +352,18 @@ namespace PSProxmoxVE.Core.Client
             try
             {
                 response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+            }
+            catch (TaskCanceledException ex)
+            {
+                // PveHttpClient.SendAsync passes no CancellationToken to HttpClient.SendAsync,
+                // so a TaskCanceledException reaching here can only be HttpClient.Timeout
+                // firing — on .NET Framework, on .NET Core, and on .NET 5+ (where it also
+                // carries a TimeoutException inner). Wrap it uniformly across frameworks.
+                var seconds = _httpClient.Timeout == System.Threading.Timeout.InfiniteTimeSpan
+                    ? "infinite"
+                    : _httpClient.Timeout.TotalSeconds.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + "s";
+                throw new PveApiException(HttpStatusCode.RequestTimeout,
+                    $"Request timed out after {seconds}.", resource, httpMethod, ex);
             }
             catch (HttpRequestException ex)
             {

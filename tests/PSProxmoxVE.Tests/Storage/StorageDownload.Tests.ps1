@@ -150,6 +150,17 @@ Describe 'Invoke-PveStorageDownload' {
             $script:Cmd.Parameters.ContainsKey('Wait') | Should -BeTrue
             $script:Cmd.Parameters['Wait'].SwitchParameter | Should -BeTrue
         }
+
+        It 'Should have TimeoutSeconds parameter' {
+            Skip-IfMissing 'Invoke-PveStorageDownload'
+            $script:Cmd.Parameters.ContainsKey('TimeoutSeconds') | Should -BeTrue
+        }
+
+        It 'TimeoutSeconds should reject negative values' {
+            Skip-IfMissing 'Invoke-PveStorageDownload'
+            { Invoke-PveStorageDownload -Node 'pve1' -Storage 'local' -Url 'https://example.com/test.iso' -Filename 'test.iso' -TimeoutSeconds -1 -Confirm:$false -ErrorAction Stop } |
+                Should -Throw
+        }
     }
 
     Context 'Session parameter' {

@@ -60,6 +60,15 @@ namespace PSProxmoxVE.Cmdlets.Storage
         [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
+        /// <summary>
+        /// HTTP timeout for this upload, in seconds. Pass 0 for infinite (no timeout).
+        /// When omitted, defaults to 30 minutes — overriding the session timeout so that
+        /// large file uploads do not trip the default 100-second HttpClient timeout.
+        /// </summary>
+        [Parameter(Mandatory = false, HelpMessage = "HTTP timeout in seconds (0 = infinite). Defaults to 1800 (30 min).")]
+        [ValidateRange(0, int.MaxValue)]
+        public int? TimeoutSeconds { get; set; }
+
         protected override void ProcessRecord()
         {
             var fileName = System.IO.Path.GetFileName(Path);
@@ -75,7 +84,18 @@ namespace PSProxmoxVE.Cmdlets.Storage
                     + $"Connected server is PVE {session.ServerVersion}. The upload will proceed without checksum verification.");
             }
 
-            using var client = new PveHttpClient(session);
+            TimeSpan timeout;
+            if (TimeoutSeconds.HasValue)
+            {
+                timeout = TimeoutSeconds.Value == 0
+                    ? System.Threading.Timeout.InfiniteTimeSpan
+                    : TimeSpan.FromSeconds(TimeoutSeconds.Value);
+            }
+            else
+            {
+                timeout = TimeSpan.FromMinutes(30);
+            }
+            using var client = new PveHttpClient(session, timeout);
 
             WriteVerbose($"Uploading {fileName} to {Node}/{Storage} (content={ContentType})...");
             var resource = $"nodes/{Uri.EscapeDataString(Node)}/storage/{Uri.EscapeDataString(Storage)}/upload";

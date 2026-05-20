@@ -2846,6 +2846,41 @@
         "evidence": "Added SizeParser.NormalizeToGibibytes() which strips G/GB/T/TB suffixes, rejects sub-GB units with a clear error, and converts TB overflows to ArgumentException. New-PveVm and New-PveContainer normalize -DiskSize and -RootFsSize before ShouldProcess so typos are caught with -WhatIf, regardless of whether the matching -DiskStorage/-RootFsStorage was supplied.",
         "verified_by": "dotnet build + dotnet test (577 passed, 32 SizeParserTests) + Pester (39 passed, new DiskSize/RootFsSize validation contexts)"
       }
+    },
+    {
+      "id": "F087",
+      "title": "HttpClient uses 100s default timeout; Send-PveFile and other long-running calls fail on large payloads",
+      "category": "reliability",
+      "severity": "high",
+      "status": "resolved",
+      "first_detected": "2026-05-20",
+      "github_issue": 59,
+      "files": [
+        "src/PSProxmoxVE.Core/Client/PveHttpClient.cs",
+        "src/PSProxmoxVE.Core/Authentication/PveSession.cs",
+        "src/PSProxmoxVE.Core/Authentication/PveAuthenticator.cs",
+        "src/PSProxmoxVE/Cmdlets/Storage/SendPveFileCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Storage/InvokePveStorageDownloadCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Connection/ConnectPveServerCmdlet.cs"
+      ],
+      "description": "PveHttpClient constructs HttpClient without setting Timeout, so .NET's 100s default applies to every request. Send-PveFile, Invoke-PveStorageDownload, and Connect-PveServer expose no way to override it, so multi-GB ISO uploads on a real LAN reliably trip the 100s timeout with TaskCanceledException. PveHttpClient.SendAsync also failed to surface the timeout as a PveApiException, leaking the raw TaskCanceledException to callers.",
+      "scan_history": [
+        {
+          "scan_date": "2026-05-20",
+          "local_id": null,
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-05-20",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-05-20",
+        "evidence": "Added PveSession.Timeout (default 100s) and a TimeSpan? override on PveHttpClient. Connect-PveServer exposes -TimeoutSeconds to set the session-default; Send-PveFile and Invoke-PveStorageDownload expose -TimeoutSeconds with a 30-minute implicit default so large uploads/downloads do not trip the 100s HttpClient default. -TimeoutSeconds 0 means Timeout.InfiniteTimeSpan. PveHttpClient.SendAsync now catches the TimeoutException-wrapped TaskCanceledException and rethrows it as PveApiException(RequestTimeout) with the resource path.",
+        "verified_by": "dotnet build + dotnet test (passed including new SendAsync_TimeoutFires xUnit test) + Pester (-TimeoutSeconds coverage on all three cmdlets)"
+      }
     }
   ]
 }

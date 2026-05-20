@@ -18,12 +18,22 @@ namespace PSProxmoxVE.Core.Authentication
         /// Authenticates using username and password, obtaining a ticket and CSRF token.
         /// The username must be in the form user@realm (e.g. root@pam).
         /// </summary>
+        /// <param name="hostname">Hostname or IP address of the Proxmox VE server.</param>
+        /// <param name="port">TCP port of the Proxmox VE API.</param>
+        /// <param name="skipCertificateCheck">When true, skips TLS certificate validation.</param>
+        /// <param name="username">Username including realm (e.g. root@pam).</param>
+        /// <param name="password">Plain-text password for the user.</param>
+        /// <param name="timeout">
+        ///   Optional HTTP timeout to apply both to the authentication call and to subsequent
+        ///   requests made with this session. When null, the default 100s applies.
+        /// </param>
         public static PveSession AuthenticateWithCredentials(
             string hostname,
             int port,
             bool skipCertificateCheck,
             string username,
-            string password)
+            string password,
+            TimeSpan? timeout = null)
         {
             if (string.IsNullOrWhiteSpace(hostname))
                 throw new ArgumentException("Hostname cannot be null or empty.", nameof(hostname));
@@ -41,7 +51,7 @@ namespace PSProxmoxVE.Core.Authentication
             };
 
             string responseBody;
-            using (var httpClient = new PveHttpClient(hostname, port, skipCertificateCheck))
+            using (var httpClient = new PveHttpClient(hostname, port, skipCertificateCheck, timeout))
             {
                 responseBody = httpClient.Post("/api2/json/access/ticket", formData);
             }
@@ -57,6 +67,8 @@ namespace PSProxmoxVE.Core.Authentication
             var ticketExpiry = DateTime.UtcNow.AddHours(2);
 
             var session = new PveSession(hostname, port, skipCertificateCheck, ticket, csrfToken, ticketExpiry);
+            if (timeout.HasValue)
+                session.Timeout = timeout.Value;
 
             session.ServerVersion = GetVersion(session);
 
@@ -67,11 +79,20 @@ namespace PSProxmoxVE.Core.Authentication
         /// Authenticates using a Proxmox VE API token.
         /// The token must be in the format USER@REALM!TOKENID=UUID (e.g. root@pam!mytoken=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).
         /// </summary>
+        /// <param name="hostname">Hostname or IP address of the Proxmox VE server.</param>
+        /// <param name="port">TCP port of the Proxmox VE API.</param>
+        /// <param name="skipCertificateCheck">When true, skips TLS certificate validation.</param>
+        /// <param name="apiToken">API token in USER@REALM!TOKENID=UUID format.</param>
+        /// <param name="timeout">
+        ///   Optional HTTP timeout to apply to requests made with this session.
+        ///   When null, the default 100s applies.
+        /// </param>
         public static PveSession AuthenticateWithApiToken(
             string hostname,
             int port,
             bool skipCertificateCheck,
-            string apiToken)
+            string apiToken,
+            TimeSpan? timeout = null)
         {
             if (string.IsNullOrWhiteSpace(hostname))
                 throw new ArgumentException("Hostname cannot be null or empty.", nameof(hostname));
@@ -83,6 +104,8 @@ namespace PSProxmoxVE.Core.Authentication
                     nameof(apiToken));
 
             var session = new PveSession(hostname, port, skipCertificateCheck, apiToken);
+            if (timeout.HasValue)
+                session.Timeout = timeout.Value;
 
             session.ServerVersion = GetVersion(session);
 
