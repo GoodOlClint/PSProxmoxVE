@@ -4,6 +4,7 @@ using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
+using PSProxmoxVE.Core.Utilities;
 
 namespace PSProxmoxVE.Cmdlets.Vms
 {
@@ -74,9 +75,13 @@ namespace PSProxmoxVE.Cmdlets.Vms
         public string? Machine { get; set; }
 
         /// <summary>
-        /// <para type="description">Size of the primary disk (e.g., "32G").</para>
+        /// <para type="description">
+        /// Size of the primary disk. Accepts a bare integer in GiB ("32") or a value
+        /// suffixed with G/GB/T/TB (case-insensitive); the value is normalized to a
+        /// bare GiB count before being sent to the API.
+        /// </para>
         /// </summary>
-        [Parameter(Mandatory = false, HelpMessage = "Size of the primary disk (e.g. 32G).")]
+        [Parameter(Mandatory = false, HelpMessage = "Size of the primary disk in GiB (e.g. 32 or 32G).")]
         public string? DiskSize { get; set; }
 
         /// <summary>
@@ -163,7 +168,8 @@ namespace PSProxmoxVE.Cmdlets.Vms
 
             if (!string.IsNullOrEmpty(DiskStorage) && !string.IsNullOrEmpty(DiskSize))
             {
-                var diskValue = $"{DiskStorage}:{DiskSize}";
+                var sizeGib = SizeParser.NormalizeToGibibytes(DiskSize!, nameof(DiskSize));
+                var diskValue = $"{DiskStorage}:{sizeGib}";
                 if (!string.IsNullOrEmpty(DiskFormat))
                     diskValue += $",format={DiskFormat}";
                 config["virtio0"] = diskValue;

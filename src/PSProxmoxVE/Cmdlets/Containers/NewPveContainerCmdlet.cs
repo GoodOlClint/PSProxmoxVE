@@ -6,6 +6,7 @@ using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
+using PSProxmoxVE.Core.Utilities;
 
 namespace PSProxmoxVE.Cmdlets.Containers
 {
@@ -59,9 +60,13 @@ namespace PSProxmoxVE.Cmdlets.Containers
         public int? Cores { get; set; }
 
         /// <summary>
-        /// <para type="description">Size of the root filesystem (e.g., "8G").</para>
+        /// <para type="description">
+        /// Size of the root filesystem. Accepts a bare integer in GiB ("8") or a value
+        /// suffixed with G/GB/T/TB (case-insensitive); the value is normalized to a
+        /// bare GiB count before being sent to the API.
+        /// </para>
         /// </summary>
-        [Parameter(Mandatory = false, HelpMessage = "Size of the root filesystem (e.g. 8G).")]
+        [Parameter(Mandatory = false, HelpMessage = "Size of the root filesystem in GiB (e.g. 8 or 8G).")]
         public string? RootFsSize { get; set; }
 
         /// <summary>
@@ -161,7 +166,10 @@ namespace PSProxmoxVE.Cmdlets.Containers
             {
                 var rootFsValue = RootFsStorage!;
                 if (!string.IsNullOrEmpty(RootFsSize))
-                    rootFsValue += $":{RootFsSize}";
+                {
+                    var sizeGib = SizeParser.NormalizeToGibibytes(RootFsSize!, nameof(RootFsSize));
+                    rootFsValue += $":{sizeGib}";
+                }
                 config["rootfs"] = rootFsValue;
             }
 
