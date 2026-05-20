@@ -6,6 +6,7 @@ using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
+using PSProxmoxVE.Core.Utilities;
 
 namespace PSProxmoxVE.Cmdlets.Containers
 {
@@ -59,9 +60,13 @@ namespace PSProxmoxVE.Cmdlets.Containers
         public int? Cores { get; set; }
 
         /// <summary>
-        /// <para type="description">Size of the root filesystem (e.g., "8G").</para>
+        /// <para type="description">
+        /// Size of the root filesystem. Accepts a bare integer in GiB ("8") or a value
+        /// suffixed with G/GB/T/TB (case-insensitive); the value is normalized to a
+        /// bare GiB count before being sent to the API.
+        /// </para>
         /// </summary>
-        [Parameter(Mandatory = false, HelpMessage = "Size of the root filesystem (e.g. 8G).")]
+        [Parameter(Mandatory = false, HelpMessage = "Size of the root filesystem in GiB (e.g. 8 or 8G).")]
         public string? RootFsSize { get; set; }
 
         /// <summary>
@@ -125,6 +130,13 @@ namespace PSProxmoxVE.Cmdlets.Containers
 
         protected override void ProcessRecord()
         {
+            // Validate -RootFsSize before ShouldProcess so typos like "512M" are rejected
+            // even with -WhatIf, and so the error is raised regardless of whether
+            // -RootFsStorage is also supplied.
+            string? rootFsSizeGib = null;
+            if (!string.IsNullOrEmpty(RootFsSize))
+                rootFsSizeGib = SizeParser.NormalizeToGibibytes(RootFsSize!, nameof(RootFsSize));
+
             if (!ShouldProcess($"Container on node '{Node}'", "New-PveContainer"))
                 return;
 
@@ -160,8 +172,8 @@ namespace PSProxmoxVE.Cmdlets.Containers
             if (!string.IsNullOrEmpty(RootFsStorage))
             {
                 var rootFsValue = RootFsStorage!;
-                if (!string.IsNullOrEmpty(RootFsSize))
-                    rootFsValue += $":{RootFsSize}";
+                if (rootFsSizeGib != null)
+                    rootFsValue += $":{rootFsSizeGib}";
                 config["rootfs"] = rootFsValue;
             }
 

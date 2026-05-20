@@ -2815,6 +2815,37 @@
         "evidence": "Replaced JArray? Nodelist with List<Dictionary<string, object?>>? + NativeListConverter, and JObject? Totem with Dictionary<string, object?>? + NativeDictionaryConverter. Removed Newtonsoft.Json.Linq dependency.",
         "verified_by": "dotnet build + dotnet test (382 passed)"
       }
+    },
+    {
+      "id": "F086",
+      "title": "New-PveVm -DiskSize and New-PveContainer -RootFsSize pass unit suffix verbatim, LVM rejects 'NG'",
+      "category": "api_contract",
+      "severity": "high",
+      "status": "resolved",
+      "first_detected": "2026-05-20",
+      "github_issue": 58,
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Vms/NewPveVmCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Containers/NewPveContainerCmdlet.cs"
+      ],
+      "description": "Disk and rootfs sizes are interpolated directly into the disk spec as '<storage>:<size>'. The parameter docstring advertises 'e.g. 32G' but on LVM/LVM-thin storages PVE parses the value after the colon as a volume name unless it is a bare integer, failing with 'unable to parse lvm volume name \"32G\"'. File-backed storages (NFS, directory) accept either form, masking the bug in mixed environments.",
+      "scan_history": [
+        {
+          "scan_date": "2026-05-20",
+          "local_id": null,
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-05-20",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-05-20",
+        "evidence": "Added SizeParser.NormalizeToGibibytes() which strips G/GB/T/TB suffixes, rejects sub-GB units with a clear error, and converts TB overflows to ArgumentException. New-PveVm and New-PveContainer normalize -DiskSize and -RootFsSize before ShouldProcess so typos are caught with -WhatIf, regardless of whether the matching -DiskStorage/-RootFsStorage was supplied.",
+        "verified_by": "dotnet build + dotnet test (577 passed, 32 SizeParserTests) + Pester (39 passed, new DiskSize/RootFsSize validation contexts)"
+      }
     }
   ]
 }
