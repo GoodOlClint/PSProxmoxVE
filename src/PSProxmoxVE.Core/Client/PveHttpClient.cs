@@ -353,6 +353,17 @@ namespace PSProxmoxVE.Core.Client
             {
                 response = await _httpClient.SendAsync(request).ConfigureAwait(false);
             }
+            catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+            {
+                // HttpClient.Timeout elapsed. In .NET 5+, HttpClient surfaces transport
+                // timeouts as TaskCanceledException with a TimeoutException inner —
+                // distinguishing them from caller-driven CancellationToken cancellation.
+                var seconds = _httpClient.Timeout == System.Threading.Timeout.InfiniteTimeSpan
+                    ? "infinite"
+                    : _httpClient.Timeout.TotalSeconds.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + "s";
+                throw new PveApiException(HttpStatusCode.RequestTimeout,
+                    $"Request timed out after {seconds}.", resource, httpMethod, ex);
+            }
             catch (HttpRequestException ex)
             {
                 throw new PveApiException(HttpStatusCode.ServiceUnavailable,
