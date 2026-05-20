@@ -2815,6 +2815,41 @@
         "evidence": "Replaced JArray? Nodelist with List<Dictionary<string, object?>>? + NativeListConverter, and JObject? Totem with Dictionary<string, object?>? + NativeDictionaryConverter. Removed Newtonsoft.Json.Linq dependency.",
         "verified_by": "dotnet build + dotnet test (382 passed)"
       }
+    },
+    {
+      "id": "F087",
+      "title": "HttpClient uses 100s default timeout; Send-PveFile and other long-running calls fail on large payloads",
+      "category": "reliability",
+      "severity": "high",
+      "status": "resolved",
+      "first_detected": "2026-05-20",
+      "github_issue": 59,
+      "files": [
+        "src/PSProxmoxVE.Core/Client/PveHttpClient.cs",
+        "src/PSProxmoxVE.Core/Authentication/PveSession.cs",
+        "src/PSProxmoxVE.Core/Authentication/PveAuthenticator.cs",
+        "src/PSProxmoxVE/Cmdlets/Storage/SendPveFileCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Storage/InvokePveStorageDownloadCmdlet.cs",
+        "src/PSProxmoxVE/Cmdlets/Connection/ConnectPveServerCmdlet.cs"
+      ],
+      "description": "PveHttpClient constructs HttpClient without setting Timeout, so .NET's 100s default applies to every request. Send-PveFile, Invoke-PveStorageDownload, and Connect-PveServer expose no way to override it, so multi-GB ISO uploads on a real LAN reliably trip the 100s timeout with TaskCanceledException.",
+      "scan_history": [
+        {
+          "scan_date": "2026-05-20",
+          "local_id": null,
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-05-20",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-05-20",
+        "evidence": "Added PveSession.Timeout (default 100s) and a TimeSpan? override on PveHttpClient. Connect-PveServer exposes -TimeoutSeconds to set the session-default; Send-PveFile and Invoke-PveStorageDownload expose -TimeoutSeconds with a 30-minute implicit default so large uploads/downloads do not trip the 100s HttpClient default. -TimeoutSeconds 0 means Timeout.InfiniteTimeSpan.",
+        "verified_by": "dotnet build + dotnet test (550 passed, 5 new timeout tests)"
+      }
     }
   ]
 }

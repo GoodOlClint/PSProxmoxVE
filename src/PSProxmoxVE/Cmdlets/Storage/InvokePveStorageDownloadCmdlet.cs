@@ -44,6 +44,16 @@ namespace PSProxmoxVE.Cmdlets.Storage
         [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
+        /// <summary>
+        /// HTTP timeout for issuing the download request, in seconds. Pass 0 for infinite.
+        /// When omitted, defaults to 30 minutes. Note: this only bounds the API call that
+        /// schedules the download; the actual file transfer runs server-side and is tracked
+        /// by the returned task.
+        /// </summary>
+        [Parameter(Mandatory = false, HelpMessage = "HTTP timeout in seconds (0 = infinite). Defaults to 1800 (30 min).")]
+        [ValidateRange(0, int.MaxValue)]
+        public int? TimeoutSeconds { get; set; }
+
         protected override void ProcessRecord()
         {
             if (!ShouldProcess($"{Node}/{Storage}/{Filename}", $"Download from {Url}"))
@@ -51,7 +61,19 @@ namespace PSProxmoxVE.Cmdlets.Storage
 
             var session = GetSession();
             RequireVersion(session, "Storage URL download", 7, 0);
-            using var client = new PveHttpClient(session);
+
+            TimeSpan timeout;
+            if (TimeoutSeconds.HasValue)
+            {
+                timeout = TimeoutSeconds.Value == 0
+                    ? System.Threading.Timeout.InfiniteTimeSpan
+                    : TimeSpan.FromSeconds(TimeoutSeconds.Value);
+            }
+            else
+            {
+                timeout = TimeSpan.FromMinutes(30);
+            }
+            using var client = new PveHttpClient(session, timeout);
 
             WriteVerbose($"Downloading '{Url}' to {Node}/{Storage}...");
             var resource = $"nodes/{Uri.EscapeDataString(Node)}/storage/{Uri.EscapeDataString(Storage)}/download-url";

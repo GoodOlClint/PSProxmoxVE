@@ -33,6 +33,13 @@ namespace PSProxmoxVE.Core.Authentication
         /// <summary>The Proxmox VE version detected on the server at connection time.</summary>
         public PveVersion? ServerVersion { get; internal set; }
 
+        /// <summary>
+        /// The default HTTP request timeout applied to clients created with this session.
+        /// Defaults to 100 seconds (HttpClient's built-in default). Cmdlets that perform
+        /// long-running operations (e.g. Send-PveFile) may override this per-call.
+        /// </summary>
+        public TimeSpan Timeout { get; internal set; } = TimeSpan.FromSeconds(100);
+
         /// <summary>Returns true if the ticket has expired (only relevant for Ticket auth mode)</summary>
         public bool IsExpired
         {

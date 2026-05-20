@@ -48,6 +48,17 @@ namespace PSProxmoxVE.Cmdlets.Connection
         [Parameter(Mandatory = false, HelpMessage = "Skip TLS certificate validation.")]
         public SwitchParameter SkipCertificateCheck { get; set; }
 
+        /// <summary>
+        /// HTTP request timeout in seconds for all calls made with this session.
+        /// Defaults to 100 seconds (HttpClient's built-in default). Pass 0 to disable
+        /// the timeout entirely. Cmdlets that perform long-running operations
+        /// (Send-PveFile, Invoke-PveStorageDownload) accept their own -TimeoutSeconds
+        /// that overrides this value per-call.
+        /// </summary>
+        [Parameter(Mandatory = false, HelpMessage = "HTTP timeout in seconds (0 = infinite). Default 100s.")]
+        [ValidateRange(0, int.MaxValue)]
+        public int? TimeoutSeconds { get; set; }
+
         /// <summary>Deprecated — session is now always output. Kept for backwards compatibility.</summary>
         [Parameter(Mandatory = false, DontShow = true)]
         public SwitchParameter PassThru { get; set; }
@@ -59,6 +70,13 @@ namespace PSProxmoxVE.Cmdlets.Connection
         protected override void ProcessRecord()
         {
             PveSession session;
+            TimeSpan? timeout = null;
+            if (TimeoutSeconds.HasValue)
+            {
+                timeout = TimeoutSeconds.Value == 0
+                    ? System.Threading.Timeout.InfiniteTimeSpan
+                    : TimeSpan.FromSeconds(TimeoutSeconds.Value);
+            }
 
             switch (ParameterSetName)
             {
@@ -77,7 +95,7 @@ namespace PSProxmoxVE.Cmdlets.Connection
                     try
                     {
                         session = PveAuthenticator.AuthenticateWithCredentials(
-                            Server, Port, SkipCertificateCheck.IsPresent, username, password);
+                            Server, Port, SkipCertificateCheck.IsPresent, username, password, timeout);
                     }
                     catch (Exception ex)
                     {
@@ -96,7 +114,7 @@ namespace PSProxmoxVE.Cmdlets.Connection
                     try
                     {
                         session = PveAuthenticator.AuthenticateWithApiToken(
-                            Server, Port, SkipCertificateCheck.IsPresent, ApiToken!);
+                            Server, Port, SkipCertificateCheck.IsPresent, ApiToken!, timeout);
                     }
                     catch (Exception ex)
                     {
