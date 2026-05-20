@@ -130,6 +130,13 @@ namespace PSProxmoxVE.Cmdlets.Containers
 
         protected override void ProcessRecord()
         {
+            // Validate -RootFsSize before ShouldProcess so typos like "512M" are rejected
+            // even with -WhatIf, and so the error is raised regardless of whether
+            // -RootFsStorage is also supplied.
+            string? rootFsSizeGib = null;
+            if (!string.IsNullOrEmpty(RootFsSize))
+                rootFsSizeGib = SizeParser.NormalizeToGibibytes(RootFsSize!, nameof(RootFsSize));
+
             if (!ShouldProcess($"Container on node '{Node}'", "New-PveContainer"))
                 return;
 
@@ -165,11 +172,8 @@ namespace PSProxmoxVE.Cmdlets.Containers
             if (!string.IsNullOrEmpty(RootFsStorage))
             {
                 var rootFsValue = RootFsStorage!;
-                if (!string.IsNullOrEmpty(RootFsSize))
-                {
-                    var sizeGib = SizeParser.NormalizeToGibibytes(RootFsSize!, nameof(RootFsSize));
-                    rootFsValue += $":{sizeGib}";
-                }
+                if (rootFsSizeGib != null)
+                    rootFsValue += $":{rootFsSizeGib}";
                 config["rootfs"] = rootFsValue;
             }
 

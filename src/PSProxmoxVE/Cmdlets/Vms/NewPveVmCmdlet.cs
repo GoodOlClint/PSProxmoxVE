@@ -128,6 +128,13 @@ namespace PSProxmoxVE.Cmdlets.Vms
 
         protected override void ProcessRecord()
         {
+            // Validate -DiskSize before ShouldProcess so typos like "512M" are rejected
+            // even with -WhatIf, and so the error is raised regardless of whether
+            // -DiskStorage is also supplied.
+            string? diskSizeGib = null;
+            if (!string.IsNullOrEmpty(DiskSize))
+                diskSizeGib = SizeParser.NormalizeToGibibytes(DiskSize!, nameof(DiskSize));
+
             if (!ShouldProcess($"VM on node '{Node}'", "New-PveVm"))
                 return;
 
@@ -166,10 +173,9 @@ namespace PSProxmoxVE.Cmdlets.Vms
             if (!string.IsNullOrEmpty(OsType))
                 config["ostype"] = OsType!;
 
-            if (!string.IsNullOrEmpty(DiskStorage) && !string.IsNullOrEmpty(DiskSize))
+            if (!string.IsNullOrEmpty(DiskStorage) && diskSizeGib != null)
             {
-                var sizeGib = SizeParser.NormalizeToGibibytes(DiskSize!, nameof(DiskSize));
-                var diskValue = $"{DiskStorage}:{sizeGib}";
+                var diskValue = $"{DiskStorage}:{diskSizeGib}";
                 if (!string.IsNullOrEmpty(DiskFormat))
                     diskValue += $",format={DiskFormat}";
                 config["virtio0"] = diskValue;

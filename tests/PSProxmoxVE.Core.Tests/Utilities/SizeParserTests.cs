@@ -76,5 +76,15 @@ namespace PSProxmoxVE.Core.Tests.Utilities
             Assert.Equal("DiskSize", ex.ParamName);
             Assert.Contains("DiskSize", ex.Message);
         }
+
+        [Fact]
+        public void NormalizeToGibibytes_TerabyteOverflow_ThrowsArgumentException()
+        {
+            // long.MaxValue with a T suffix overflows when multiplied by 1024.
+            var input = long.MaxValue.ToString(System.Globalization.CultureInfo.InvariantCulture) + "T";
+            var ex = Assert.Throws<ArgumentException>(() => SizeParser.NormalizeToGibibytes(input, "DiskSize"));
+            Assert.Equal("DiskSize", ex.ParamName);
+            Assert.Contains("too large", ex.Message, StringComparison.OrdinalIgnoreCase);
+        }
     }
 }

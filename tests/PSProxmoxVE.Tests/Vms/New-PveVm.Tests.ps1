@@ -133,4 +133,39 @@ Describe 'New-PveVm' {
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
+
+    Context 'DiskSize validation' {
+        # Validation runs before ShouldProcess so -WhatIf is enough to exercise it
+        # without an active session.
+
+        It 'Should reject sub-GB units (e.g. 512M)' {
+            { New-PveVm -Node 'pve-node1' -DiskStorage 'local-lvm' -DiskSize '512M' -WhatIf -ErrorAction Stop } |
+                Should -Throw '*unsupported unit*'
+        }
+
+        It 'Should reject sub-GB units even when -DiskStorage is omitted' {
+            { New-PveVm -Node 'pve-node1' -DiskSize '512M' -WhatIf -ErrorAction Stop } |
+                Should -Throw '*unsupported unit*'
+        }
+
+        It 'Should reject malformed input (e.g. 32.5G)' {
+            { New-PveVm -Node 'pve-node1' -DiskStorage 'local-lvm' -DiskSize '32.5G' -WhatIf -ErrorAction Stop } |
+                Should -Throw '*not a valid size*'
+        }
+
+        It 'Should accept a bare integer with -WhatIf' {
+            { New-PveVm -Node 'pve-node1' -DiskStorage 'local-lvm' -DiskSize '32' -WhatIf -ErrorAction Stop } |
+                Should -Not -Throw
+        }
+
+        It 'Should accept "32G" with -WhatIf' {
+            { New-PveVm -Node 'pve-node1' -DiskStorage 'local-lvm' -DiskSize '32G' -WhatIf -ErrorAction Stop } |
+                Should -Not -Throw
+        }
+
+        It 'Should accept "1T" with -WhatIf' {
+            { New-PveVm -Node 'pve-node1' -DiskStorage 'local-lvm' -DiskSize '1T' -WhatIf -ErrorAction Stop } |
+                Should -Not -Throw
+        }
+    }
 }

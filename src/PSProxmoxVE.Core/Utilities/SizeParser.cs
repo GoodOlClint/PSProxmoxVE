@@ -59,7 +59,13 @@ namespace PSProxmoxVE.Core.Utilities
                 case "T":
                 case "TB":
                 case "TIB":
-                    gib = checked(num * 1024L);
+                    try { gib = checked(num * 1024L); }
+                    catch (OverflowException)
+                    {
+                        throw new ArgumentException(
+                            $"{parameterName} '{value}' is too large to represent in GiB.",
+                            parameterName);
+                    }
                     break;
                 default:
                     throw new ArgumentException(

@@ -2843,8 +2843,8 @@
       ],
       "resolution": {
         "scan_date": "2026-05-20",
-        "evidence": "Added SizeParser.NormalizeToGibibytes() which strips G/GB/T/TB suffixes (and rejects sub-GB units with a clear error). New-PveVm and New-PveContainer normalize -DiskSize and -RootFsSize through it before constructing the disk spec, so '32G' becomes '<storage>:32' on every storage type.",
-        "verified_by": "dotnet build + dotnet test (576 passed, 31 new SizeParserTests)"
+        "evidence": "Added SizeParser.NormalizeToGibibytes() which strips G/GB/T/TB suffixes, rejects sub-GB units with a clear error, and converts TB overflows to ArgumentException. New-PveVm and New-PveContainer normalize -DiskSize and -RootFsSize before ShouldProcess so typos are caught with -WhatIf, regardless of whether the matching -DiskStorage/-RootFsStorage was supplied.",
+        "verified_by": "dotnet build + dotnet test (577 passed, 32 SizeParserTests) + Pester (39 passed, new DiskSize/RootFsSize validation contexts)"
       }
     }
   ]
