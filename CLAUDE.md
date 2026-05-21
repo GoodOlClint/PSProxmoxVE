@@ -93,3 +93,21 @@ This repo uses a structured review system to track findings and prevent regressi
 Finding IDs (F001, F002...) are permanent. A resolved finding is never deleted from
 findings.json — it is marked `resolved` with evidence of the fix. If a finding reappears,
 it is marked `regressed` and retains its original ID.
+
+## Releasing to PSGallery
+
+Tag-driven: pushing a `v*` tag to `main` triggers `.github/workflows/publish.yml` (build →
+PS 5.1 smoke test → publish to PSGallery → create GitHub Release with auto-generated notes).
+
+Each release PR must update **three** things in lockstep before the tag is cut:
+
+1. `ModuleVersion` in `src/PSProxmoxVE/PSProxmoxVE.psd1` (semver patch for bug-fix-only;
+   minor for new features; major for breaking changes).
+2. `ReleaseNotes` in the same psd1 — this is what PSGallery surfaces on the version page.
+   Replace the previous version's notes; do not append.
+3. `CHANGELOG.md` — cut the `[Unreleased]` section into a new `[X.Y.Z] - YYYY-MM-DD`
+   block and reset `[Unreleased]` to empty.
+
+After merge, tag `main` with `vX.Y.Z` and push the tag. The publish workflow rewrites
+the psd1 `ModuleVersion` in the build artifact from the tag, so the tag and the source
+version must match.

@@ -371,7 +371,21 @@
             ProjectUri   = 'https://github.com/goodolclint/PSProxmoxVE'
 
             # Release notes for this version
-            ReleaseNotes = 'Initial preview release. Supports PVE 8.x and 9.x with VM, container, storage, network, SDN, user/role/permission, template, cloud-init, snapshot, and task management.'
+            ReleaseNotes = @'
+## 0.1.3
+
+Fixed:
+- New-PveVm -DiskSize / New-PveContainer -RootFsSize normalize unit suffixes
+  (32G, 1T, etc.) to bare GiB before sending to PVE so the documented call
+  shape works on LVM/LVM-thin storages (#58).
+- HttpClient timeouts are now configurable via -TimeoutSeconds on
+  Connect-PveServer (session default), Send-PveFile, and
+  Invoke-PveStorageDownload (per-call, 30-minute implicit default).
+  Timeouts surface as PveApiException(RequestTimeout) instead of a raw
+  TaskCanceledException (#59).
+
+Full changelog: https://github.com/goodolclint/PSProxmoxVE/blob/main/CHANGELOG.md
+'@
 
         }
 
