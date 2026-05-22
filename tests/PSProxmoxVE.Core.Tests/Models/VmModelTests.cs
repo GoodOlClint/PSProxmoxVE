@@ -173,5 +173,57 @@ namespace PSProxmoxVE.Core.Tests.Models
             Assert.Equal("8.8.8.8", config.Nameserver);
             Assert.Equal("example.com", config.Searchdomain);
         }
+
+        [Fact]
+        public void PveVmConfig_Deserialize_SurfacesScsiHardware()
+        {
+            var json = TestHelper.LoadFixture("pve9_vm_config.json");
+            var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
+            var config = data.ToObject<PveVmConfig>();
+            Assert.NotNull(config);
+            Assert.Equal("virtio-scsi-single", config.ScsiHardware);
+        }
+
+        [Fact]
+        public void PveVmConfig_Deserialize_SurfacesEfiDiskAndTpm()
+        {
+            var json = @"{ ""efidisk0"": ""local-lvm:vm-100-disk-1,efitype=4m,size=528K"",
+                           ""tpmstate0"": ""local-lvm:vm-100-disk-2,size=4M,version=v2.0"" }";
+            var config = JObject.Parse(json).ToObject<PveVmConfig>();
+            Assert.NotNull(config);
+            Assert.Contains("efitype=4m", config!.EfiDisk0);
+            Assert.Contains("version=v2.0", config.TpmState0);
+        }
+
+        [Fact]
+        public void PveVmConfig_UnmappedKeys_LandInAdditionalProperties_AsNativeTypes()
+        {
+            // hostpci0 and numa0 are not typed properties; they must not be dropped.
+            var json = @"{ ""cores"": 2,
+                           ""hostpci0"": ""0000:01:00.0,pcie=1"",
+                           ""numa0"": ""cpus=0-1,memory=2048"" }";
+            var config = JObject.Parse(json).ToObject<PveVmConfig>();
+            Assert.NotNull(config);
+
+            Assert.Equal(2, config!.Cores); // typed property still works
+            Assert.True(config.AdditionalProperties.ContainsKey("hostpci0"));
+            Assert.Equal("0000:01:00.0,pcie=1", config.AdditionalProperties["hostpci0"]);
+            // Value must be a native type (string), never a Newtonsoft JToken (D013).
+            Assert.IsType<string>(config.AdditionalProperties["hostpci0"]);
+            Assert.DoesNotContain("Newtonsoft", config.AdditionalProperties["hostpci0"]!.GetType().FullName);
+        }
+
+        [Fact]
+        public void PveVmConfig_TypedKeys_DoNotLeakIntoAdditionalProperties()
+        {
+            var json = TestHelper.LoadFixture("pve9_vm_config.json");
+            var data = JObject.Parse(json)["data"];
+            var config = data!.ToObject<PveVmConfig>();
+            Assert.NotNull(config);
+            // scsihw and cores are typed → they must not also appear in the catch-all.
+            Assert.False(config!.AdditionalProperties.ContainsKey("scsihw"));
+            Assert.False(config.AdditionalProperties.ContainsKey("cores"));
+        }
     }
 }

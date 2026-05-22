@@ -2911,6 +2911,66 @@
         "evidence": "Added ';' -> %3B to EncodeFormValue. Safe under the minimal-encoding policy (cluster-join values never contain ';' and PVE url-decodes config form values). Verified the colon/comma minimal-encoding behavior is preserved.",
         "verified_by": "dotnet build + dotnet test (3 new PveHttpClientFormEncodingTests: semicolon encoded on POST/PUT, comma/colon remain literal)"
       }
+    },
+    {
+      "id": "F089",
+      "title": "New-PveVm cannot set disk controller or IO options at create time",
+      "category": "enhancement",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-05-22",
+      "github_issue": 65,
+      "files": [
+        "src/PSProxmoxVE/Cmdlets/Vms/NewPveVmCmdlet.cs"
+      ],
+      "description": "New-PveVm only emitted a plain virtio0 from -DiskStorage/-DiskSize/-DiskFormat. There was no way to choose the controller (virtio-scsi-single) or set performance/IO options (iothread, aio, ssd, discard, cache) at create time, forcing callers to create the VM diskless and then hand-build a raw scsi0 string via Set-PveVmConfig.",
+      "scan_history": [
+        {
+          "scan_date": "2026-05-22",
+          "local_id": null,
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-05-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-05-22",
+        "evidence": "Added -DiskBus (virtio/scsi/sata/ide, default virtio), -ScsiHardware (scsihw), -DiskIoThread, -DiskAio, -DiskSsd, -DiskDiscard, -DiskCache. The disk spec is built via a BuildDiskSpec helper; ValidateDiskOptions enforces (before ShouldProcess) that ssd is not used on virtio and that iothread is only used on virtio or scsi+virtio-scsi-single, surfacing clear errors at create time instead of at VM start.",
+        "verified_by": "dotnet build (0 warnings) + Pester (47 New-PveVm tests incl. disk-option validation matrix)"
+      }
+    },
+    {
+      "id": "F090",
+      "title": "Get-PveVmConfig silently drops config keys not in the typed allow-list",
+      "category": "completeness",
+      "severity": "medium",
+      "status": "resolved",
+      "first_detected": "2026-05-22",
+      "github_issue": 65,
+      "files": [
+        "src/PSProxmoxVE.Core/Models/Vms/PveVmConfig.cs"
+      ],
+      "description": "PveVmConfig was a fixed allow-list of [JsonProperty] fields with no catch-all, so keys like scsihw, efidisk0, tpmstate0, hostpci0, and additional disk buses were silently dropped on deserialize — making the F089 workaround unverifiable by reading the config back.",
+      "scan_history": [
+        {
+          "scan_date": "2026-05-22",
+          "local_id": null,
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-05-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-05-22",
+        "evidence": "Added typed scsihw/efidisk0/tpmstate0 properties plus a private [JsonExtensionData] landing field exposed as AdditionalProperties (Dictionary<string, object?> via JsonHelper.ToNative, so values are native .NET types per D013 — no JToken leakage). Typed keys do not duplicate into the catch-all.",
+        "verified_by": "dotnet build + dotnet test (586 passed, new VmModelTests for scsihw/efidisk/tpm, native-typed AdditionalProperties, and no typed-key leakage)"
+      }
     }
   ]
 }

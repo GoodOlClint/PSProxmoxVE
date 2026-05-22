@@ -168,4 +168,80 @@ Describe 'New-PveVm' {
                 Should -Not -Throw
         }
     }
+
+    Context 'Disk controller / IO parameter metadata' {
+        BeforeAll { $script:Cmd = Get-Command 'New-PveVm' }
+
+        It 'Should have <_> parameter' -ForEach @(
+            'DiskBus', 'ScsiHardware', 'DiskIoThread', 'DiskAio', 'DiskSsd', 'DiskDiscard', 'DiskCache'
+        ) {
+            $script:Cmd.Parameters.ContainsKey($_) | Should -BeTrue
+        }
+
+        It 'DiskBus should have a ValidateSet of virtio, scsi, sata, ide' {
+            $vs = $script:Cmd.Parameters['DiskBus'].Attributes |
+                Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] } |
+                Select-Object -First 1
+            $vs.ValidValues | Should -Contain 'virtio'
+            $vs.ValidValues | Should -Contain 'scsi'
+            $vs.ValidValues | Should -Contain 'sata'
+            $vs.ValidValues | Should -Contain 'ide'
+        }
+
+        It 'DiskIoThread and DiskSsd should be switch parameters' {
+            $script:Cmd.Parameters['DiskIoThread'].ParameterType | Should -Be ([System.Management.Automation.SwitchParameter])
+            $script:Cmd.Parameters['DiskSsd'].ParameterType | Should -Be ([System.Management.Automation.SwitchParameter])
+        }
+    }
+
+    Context 'Disk option validation' {
+        # Validation runs before ShouldProcess, so -WhatIf exercises it offline.
+
+        It 'Should reject -DiskSsd on the virtio bus' {
+            { New-PveVm -Node 'pve-node1' -DiskStorage 'local-lvm' -DiskSize '32' -DiskSsd -WhatIf -ErrorAction Stop } |
+                Should -Throw '*virtio bus*'
+        }
+
+        It 'Should reject -DiskSsd on the default (virtio) bus when bus omitted' {
+            { New-PveVm -Node 'pve-node1' -DiskStorage 'local-lvm' -DiskSize '32' -DiskSsd -WhatIf -ErrorAction Stop } |
+                Should -Throw '*virtio bus*'
+        }
+
+        It 'Should accept -DiskSsd on the scsi bus' {
+            { New-PveVm -Node 'pve-node1' -DiskStorage 'local-lvm' -DiskSize '32' -DiskBus scsi -DiskSsd -WhatIf -ErrorAction Stop } |
+                Should -Not -Throw
+        }
+
+        It 'Should reject -DiskIoThread on the sata bus' {
+            { New-PveVm -Node 'pve-node1' -DiskStorage 'local-lvm' -DiskSize '32' -DiskBus sata -DiskIoThread -WhatIf -ErrorAction Stop } |
+                Should -Throw '*requires -DiskBus virtio or scsi*'
+        }
+
+        It 'Should reject -DiskIoThread on scsi without -ScsiHardware virtio-scsi-single' {
+            { New-PveVm -Node 'pve-node1' -DiskStorage 'local-lvm' -DiskSize '32' -DiskBus scsi -DiskIoThread -WhatIf -ErrorAction Stop } |
+                Should -Throw '*virtio-scsi-single*'
+        }
+
+        It 'Should reject -DiskIoThread on scsi with a wrong -ScsiHardware (virtio-scsi-pci)' {
+            { New-PveVm -Node 'pve-node1' -DiskStorage 'local-lvm' -DiskSize '32' -DiskBus scsi -ScsiHardware 'virtio-scsi-pci' -DiskIoThread -WhatIf -ErrorAction Stop } |
+                Should -Throw '*virtio-scsi-single*'
+        }
+
+        It 'Should accept -DiskIoThread on scsi with -ScsiHardware virtio-scsi-single' {
+            { New-PveVm -Node 'pve-node1' -DiskStorage 'local-lvm' -DiskSize '32' -DiskBus scsi -ScsiHardware 'virtio-scsi-single' -DiskIoThread -WhatIf -ErrorAction Stop } |
+                Should -Not -Throw
+        }
+
+        It 'Should accept -DiskIoThread on the default virtio bus' {
+            { New-PveVm -Node 'pve-node1' -DiskStorage 'local-lvm' -DiskSize '32' -DiskIoThread -WhatIf -ErrorAction Stop } |
+                Should -Not -Throw
+        }
+
+        It 'Should accept a fully tuned scsi disk spec' {
+            { New-PveVm -Node 'pve-node1' -DiskStorage 'local-lvm' -DiskSize '60' -DiskBus scsi `
+                -ScsiHardware 'virtio-scsi-single' -DiskIoThread -DiskAio native -DiskSsd -DiskDiscard `
+                -DiskCache none -WhatIf -ErrorAction Stop } |
+                Should -Not -Throw
+        }
+    }
 }
