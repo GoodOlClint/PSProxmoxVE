@@ -10,7 +10,7 @@
     RootModule        = 'PSProxmoxVE.dll'
 
     # Version number of this module.
-    ModuleVersion     = '0.1.3'
+    ModuleVersion     = '0.2.0'
 
     # Supported PSEditions
     CompatiblePSEditions = @('Desktop', 'Core')
@@ -372,17 +372,20 @@
 
             # Release notes for this version
             ReleaseNotes = @'
-## 0.1.3
+## 0.2.0
+
+Added:
+- New-PveVm disk controller / IO options: -DiskBus (virtio/scsi/sata/ide),
+  -ScsiHardware, -DiskIoThread, -DiskAio, -DiskSsd, -DiskDiscard, -DiskCache,
+  with up-front validation of invalid combinations (#65).
+- Get-PveVmConfig now surfaces scsihw/efidisk0/tpmstate0 plus an
+  AdditionalProperties dictionary for any other config key (#65).
 
 Fixed:
-- New-PveVm -DiskSize / New-PveContainer -RootFsSize normalize unit suffixes
-  (32G, 1T, etc.) to bare GiB before sending to PVE so the documented call
-  shape works on LVM/LVM-thin storages (#58).
-- HttpClient timeouts are now configurable via -TimeoutSeconds on
-  Connect-PveServer (session default), Send-PveFile, and
-  Invoke-PveStorageDownload (per-call, 30-minute implicit default).
-  Timeouts surface as PveApiException(RequestTimeout) instead of a raw
-  TaskCanceledException (#59).
+- Form values containing ';' were split into bogus fields, breaking a
+  multi-device boot order via Set-PveVmConfig; semicolons are now encoded (#64).
+- Invoke-PveVmGuestExec -Args reached the guest as JSON on STDIN instead of
+  argv; arguments are now sent as the PVE command array (#68).
 
 Full changelog: https://github.com/goodolclint/PSProxmoxVE/blob/main/CHANGELOG.md
 '@

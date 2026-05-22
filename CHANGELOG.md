@@ -7,6 +7,18 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-22
+
+### Added
+
+- `New-PveVm` disk controller / IO options: `-DiskBus` (virtio/scsi/sata/ide), `-ScsiHardware` (scsihw), `-DiskIoThread`, `-DiskAio`, `-DiskSsd`, `-DiskDiscard`, `-DiskCache`. Invalid combinations (e.g. `ssd` on virtio, `iothread` on sata/ide or scsi without `virtio-scsi-single`) are rejected up front with a clear error. (#65)
+- `Get-PveVmConfig` now surfaces `scsihw`, `efidisk0`, and `tpmstate0` as typed properties, plus an `AdditionalProperties` dictionary capturing any other config key (e.g. `hostpci0`) as native .NET values instead of silently dropping it. (#65)
+
+### Fixed
+
+- Form values containing `;` were split into bogus fields by PVE's parser, so a multi-device boot order set via `Set-PveVmConfig -AdditionalConfig @{ boot = 'order=scsi0;ide2' }` failed with `unable to parse drive options`. Semicolons are now percent-encoded. (#64)
+- `Invoke-PveVmGuestExec -Args` were delivered to the guest as JSON on STDIN instead of as argv, so commands ran with no/garbage arguments. Arguments are now sent as the PVE `command` array (repeated keys), reaching the process as real argv. (#68)
+
 ## [0.1.3] - 2026-05-20
 
 ### Added
