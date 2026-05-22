@@ -2883,6 +2883,36 @@
       }
     },
     {
+      "id": "F088",
+      "title": "Form values containing ';' are split into bogus fields (boot order breaks Set-PveVmConfig)",
+      "category": "api_contract",
+      "severity": "high",
+      "status": "resolved",
+      "first_detected": "2026-05-22",
+      "github_issue": 64,
+      "files": [
+        "src/PSProxmoxVE.Core/Client/PveHttpClient.cs"
+      ],
+      "description": "PveHttpClient.EncodeFormValue percent-encoded &, =, +, space, and % but not ';'. PVE's application/x-www-form-urlencoded parser treats a raw ';' as a field separator, so a value like boot=order=scsi0;ide2 was split into 'boot=order=scsi0' plus an empty 'ide2' field, which PVE rejected with 'ide2: unable to parse drive options'. Affected any config value containing ';' (boot order, hookscript, some args).",
+      "scan_history": [
+        {
+          "scan_date": "2026-05-22",
+          "local_id": null,
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-05-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-05-22",
+        "evidence": "Added ';' -> %3B to EncodeFormValue. Safe under the minimal-encoding policy (cluster-join values never contain ';' and PVE url-decodes config form values). Verified the colon/comma minimal-encoding behavior is preserved.",
+        "verified_by": "dotnet build + dotnet test (3 new PveHttpClientFormEncodingTests: semicolon encoded on POST/PUT, comma/colon remain literal)"
+      }
+    },
+    {
       "id": "F089",
       "title": "New-PveVm cannot set disk controller or IO options at create time",
       "category": "enhancement",
