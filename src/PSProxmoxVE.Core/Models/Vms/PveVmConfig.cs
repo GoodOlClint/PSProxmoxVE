@@ -1,4 +1,8 @@
+using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using PSProxmoxVE.Core.Utilities;
 
 namespace PSProxmoxVE.Core.Models.Vms;
 
@@ -51,6 +55,24 @@ public class PveVmConfig
     /// </summary>
     [JsonProperty("machine")]
     public string? Machine { get; set; }
+
+    /// <summary>
+    /// SCSI controller hardware model (e.g., "virtio-scsi-single", "lsi").
+    /// </summary>
+    [JsonProperty("scsihw")]
+    public string? ScsiHardware { get; set; }
+
+    /// <summary>
+    /// EFI vars disk spec (present on OVMF/UEFI VMs), e.g. "local-lvm:vm-100-disk-1,...".
+    /// </summary>
+    [JsonProperty("efidisk0")]
+    public string? EfiDisk0 { get; set; }
+
+    /// <summary>
+    /// TPM state disk spec (present on VMs with a virtual TPM).
+    /// </summary>
+    [JsonProperty("tpmstate0")]
+    public string? TpmState0 { get; set; }
 
     // -------------------------------------------------------------------------
     // Boot / Args
@@ -287,6 +309,29 @@ public class PveVmConfig
     /// <summary>DNS search domain injected via Cloud-Init.</summary>
     [JsonProperty("searchdomain")]
     public string? Searchdomain { get; set; }
+
+    // -------------------------------------------------------------------------
+    // Catch-all for unmapped config keys
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Raw landing spot for any config key not mapped to a typed property above.
+    /// Populated by Newtonsoft during deserialization; exposed natively via
+    /// <see cref="AdditionalProperties"/>.
+    /// </summary>
+    [JsonExtensionData]
+    private IDictionary<string, JToken>? ExtensionData { get; set; }
+
+    /// <summary>
+    /// Any VM config keys not surfaced as a typed property above (e.g. hostpci0,
+    /// usb0, numa0, additional disk buses). Keys map to native .NET values so the
+    /// dictionary works naturally in PowerShell pipelines.
+    /// </summary>
+    [JsonIgnore]
+    public Dictionary<string, object?> AdditionalProperties =>
+        ExtensionData == null
+            ? new Dictionary<string, object?>()
+            : ExtensionData.ToDictionary(kvp => kvp.Key, kvp => JsonHelper.ToNative(kvp.Value));
 
     /// <inheritdoc />
     public override string ToString()

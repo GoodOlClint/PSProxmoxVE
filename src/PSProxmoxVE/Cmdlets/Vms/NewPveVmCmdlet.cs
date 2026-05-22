@@ -97,6 +97,67 @@ namespace PSProxmoxVE.Cmdlets.Vms
         public string? DiskFormat { get; set; }
 
         /// <summary>
+        /// <para type="description">
+        /// Bus/controller for the primary disk: "virtio" (default), "scsi", "sata", or "ide".
+        /// Determines the device key (virtio0, scsi0, sata0, ide0).
+        /// </para>
+        /// </summary>
+        [Parameter(Mandatory = false, HelpMessage = "Primary disk bus: virtio (default), scsi, sata, ide.")]
+        [ValidateSet("virtio", "scsi", "sata", "ide", IgnoreCase = true)]
+        public string? DiskBus { get; set; }
+
+        /// <summary>
+        /// <para type="description">
+        /// SCSI controller hardware model (sets the VM-level "scsihw" key), e.g.
+        /// "virtio-scsi-single", "virtio-scsi-pci", "lsi". Required as
+        /// "virtio-scsi-single" when combining -DiskBus scsi with -DiskIoThread.
+        /// </para>
+        /// </summary>
+        [Parameter(Mandatory = false, HelpMessage = "SCSI controller model (e.g. virtio-scsi-single).")]
+        public string? ScsiHardware { get; set; }
+
+        /// <summary>
+        /// <para type="description">
+        /// Enable a dedicated IO thread for the primary disk (iothread=1). Valid only for
+        /// the virtio bus or for the scsi bus with -ScsiHardware virtio-scsi-single.
+        /// </para>
+        /// </summary>
+        [Parameter(Mandatory = false, HelpMessage = "Enable a dedicated IO thread (iothread=1).")]
+        public SwitchParameter DiskIoThread { get; set; }
+
+        /// <summary>
+        /// <para type="description">Async IO mode for the primary disk: "native", "threads", or "io_uring".</para>
+        /// </summary>
+        [Parameter(Mandatory = false, HelpMessage = "Async IO mode: native, threads, io_uring.")]
+        [ValidateSet("native", "threads", "io_uring", IgnoreCase = true)]
+        public string? DiskAio { get; set; }
+
+        /// <summary>
+        /// <para type="description">
+        /// Mark the primary disk as SSD (ssd=1). Not supported on the virtio bus — use
+        /// -DiskBus scsi, sata, or ide.
+        /// </para>
+        /// </summary>
+        [Parameter(Mandatory = false, HelpMessage = "Mark the primary disk as SSD (ssd=1).")]
+        public SwitchParameter DiskSsd { get; set; }
+
+        /// <summary>
+        /// <para type="description">Enable discard/TRIM passthrough on the primary disk (discard=on).</para>
+        /// </summary>
+        [Parameter(Mandatory = false, HelpMessage = "Enable discard/TRIM passthrough (discard=on).")]
+        public SwitchParameter DiskDiscard { get; set; }
+
+        /// <summary>
+        /// <para type="description">
+        /// Cache mode for the primary disk: "none", "writethrough", "writeback",
+        /// "directsync", or "unsafe".
+        /// </para>
+        /// </summary>
+        [Parameter(Mandatory = false, HelpMessage = "Disk cache mode: none, writethrough, writeback, directsync, unsafe.")]
+        [ValidateSet("none", "writethrough", "writeback", "directsync", "unsafe", IgnoreCase = true)]
+        public string? DiskCache { get; set; }
+
+        /// <summary>
         /// <para type="description">Network interface model (e.g., "virtio", "e1000").</para>
         /// </summary>
         [Parameter(Mandatory = false, HelpMessage = "Network interface model (e.g. virtio, e1000).")]
@@ -128,12 +189,15 @@ namespace PSProxmoxVE.Cmdlets.Vms
 
         protected override void ProcessRecord()
         {
-            // Validate -DiskSize before ShouldProcess so typos like "512M" are rejected
-            // even with -WhatIf, and so the error is raised regardless of whether
-            // -DiskStorage is also supplied.
+            // Validate -DiskSize and disk-option combinations before ShouldProcess so
+            // typos and invalid combos are rejected even with -WhatIf, and so the error
+            // is raised regardless of whether -DiskStorage is also supplied.
             string? diskSizeGib = null;
             if (!string.IsNullOrEmpty(DiskSize))
                 diskSizeGib = SizeParser.NormalizeToGibibytes(DiskSize!, nameof(DiskSize));
+
+            var diskBus = string.IsNullOrEmpty(DiskBus) ? "virtio" : DiskBus!.ToLowerInvariant();
+            ValidateDiskOptions(diskBus);
 
             if (!ShouldProcess($"VM on node '{Node}'", "New-PveVm"))
                 return;
@@ -172,14 +236,15 @@ namespace PSProxmoxVE.Cmdlets.Vms
                 config["machine"] = Machine!;
             if (!string.IsNullOrEmpty(OsType))
                 config["ostype"] = OsType!;
+            if (!string.IsNullOrEmpty(ScsiHardware))
+                config["scsihw"] = ScsiHardware!;
 
             if (!string.IsNullOrEmpty(DiskStorage) && diskSizeGib != null)
-            {
-                var diskValue = $"{DiskStorage}:{diskSizeGib}";
-                if (!string.IsNullOrEmpty(DiskFormat))
-                    diskValue += $",format={DiskFormat}";
-                config["virtio0"] = diskValue;
-            }
+                config[$"{diskBus}0"] = BuildDiskSpec(DiskStorage!, diskSizeGib);
+            else if (HasDiskOptions())
+                WriteWarning("Disk IO options (-DiskBus/-DiskIoThread/-DiskAio/-DiskSsd/-DiskDiscard/-DiskCache) "
+                    + "were specified but no disk is being created (-DiskStorage and -DiskSize are both required). "
+                    + "The options were ignored.");
 
             if (!string.IsNullOrEmpty(Bridge))
             {
@@ -199,6 +264,62 @@ namespace PSProxmoxVE.Cmdlets.Vms
             }
 
             WriteObject(task);
+        }
+
+        private bool HasDiskOptions() =>
+            !string.IsNullOrEmpty(DiskBus)
+            || DiskIoThread.IsPresent
+            || !string.IsNullOrEmpty(DiskAio)
+            || DiskSsd.IsPresent
+            || DiskDiscard.IsPresent
+            || !string.IsNullOrEmpty(DiskCache);
+
+        /// <summary>
+        /// Validates disk option combinations that PVE would otherwise reject at VM start
+        /// rather than at create time, surfacing a clear error up front.
+        /// </summary>
+        private void ValidateDiskOptions(string diskBus)
+        {
+            if (DiskSsd.IsPresent && diskBus == "virtio")
+                throw new PSArgumentException(
+                    "-DiskSsd is not supported on the virtio bus. Use -DiskBus scsi, sata, or ide.",
+                    nameof(DiskSsd));
+
+            if (DiskIoThread.IsPresent)
+            {
+                if (diskBus == "sata" || diskBus == "ide")
+                    throw new PSArgumentException(
+                        "-DiskIoThread requires -DiskBus virtio or scsi.",
+                        nameof(DiskIoThread));
+
+                if (diskBus == "scsi"
+                    && !string.Equals(ScsiHardware, "virtio-scsi-single", System.StringComparison.OrdinalIgnoreCase))
+                    throw new PSArgumentException(
+                        "-DiskIoThread on a scsi disk requires -ScsiHardware virtio-scsi-single.",
+                        nameof(DiskIoThread));
+            }
+        }
+
+        /// <summary>
+        /// Builds the disk volume spec ("&lt;storage&gt;:&lt;sizeGiB&gt;[,opt=val...]") for the
+        /// primary disk, appending format and any requested IO options in a stable order.
+        /// </summary>
+        private string BuildDiskSpec(string storage, string sizeGib)
+        {
+            var sb = new System.Text.StringBuilder($"{storage}:{sizeGib}");
+            if (!string.IsNullOrEmpty(DiskFormat))
+                sb.Append($",format={DiskFormat}");
+            if (!string.IsNullOrEmpty(DiskCache))
+                sb.Append($",cache={DiskCache!.ToLowerInvariant()}");
+            if (!string.IsNullOrEmpty(DiskAio))
+                sb.Append($",aio={DiskAio!.ToLowerInvariant()}");
+            if (DiskSsd.IsPresent)
+                sb.Append(",ssd=1");
+            if (DiskDiscard.IsPresent)
+                sb.Append(",discard=on");
+            if (DiskIoThread.IsPresent)
+                sb.Append(",iothread=1");
+            return sb.ToString();
         }
     }
 }
