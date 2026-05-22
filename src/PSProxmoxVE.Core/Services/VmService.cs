@@ -610,7 +610,11 @@ namespace PSProxmoxVE.Core.Services
                 if (args != null)
                 {
                     foreach (var arg in args)
+                    {
+                        if (arg == null)
+                            throw new ArgumentException("Args elements must not be null.", nameof(args));
                         data.Add(new KeyValuePair<string, string>("command", arg));
+                    }
                 }
 
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/agent/exec", data)

@@ -1,15 +1,15 @@
 {
   "_schema_version": "1.0",
   "_description": "PSProxmoxVE stable findings ledger. IDs are permanent (F001, F002...). Resolved findings are never deleted — they are marked resolved with evidence. If a finding reappears, it is marked regressed and retains its original ID.",
-  "last_updated": "2026-03-26",
+  "last_updated": "2026-05-22",
   "last_scan_date": "2026-03-26",
   "counters": {
-    "next_id": 86,
+    "next_id": 92,
     "total_open": 7,
-    "total_resolved": 77,
+    "total_resolved": 83,
     "total_regressed": 0,
     "open": 7,
-    "resolved": 77,
+    "resolved": 83,
     "regressed": 0,
     "wont_fix": 1
   },

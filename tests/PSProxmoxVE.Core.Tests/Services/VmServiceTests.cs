@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Moq;
@@ -76,6 +77,37 @@ namespace PSProxmoxVE.Core.Tests.Services
             var only = Assert.Single(captured!);
             Assert.Equal("command", only.Key);
             Assert.Equal("whoami", only.Value);
+        }
+
+        [Fact]
+        public void ExecuteGuestCommand_EmptyArgs_SendsSingleCommandEntry()
+        {
+            List<KeyValuePair<string, string>>? captured = null;
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient
+                .Setup(c => c.PostAsync(It.IsAny<string>(), It.IsAny<IEnumerable<KeyValuePair<string, string>>>()))
+                .Callback<string, IEnumerable<KeyValuePair<string, string>>>((_, data) => captured = data.ToList())
+                .ReturnsAsync("{\"data\":{\"pid\":9}}");
+
+            var service = new VmService(mockClient.Object);
+            service.ExecuteGuestCommand(CreateSession(), TestNode, TestVmId, "whoami", new string[0]);
+
+            Assert.NotNull(captured);
+            var only = Assert.Single(captured!);
+            Assert.Equal("command", only.Key);
+            Assert.Equal("whoami", only.Value);
+        }
+
+        [Fact]
+        public void ExecuteGuestCommand_NullArgElement_ThrowsArgumentException()
+        {
+            var mockClient = new Mock<IPveHttpClient>();
+            var service = new VmService(mockClient.Object);
+
+            var ex = Assert.Throws<ArgumentException>(() =>
+                service.ExecuteGuestCommand(CreateSession(), TestNode, TestVmId,
+                    "cmd.exe", new[] { "/c", null!, "echo" }));
+            Assert.Equal("args", ex.ParamName);
         }
     }
 }
