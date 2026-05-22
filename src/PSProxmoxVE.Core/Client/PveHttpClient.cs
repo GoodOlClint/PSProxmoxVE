@@ -169,6 +169,11 @@ namespace PSProxmoxVE.Core.Client
                 {
                     case '&': sb.Append("%26"); break;
                     case '=': sb.Append("%3D"); break;
+                    // PVE's form parser treats a raw ';' as a field separator (the
+                    // historical alternative to '&'), so an unencoded ';' inside a value
+                    // (e.g. boot=order=scsi0;ide2) splits the value into bogus extra
+                    // fields. Encode it so the value arrives intact.
+                    case ';': sb.Append("%3B"); break;
                     case '+': sb.Append("%2B"); break;
                     case ' ': sb.Append('+'); break;
                     case '%': sb.Append("%25"); break;
