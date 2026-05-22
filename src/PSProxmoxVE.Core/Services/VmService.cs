@@ -599,16 +599,22 @@ namespace PSProxmoxVE.Core.Services
             IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
             try
             {
-                var data = new Dictionary<string, string>
+                // PVE's agent/exec "command" is an array: element 0 is the executable and
+                // each subsequent element is one argv entry. It is sent as repeated form
+                // keys (command=<exe>&command=<arg1>&...). Do NOT use "input-data" for
+                // arguments — that is the process's STDIN, not argv.
+                var data = new List<KeyValuePair<string, string>>
                 {
-                    ["command"] = command
+                    new KeyValuePair<string, string>("command", command)
                 };
-
-                if (args != null && args.Length > 0)
+                if (args != null)
                 {
-                    // PVE expects input-data for arguments passed as a JSON-encoded string array
-                    var argsJson = Newtonsoft.Json.JsonConvert.SerializeObject(args);
-                    data["input-data"] = argsJson;
+                    foreach (var arg in args)
+                    {
+                        if (arg == null)
+                            throw new ArgumentException("Args elements must not be null.", nameof(args));
+                        data.Add(new KeyValuePair<string, string>("command", arg));
+                    }
                 }
 
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/agent/exec", data)

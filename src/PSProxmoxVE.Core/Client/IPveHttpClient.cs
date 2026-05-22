@@ -16,6 +16,13 @@ namespace PSProxmoxVE.Core.Client
         /// <summary>Performs a POST request against the specified API resource path.</summary>
         Task<string> PostAsync(string resource, Dictionary<string, string>? data = null);
 
+        /// <summary>
+        /// Performs a POST request whose form body may contain repeated keys, used for
+        /// PVE array parameters (e.g. guest-exec "command"). Each pair becomes one
+        /// <c>key=value</c> field, so a key may appear multiple times.
+        /// </summary>
+        Task<string> PostAsync(string resource, IEnumerable<KeyValuePair<string, string>> data);
+
         /// <summary>Performs a PUT request against the specified API resource path.</summary>
         Task<string> PutAsync(string resource, Dictionary<string, string>? data = null);
 
@@ -25,7 +32,7 @@ namespace PSProxmoxVE.Core.Client
         /// <summary>Synchronous wrapper for <see cref="GetAsync"/>.</summary>
         string Get(string resource);
 
-        /// <summary>Synchronous wrapper for <see cref="PostAsync"/>.</summary>
+        /// <summary>Synchronous wrapper for <see cref="PostAsync(string, Dictionary{string, string})"/>.</summary>
         string Post(string resource, Dictionary<string, string>? data = null);
 
         /// <summary>Synchronous wrapper for <see cref="PutAsync"/>.</summary>

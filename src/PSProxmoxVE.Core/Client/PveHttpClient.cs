@@ -111,6 +111,21 @@ namespace PSProxmoxVE.Core.Client
             return await SendAsync(request, resource, "POST").ConfigureAwait(false);
         }
 
+        /// <summary>
+        /// POST whose form body may contain repeated keys, for PVE array parameters
+        /// (e.g. guest-exec "command"). Each pair becomes one key=value field.
+        /// </summary>
+        /// <param name="resource">Relative resource path</param>
+        /// <param name="data">Form fields; a key may appear more than once</param>
+        /// <returns>Raw JSON response body</returns>
+        public async Task<string> PostAsync(string resource, IEnumerable<KeyValuePair<string, string>> data)
+        {
+            if (data == null) throw new ArgumentNullException(nameof(data));
+            var request = BuildRequest(HttpMethod.Post, resource, mutating: true);
+            request.Content = BuildFormContent(data);
+            return await SendAsync(request, resource, "POST").ConfigureAwait(false);
+        }
+
         /// <summary>Performs a PUT request against the specified API resource path.</summary>
         /// <param name="resource">Relative resource path</param>
         /// <param name="data">Form fields to send as application/x-www-form-urlencoded body</param>
@@ -142,7 +157,7 @@ namespace PSProxmoxVE.Core.Client
         /// <c>:</c> and <c>!</c> which PVE's internal API consumers (e.g. cluster join)
         /// do not properly URL-decode.
         /// </summary>
-        private static StringContent BuildFormContent(Dictionary<string, string> data)
+        private static StringContent BuildFormContent(IEnumerable<KeyValuePair<string, string>> data)
         {
             var sb = new StringBuilder();
             foreach (var kvp in data)
@@ -191,7 +206,7 @@ namespace PSProxmoxVE.Core.Client
         public string Get(string resource) =>
             GetAsync(resource).GetAwaiter().GetResult();
 
-        /// <summary>Synchronous wrapper for <see cref="PostAsync"/>.</summary>
+        /// <summary>Synchronous wrapper for <see cref="PostAsync(string, Dictionary{string, string})"/>.</summary>
         public string Post(string resource, Dictionary<string, string>? data = null) =>
             PostAsync(resource, data).GetAwaiter().GetResult();
 

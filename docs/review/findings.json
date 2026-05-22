@@ -1,15 +1,15 @@
 {
   "_schema_version": "1.0",
   "_description": "PSProxmoxVE stable findings ledger. IDs are permanent (F001, F002...). Resolved findings are never deleted — they are marked resolved with evidence. If a finding reappears, it is marked regressed and retains its original ID.",
-  "last_updated": "2026-03-26",
+  "last_updated": "2026-05-22",
   "last_scan_date": "2026-03-26",
   "counters": {
-    "next_id": 86,
+    "next_id": 92,
     "total_open": 7,
-    "total_resolved": 77,
+    "total_resolved": 83,
     "total_regressed": 0,
     "open": 7,
-    "resolved": 77,
+    "resolved": 83,
     "regressed": 0,
     "wont_fix": 1
   },
@@ -2970,6 +2970,38 @@
         "scan_date": "2026-05-22",
         "evidence": "Added typed scsihw/efidisk0/tpmstate0 properties plus a private [JsonExtensionData] landing field exposed as AdditionalProperties (Dictionary<string, object?> via JsonHelper.ToNative, so values are native .NET types per D013 — no JToken leakage). Typed keys do not duplicate into the catch-all.",
         "verified_by": "dotnet build + dotnet test (586 passed, new VmModelTests for scsihw/efidisk/tpm, native-typed AdditionalProperties, and no typed-key leakage)"
+      }
+    },
+    {
+      "id": "F091",
+      "title": "Invoke-PveVmGuestExec -Args delivered as JSON STDIN instead of argv",
+      "category": "api_contract",
+      "severity": "high",
+      "status": "resolved",
+      "first_detected": "2026-05-22",
+      "github_issue": 68,
+      "files": [
+        "src/PSProxmoxVE.Core/Services/VmService.cs",
+        "src/PSProxmoxVE.Core/Client/PveHttpClient.cs",
+        "src/PSProxmoxVE.Core/Client/IPveHttpClient.cs"
+      ],
+      "description": "VmService.ExecuteGuestCommand JSON-serialized the args array into the agent/exec 'input-data' field (the process's STDIN) instead of passing them as argv. PVE's agent/exec 'command' parameter is itself an array (element 0 = executable, rest = arguments) and must be sent as repeated form keys. The result: guest commands ran with no/garbage arguments (cmd.exe started interactively, the JSON blob appeared at the prompt). The low-level client also could not express repeated form keys (Dictionary<string,string> only).",
+      "scan_history": [
+        {
+          "scan_date": "2026-05-22",
+          "local_id": null,
+          "status": "new"
+        },
+        {
+          "scan_date": "2026-05-22",
+          "local_id": null,
+          "status": "fixed"
+        }
+      ],
+      "resolution": {
+        "scan_date": "2026-05-22",
+        "evidence": "Added PostAsync(string, IEnumerable<KeyValuePair<string,string>>) to IPveHttpClient/PveHttpClient (BuildFormContent now emits repeated keys). ExecuteGuestCommand builds command = [exe] + args as repeated 'command' fields and no longer touches input-data.",
+        "verified_by": "dotnet build (0 warnings) + dotnet test (594 passed; new PveHttpClientFormEncodingTests for repeated keys + per-value encoding, and VmServiceTests asserting the command array and absence of input-data)"
       }
     }
   ]

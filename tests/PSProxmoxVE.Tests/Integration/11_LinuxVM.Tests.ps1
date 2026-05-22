@@ -157,6 +157,18 @@ Describe 'Linux VM — Integration' -Tag 'Integration' {
             $result.ExitCode | Should -Be 0
             $result.Stdout | Should -Not -BeNullOrEmpty
         }
+
+        It 'Should pass -Args to the guest as argv (Invoke-PveVmGuestExec)' {
+            if (Skip-IfNoLinuxVm) { return }
+
+            # Regression guard for #68: args must reach the process as argv, not STDIN.
+            # With the old bug, echo got no arguments and stdout was empty.
+            $marker = 'PSPROXMOXVE_ARG_TEST'
+            $result = Invoke-PveVmGuestExec -Node $script:Node -VmId $script:LinuxVmId `
+                -Command 'echo' -Args @($marker)
+            $result.ExitCode | Should -Be 0
+            $result.Stdout.Trim() | Should -Be $marker
+        }
     }
 
     Context 'Guest Agent VM — Lifecycle' {
