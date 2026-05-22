@@ -79,6 +79,46 @@ namespace PSProxmoxVE.Core.Tests.Client
             Assert.Contains("ide2=nas:iso/win.iso,media%3Dcdrom", handler.LastBody);
         }
 
+        [Fact]
+        public async Task PostAsync_RepeatedKeys_EmitOneFieldPerValue()
+        {
+            var (client, handler) = NewCapturingClient();
+            using (client)
+            {
+                // PVE array params (e.g. guest-exec command) are sent as repeated keys.
+                var data = new List<KeyValuePair<string, string>>
+                {
+                    new KeyValuePair<string, string>("command", "cmd.exe"),
+                    new KeyValuePair<string, string>("command", "/c"),
+                    new KeyValuePair<string, string>("command", "echo"),
+                    new KeyValuePair<string, string>("command", "WLMARK42"),
+                };
+                await client.PostAsync("nodes/pve/qemu/100/agent/exec", data);
+            }
+
+            Assert.Equal("command=cmd.exe&command=/c&command=echo&command=WLMARK42", handler.LastBody);
+        }
+
+        [Fact]
+        public async Task PostAsync_RepeatedKeys_EncodeEachValueIndependently()
+        {
+            var (client, handler) = NewCapturingClient();
+            using (client)
+            {
+                var data = new List<KeyValuePair<string, string>>
+                {
+                    new KeyValuePair<string, string>("command", "powershell.exe"),
+                    new KeyValuePair<string, string>("command", "-Command"),
+                    new KeyValuePair<string, string>("command", "echo a=b;c"),
+                };
+                await client.PostAsync("nodes/pve/qemu/100/agent/exec", data);
+            }
+
+            // The '=' and ';' inside an arg must be encoded so they don't split the body,
+            // while spaces follow the form convention ('+').
+            Assert.Equal("command=powershell.exe&command=-Command&command=echo+a%3Db%3Bc", handler.LastBody);
+        }
+
         private sealed class CapturingHandler : HttpMessageHandler
         {
             public string LastBody { get; private set; } = string.Empty;
