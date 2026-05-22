@@ -242,9 +242,10 @@ namespace PSProxmoxVE.Cmdlets.Vms
             if (!string.IsNullOrEmpty(DiskStorage) && diskSizeGib != null)
                 config[$"{diskBus}0"] = BuildDiskSpec(DiskStorage!, diskSizeGib);
             else if (HasDiskOptions())
-                WriteWarning("Disk IO options (-DiskBus/-DiskIoThread/-DiskAio/-DiskSsd/-DiskDiscard/-DiskCache) "
-                    + "were specified but no disk is being created (-DiskStorage and -DiskSize are both required). "
-                    + "The options were ignored.");
+                WriteWarning("Disk options were specified but no disk is being created "
+                    + "(-DiskStorage and -DiskSize are both required). The per-disk options "
+                    + "(-DiskBus/-DiskIoThread/-DiskAio/-DiskSsd/-DiskDiscard/-DiskCache) were ignored; "
+                    + "-ScsiHardware, if specified, is still applied as the VM-level scsihw setting.");
 
             if (!string.IsNullOrEmpty(Bridge))
             {
