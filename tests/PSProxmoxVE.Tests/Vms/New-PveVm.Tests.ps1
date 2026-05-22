@@ -222,6 +222,11 @@ Describe 'New-PveVm' {
                 Should -Throw '*virtio-scsi-single*'
         }
 
+        It 'Should reject -DiskIoThread on scsi with a wrong -ScsiHardware (virtio-scsi-pci)' {
+            { New-PveVm -Node 'pve-node1' -DiskStorage 'local-lvm' -DiskSize '32' -DiskBus scsi -ScsiHardware 'virtio-scsi-pci' -DiskIoThread -WhatIf -ErrorAction Stop } |
+                Should -Throw '*virtio-scsi-single*'
+        }
+
         It 'Should accept -DiskIoThread on scsi with -ScsiHardware virtio-scsi-single' {
             { New-PveVm -Node 'pve-node1' -DiskStorage 'local-lvm' -DiskSize '32' -DiskBus scsi -ScsiHardware 'virtio-scsi-single' -DiskIoThread -WhatIf -ErrorAction Stop } |
                 Should -Not -Throw

@@ -268,6 +268,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
 
         private bool HasDiskOptions() =>
             !string.IsNullOrEmpty(DiskBus)
+            || !string.IsNullOrEmpty(ScsiHardware)
             || DiskIoThread.IsPresent
             || !string.IsNullOrEmpty(DiskAio)
             || DiskSsd.IsPresent

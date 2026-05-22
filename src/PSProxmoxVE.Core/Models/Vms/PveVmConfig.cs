@@ -322,6 +322,8 @@ public class PveVmConfig
     [JsonExtensionData]
     private IDictionary<string, JToken>? ExtensionData { get; set; }
 
+    private Dictionary<string, object?>? _additionalProperties;
+
     /// <summary>
     /// Any VM config keys not surfaced as a typed property above (e.g. hostpci0,
     /// usb0, numa0, additional disk buses). Keys map to native .NET values so the
@@ -329,7 +331,10 @@ public class PveVmConfig
     /// </summary>
     [JsonIgnore]
     public Dictionary<string, object?> AdditionalProperties =>
-        ExtensionData == null
+        // Built once from the deserialized extension data (the model is effectively
+        // immutable after deserialization), avoiding a fresh allocation per access
+        // when iterating many configs in a pipeline.
+        _additionalProperties ??= ExtensionData == null
             ? new Dictionary<string, object?>()
             : ExtensionData.ToDictionary(kvp => kvp.Key, kvp => JsonHelper.ToNative(kvp.Value));
 
