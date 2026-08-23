@@ -42,6 +42,7 @@ resource "proxmox_virtual_environment_vm" "nested_pve" {
   name      = each.value.vm_name
   node_name = var.target_node
   vm_id     = each.value.vm_id
+  pool_id   = var.pool_id
 
   machine    = "q35"
   bios       = "ovmf"

@@ -75,8 +75,8 @@ pve_iso() {
 
 pve_vmid() {
     case "$1" in
-        9a) echo "${PVE9A_VMID:-99091}" ;; 9b) echo "${PVE9B_VMID:-99092}" ;;
-        8a) echo "${PVE8A_VMID:-99081}" ;; 8b) echo "${PVE8B_VMID:-99082}" ;;
+        9a) echo "${PVE9A_VMID:-5091}" ;; 9b) echo "${PVE9B_VMID:-5092}" ;;
+        8a) echo "${PVE8A_VMID:-5081}" ;; 8b) echo "${PVE8B_VMID:-5082}" ;;
         *) echo "ERROR: unknown node '$1'" >&2; exit 1 ;;
     esac
 }
