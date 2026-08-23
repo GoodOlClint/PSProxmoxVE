@@ -137,6 +137,7 @@ jobs:
           TF_VAR_disk_storage: ${{ vars.DISK_STORAGE }}
           TF_VAR_iso_storage: ${{ vars.ISO_STORAGE }}
           TF_VAR_network_bridge: ${{ vars.NETWORK_BRIDGE }}
+          TF_VAR_pool_id: ${{ vars.POOL_ID }}
         run: bash ${SCRIPTS_DIR}/run-integration.sh provision
 
   # ── Integration tests (self-hosted, per PVE version) ────────────────
@@ -215,6 +216,7 @@ jobs:
           TF_VAR_disk_storage: ${{ vars.DISK_STORAGE }}
           TF_VAR_iso_storage: ${{ vars.ISO_STORAGE }}
           TF_VAR_network_bridge: ${{ vars.NETWORK_BRIDGE }}
+          TF_VAR_pool_id: ${{ vars.POOL_ID }}
         # Always use force-cleanup in CI — handles corrupted state from
         # cancelled runs, timeouts, or partial provisioning failures.
         run: bash ${SCRIPTS_DIR}/run-integration.sh force-cleanup

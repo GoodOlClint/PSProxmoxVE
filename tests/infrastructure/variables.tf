@@ -100,3 +100,9 @@ variable "answer_server_dir" {
   type        = string
 }
 
+
+variable "pool_id" {
+  description = "Resource pool the nested VMs are created in (a pool-scoped API token can only allocate here)"
+  type        = string
+  default     = null
+}
