@@ -109,7 +109,7 @@ jobs:
   provision:
     if: inputs.skip_provision != true
     needs: [build, container-image]
-    runs-on: [self-hosted, proxmox, integration]
+    runs-on: psproxmoxve
     timeout-minutes: 45
     container:
       image: ghcr.io/goodolclint/psproxmoxve-integration:${{ github.sha }}
@@ -143,7 +143,7 @@ jobs:
   # ── Integration tests (self-hosted, per PVE version) ────────────────
   test:
     needs: [build, provision]
-    runs-on: [self-hosted, proxmox, integration]
+    runs-on: psproxmoxve
     timeout-minutes: 20
     container:
       image: ghcr.io/goodolclint/psproxmoxve-integration:${{ github.sha }}
@@ -188,7 +188,7 @@ jobs:
   cleanup:
     needs: [provision, test]
     if: always() && needs.provision.result != 'skipped' && github.actor != 'dependabot[bot]'
-    runs-on: [self-hosted, proxmox, integration]
+    runs-on: psproxmoxve
     timeout-minutes: 15
     container:
       image: ghcr.io/goodolclint/psproxmoxve-integration:${{ github.sha }}
