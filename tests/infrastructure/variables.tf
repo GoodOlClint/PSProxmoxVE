@@ -61,7 +61,7 @@ variable "disk_storage" {
 }
 
 variable "iso_storage" {
-  description = "Proxmox storage pool for uploading the ISO (must accept ISO content type)"
+  description = "Proxmox storage pool for uploads (must accept the iso AND import content types — import is not enabled by default on most storages)"
   type        = string
   default     = "local"
 }
@@ -78,28 +78,40 @@ variable "test_vm_password" {
   sensitive   = true
 }
 
-variable "storage_iscsi_iqn" {
-  description = "iSCSI target IQN for the test storage"
-  type        = string
-  default     = "iqn.2024-01.local.test:storage"
+variable "storage_vmid" {
+  description = "VMID for the shared storage VM (must be inside the CI pool's reserved range)"
+  type        = number
+  default     = 5080
 }
 
-variable "storage_iscsi_lun_size" {
-  description = "Size of the iSCSI LUN backing file"
+variable "storage_vm_ip" {
+  description = "Static IPv4 address in CIDR form for the storage VM, outside the VLAN's DHCP range"
   type        = string
-  default     = "10G"
+  default     = "172.16.60.60/24"
+
+  validation {
+    condition     = can(cidrnetmask(var.storage_vm_ip))
+    error_message = "storage_vm_ip must be CIDR notation, e.g. 172.16.60.60/24."
+  }
 }
 
-variable "docker_host_ip" {
-  description = "IP of the Docker host, used by PVE nodes to reach storage containers"
+variable "storage_vm_ssh_public_key" {
+  description = "SSH public key granted to the storage VM's ubuntu user (cloud images refuse password SSH; required for provision, unused on destroy)"
   type        = string
+  default     = ""
 }
 
-variable "answer_server_dir" {
-  description = "Host path to the answer server root directory (contains default.toml and answers/ subdirectory)"
+variable "storage_vm_gateway" {
+  description = "Gateway (and DNS server) for the storage VM"
   type        = string
+  default     = "172.16.60.1"
 }
 
+variable "cloud_image_path" {
+  description = "Local path to the Ubuntu cloud image imported as the storage VM's disk (required for provision; unused on destroy)"
+  type        = string
+  default     = ""
+}
 
 variable "pool_id" {
   description = "Resource pool the nested VMs are created in (a pool-scoped API token can only allocate here)"

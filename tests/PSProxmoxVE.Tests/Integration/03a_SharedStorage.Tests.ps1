@@ -4,7 +4,7 @@
     Pester 5 integration tests for shared storage backends (NFS, iSCSI).
 
     These tests require the multi-node integration test infrastructure with
-    Docker-based storage services (iSCSI target + NFS server). They are
+    the shared storage VM (iSCSI target + NFS server on the CI VLAN). They are
     SKIPPED when the storage env vars are not set.
 
     Required environment variables (in addition to base integration vars):
