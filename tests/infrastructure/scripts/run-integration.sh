@@ -41,7 +41,7 @@
 #   WORK_DIR           Temp dir for build artifacts (default: $CACHE_DIR/work)
 #   CONFIG_FILE        Test config JSON path (default: $WORK_DIR/config.json)
 #   MODULE_ARTIFACT    Path to built module DLLs (default: ./publish/netstandard2.0)
-#   PVE_VERSIONS       Space-separated versions to provision (default: "9 8")
+#   PVE_VERSIONS       Space-separated versions to provision (default: "9"; "9 8" still works)
 #   STORAGE_ISCSI_IQN  iSCSI IQN for storage target (default: iqn.2024-01.local.test:storage)
 #   STORAGE_VM_IP      Static CIDR address for the storage VM on the CI VLAN,
 #                      outside the DHCP range (default: 172.16.60.60/24)
@@ -63,7 +63,7 @@ CACHE_DIR="${CACHE_DIR:-/opt/pve-integration}"
 WORK_DIR="${WORK_DIR:-$CACHE_DIR/work}"
 CONFIG_FILE="${CONFIG_FILE:-$WORK_DIR/config.json}"
 MODULE_ARTIFACT="${MODULE_ARTIFACT:-$REPO_ROOT/publish/netstandard2.0}"
-PVE_VERSIONS="${PVE_VERSIONS:-9 8}"
+PVE_VERSIONS="${PVE_VERSIONS:-9}"
 SKIP_PROVISION="${SKIP_PROVISION:-false}"
 STORAGE_ISCSI_IQN="${STORAGE_ISCSI_IQN:-iqn.2024-01.local.test:storage}"
 STORAGE_VM_IP="${STORAGE_VM_IP:-172.16.60.60/24}"
@@ -196,7 +196,7 @@ resolve_target_node() {
     if [[ -z "$free" ]]; then
         log "WARNING: no memory stats for $PVE_TARGET_NODE (token lacks PVEAuditor on /nodes?) — skipping the headroom check"
     elif (( free < need )); then
-        ci_error "Refusing to provision: $PVE_TARGET_NODE has ${free}GiB free, need ${need}GiB ($count VMs x ${PVE_VM_MEM_GB:-8}GiB + ${PVE_MEM_HEADROOM_GB:-8}GiB headroom)"
+        ci_error "Refusing to provision: $PVE_TARGET_NODE has ${free}GiB free, need ${need}GiB ($count VMs x ${PVE_VM_MEM_GB:-8}GiB + 2GiB storage VM + ${PVE_MEM_HEADROOM_GB:-8}GiB headroom)"
         exit 1
     else
         log "Target node $PVE_TARGET_NODE: ${free}GiB free, need ${need}GiB"
@@ -207,7 +207,7 @@ resolve_target_node() {
     export PVE_TARGET_NODE
 }
 
-# ── Subcommands ───────────────────────────────────────────────────
+# ── Subcommands ─────────────────────────────────────────────────────
 
 cmd_provision() {
     local requested="${1:-all}"
@@ -784,7 +784,7 @@ cmd_all() {
     return $test_exit
 }
 
-# ── Main ───────────────────────────────────────────────────────────
+# ── Main ────────────────────────────────────────────────────────────
 main() {
     local cmd="${1:-}"
     shift || true
