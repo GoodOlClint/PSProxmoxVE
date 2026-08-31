@@ -61,6 +61,9 @@ env:
   SCRIPTS_DIR: tests/infrastructure/scripts
   TEST_IMAGE: ghcr.io/goodolclint/psproxmoxve-integration
   CACHE_DIR: /opt/pve-integration
+  # PVE 8 reached EOL 2026-08-31; CI provisions and tests PVE 9 only.
+  # run-integration.sh still accepts "8" for local runs against old targets.
+  PVE_VERSIONS: '9'
 
 jobs:
   # ── Build module artifact (GitHub-hosted) ────────────────────────
@@ -158,9 +161,8 @@ jobs:
         - /opt/pve-integration:/opt/pve-integration
     strategy:
       fail-fast: false
-      max-parallel: 2
       matrix:
-        pve_version: ['9', '8']
+        pve_version: ['9']
 
     steps:
       - uses: actions/checkout@v7
