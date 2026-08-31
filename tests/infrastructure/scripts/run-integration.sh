@@ -22,7 +22,6 @@
 # Required env vars (provision/cleanup):
 #   PVE_ENDPOINT       Parent PVE API URL (e.g. https://pve.example.com:8006)
 #   PVE_API_TOKEN      Parent PVE API token
-#   PVE_TARGET_NODE    Parent PVE node name
 #   PVE_PASSWORD       Root password for nested PVE instances
 #
 # Required env vars (test with pre-existing PVE):
@@ -31,6 +30,12 @@
 #   Set SKIP_PROVISION=true
 #
 # Optional env vars:
+#   PVE_TARGET_NODE    Parent PVE node name; unset or "auto" picks the online
+#                      node with the most free memory (token needs PVEAuditor
+#                      on /nodes for the memory stats)
+#   PVE_VM_MEM_GB      Memory per nested PVE VM in GiB, for the headroom check
+#                      (default: 8, matches the Terraform default)
+#   PVE_MEM_HEADROOM_GB Free memory to leave the parent node (default: 8)
 #   CACHE_DIR          ISO/image cache (default: /opt/pve-integration)
 #   WORK_DIR           Temp dir for build artifacts (default: $CACHE_DIR/work)
 #   CONFIG_FILE        Test config JSON path (default: $WORK_DIR/config.json)
@@ -131,6 +136,56 @@ require_env() {
     fi
 }
 
+# ── Target node selection ───────────────────────────────────────────
+# The chosen node is persisted to the shared mount: cleanup runs in a later
+# job with its own environment and must aim at the node provision picked.
+TARGET_NODE_FILE="$WORK_DIR/target-node"
+
+# "node freeGiB" per online node; nodes without memory stats (token lacks
+# Sys.Audit on /nodes) are omitted.
+pve_free_nodes() {
+    curl -ksf -H "Authorization: PVEAPIToken=$PVE_API_TOKEN" \
+        "$PVE_ENDPOINT/api2/json/cluster/resources?type=node" |
+        jq -r '.data[]
+            | select(.status == "online" and .maxmem != null)
+            | "\(.node) \((.maxmem - .mem) / 1073741824 | floor)"'
+}
+
+# resolve_target_node <node-count>: sets PVE_TARGET_NODE (auto mode picks the
+# online node with the most free memory) and refuses to provision onto a node
+# without enough headroom — a polite CI failure beats OOM-killing a guest on
+# the parent hypervisor.
+resolve_target_node() {
+    local count="$1"
+    local need=$(( count * ${PVE_VM_MEM_GB:-8} + ${PVE_MEM_HEADROOM_GB:-8} ))
+    local nodes
+    nodes="$(pve_free_nodes || true)"
+
+    if [[ -z "${PVE_TARGET_NODE:-}" || "$PVE_TARGET_NODE" == "auto" ]]; then
+        if [[ -z "$nodes" ]]; then
+            ci_error "Node auto-selection needs memory stats from /cluster/resources — grant the token's user PVEAuditor on /nodes, or pin PVE_TARGET_NODE"
+            exit 1
+        fi
+        PVE_TARGET_NODE="$(sort -k2 -rn <<<"$nodes" | head -1 | cut -d' ' -f1)"
+        log "Auto-selected target node: $PVE_TARGET_NODE"
+    fi
+
+    local free
+    free="$(awk -v n="$PVE_TARGET_NODE" '$1 == n {print $2}' <<<"$nodes")"
+    if [[ -z "$free" ]]; then
+        log "WARNING: no memory stats for $PVE_TARGET_NODE (token lacks PVEAuditor on /nodes?) — skipping the headroom check"
+    elif (( free < need )); then
+        ci_error "Refusing to provision: $PVE_TARGET_NODE has ${free}GiB free, need ${need}GiB ($count VMs x ${PVE_VM_MEM_GB:-8}GiB + ${PVE_MEM_HEADROOM_GB:-8}GiB headroom)"
+        exit 1
+    else
+        log "Target node $PVE_TARGET_NODE: ${free}GiB free, need ${need}GiB"
+    fi
+
+    mkdir -p "$WORK_DIR"
+    printf '%s' "$PVE_TARGET_NODE" > "$TARGET_NODE_FILE"
+    export PVE_TARGET_NODE
+}
+
 # ── Subcommands ─────────────────────────────────────────────────────
 
 cmd_provision() {
@@ -151,8 +206,8 @@ cmd_provision() {
     log "  Storage: Docker containers (iSCSI + NFS)"
     require_env PVE_ENDPOINT
     require_env PVE_API_TOKEN
-    require_env PVE_TARGET_NODE
     require_env PVE_PASSWORD
+    resolve_target_node "$(wc -w <<<"$provision_nodes")"
 
     ci_mask "$PVE_PASSWORD"
     mkdir -p "$WORK_DIR" "$CACHE_DIR"
@@ -233,8 +288,9 @@ cmd_provision() {
     log "Running Terraform init..."
     (cd "$INFRA_DIR" && terraform init -input=false -reconfigure)
 
-    # Always build tfvars for ALL versions to keep Terraform state consistent.
-    # When provisioning a subset, we use -target to limit the apply.
+    # tfvars must carry every version even on a subset run — a filtered var map
+    # makes terraform destroy the other versions' VMs still in state; subset
+    # applies are limited with -target only.
     log "Building Terraform vars..."
     local tfvars="$WORK_DIR/instances.tfvars.json"
 
@@ -270,9 +326,6 @@ cmd_provision() {
         '{pve_instances: $pve_instances, pve_isos: $pve_isos}' > "$tfvars"
 
     log "Running Terraform apply (PVE nodes)..."
-    # Build -target flags when provisioning a subset of versions.
-    # This prevents Terraform from destroying VMs for other versions
-    # that exist in state but aren't in the filtered tfvars.
     local tf_targets=""
     if [[ "$requested" != "all" ]]; then
         for v in $provision_versions; do
@@ -523,6 +576,9 @@ cmd_cleanup() {
 
     require_env PVE_ENDPOINT
     require_env PVE_API_TOKEN
+    if [[ -z "${PVE_TARGET_NODE:-}" || "$PVE_TARGET_NODE" == "auto" ]]; then
+        PVE_TARGET_NODE="$(cat "$TARGET_NODE_FILE" 2>/dev/null || true)"
+    fi
     require_env PVE_TARGET_NODE
 
     # Discover Docker host IP for the docker_host_ip variable
@@ -591,7 +647,7 @@ cmd_cleanup() {
 
     # Clean up work directory when destroying all
     if [[ "$requested" == "all" ]]; then
-        rm -f "$CONFIG_FILE" "$WORK_DIR"/instances.tfvars.json
+        rm -f "$CONFIG_FILE" "$WORK_DIR"/instances.tfvars.json "$TARGET_NODE_FILE"
     fi
 
     log "Cleanup complete."
@@ -608,6 +664,11 @@ cmd_force_cleanup() {
     fi
 
     log "Force cleanup — bypassing Terraform, using direct API calls..."
+
+    if [[ -z "${PVE_TARGET_NODE:-}" || "$PVE_TARGET_NODE" == "auto" ]]; then
+        PVE_TARGET_NODE="$(cat "$TARGET_NODE_FILE" 2>/dev/null || true)"
+        [[ -n "$PVE_TARGET_NODE" ]] && export PVE_TARGET_NODE
+    fi
 
     # Destroy VMs via the PVE API (works even with broken Terraform state)
     # Track which versions we've already cleaned up ISOs for (generic ISOs are shared)
@@ -644,7 +705,7 @@ cmd_force_cleanup() {
     rm -rf "$INFRA_DIR/.terraform"
 
     # Remove work artifacts
-    rm -f "$CONFIG_FILE" "$WORK_DIR"/instances.tfvars.json
+    rm -f "$CONFIG_FILE" "$WORK_DIR"/instances.tfvars.json "$TARGET_NODE_FILE"
 
     log "Force cleanup complete. Next provision will start from scratch."
 }

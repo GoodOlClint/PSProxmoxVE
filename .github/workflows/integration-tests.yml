@@ -18,8 +18,12 @@ name: Integration Tests
 #   PVE_API_TOKEN      - Parent PVE API token (for Terraform + uploads)
 #   PVE_TEST_PASSWORD  - Root password for nested PVE instances (used for both provision and tests)
 #
-# Required repository variables:
-#   PVE_TARGET_NODE    - Parent PVE node name (variable, not secret, to avoid log masking)
+# Optional repository variables:
+#   PVE_TARGET_NODE    - Parent PVE node name (variable, not secret, to avoid log
+#                        masking). Unset or "auto": provisioning picks the online
+#                        node with the most free memory and refuses to run when
+#                        no node has enough headroom — the token's user needs
+#                        PVEAuditor on /nodes for the memory stats.
 #
 # Optional secrets (for skip_provision mode):
 #   PVETEST_HOST       - Hostname or IP of a pre-existing nested PVE
@@ -56,7 +60,7 @@ env:
   CACHE_DIR: /opt/pve-integration
 
 jobs:
-  # ── Build module artifact (GitHub-hosted) ────────────────────────────
+  # ── Build module artifact (GitHub-hosted) ────────────────────────
   build:
     if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
@@ -184,7 +188,7 @@ jobs:
           name: integration-test-results-pve${{ matrix.pve_version }}
           path: TestResults/
 
-  # ── Cleanup: destroy all VMs (always runs) ──────────────────────────
+  # ── Cleanup: destroy all VMs (always runs) ──────────────────────
   cleanup:
     needs: [provision, test]
     if: always() && needs.provision.result != 'skipped' && github.actor != 'dependabot[bot]'
@@ -221,7 +225,7 @@ jobs:
         # cancelled runs, timeouts, or partial provisioning failures.
         run: bash ${SCRIPTS_DIR}/run-integration.sh force-cleanup
 
-  # ── Clean up old container images from GHCR ──────────────────────────
+  # ── Clean up old container images from GHCR ──────────────────────
   cleanup-images:
     needs: test
     if: always() && github.actor != 'dependabot[bot]'
