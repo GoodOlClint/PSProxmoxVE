@@ -102,9 +102,15 @@ variable "storage_vm_ssh_public_key" {
 }
 
 variable "storage_vm_gateway" {
-  description = "Gateway (and DNS server) for the storage VM"
+  description = "Gateway for the storage VM"
   type        = string
   default     = "172.16.60.1"
+}
+
+variable "storage_vm_dns" {
+  description = "DNS server for the storage VM. The CI VLAN gateway runs no resolver; public DNS works under the ci-to-internet rule and keeps the sandbox independent of fleet DNS"
+  type        = string
+  default     = "1.1.1.1"
 }
 
 variable "cloud_image_path" {

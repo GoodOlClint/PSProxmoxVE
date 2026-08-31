@@ -49,7 +49,7 @@ resource "proxmox_virtual_environment_vm" "storage" {
     }
 
     dns {
-      servers = [var.storage_vm_gateway]
+      servers = [var.storage_vm_dns]
     }
 
     user_account {
