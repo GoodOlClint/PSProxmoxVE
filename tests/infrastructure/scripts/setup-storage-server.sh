@@ -3,12 +3,12 @@
 # iSCSI target, and the HTTP answer server the PVE auto-installers fetch
 # from. Idempotent — safe to re-run against an already-configured VM.
 #
-# Usage: setup-storage-server.sh <storage-vm-ip> <ssh-private-key-path> <iscsi-iqn> <answer-dir>
+# Usage: setup-storage-server.sh <storage-vm-host> <ssh-private-key-path> <iscsi-iqn> <answer-dir>
 #   <answer-dir> is the local directory holding default.toml and answers/.
 
 set -euo pipefail
 
-STORAGE_IP="${1:?Usage: setup-storage-server.sh <ip> <ssh-key> <iqn> <answer-dir>}"
+STORAGE_IP="${1:?Usage: setup-storage-server.sh <host> <ssh-key> <iqn> <answer-dir>}"
 SSH_KEY="${2:?missing SSH private key path}"
 ISCSI_IQN="${3:?missing iSCSI IQN}"
 ANSWER_DIR="${4:?missing answer directory}"

@@ -41,15 +41,12 @@ resource "proxmox_virtual_environment_vm" "storage" {
   initialization {
     datastore_id = var.disk_storage
 
+    # DHCP: pfSense owns addressing/DNS for the CI VLAN; the VM registers its
+    # hostname (= VM name) in the CI DNS zone and is addressed by FQDN.
     ip_config {
       ipv4 {
-        address = var.storage_vm_ip
-        gateway = var.storage_vm_gateway
+        address = "dhcp"
       }
-    }
-
-    dns {
-      servers = [var.storage_vm_dns]
     }
 
     user_account {
@@ -64,6 +61,8 @@ resource "proxmox_virtual_environment_vm" "storage" {
   network_device {
     bridge = var.network_bridge
     model  = "virtio"
+    # Deterministic MAC so the operator can pin a DHCP reservation to it
+    mac_address = "aa:bb:cc:00:60:01"
   }
 
   operating_system {

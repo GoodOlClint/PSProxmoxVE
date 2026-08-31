@@ -24,9 +24,10 @@ name: Integration Tests
 #                        node with the most free memory and refuses to run when
 #                        no node has enough headroom — the token's user needs
 #                        PVEAuditor on /nodes for the memory stats.
-#   STORAGE_VM_IP      - Static CIDR address for the shared storage/answer-server
-#                        VM on the CI VLAN (default: 172.16.60.60/24)
-#   STORAGE_VM_GATEWAY - Gateway + DNS for that VM (default: 172.16.60.1)
+#   STORAGE_VM_FQDN    - DNS name of the shared storage/answer-server VM; it
+#                        boots via DHCP as hostname pvetest-storage and must
+#                        resolve from the runner and the CI VLAN
+#                        (default: pvetest-storage.test.local)
 #
 # Optional secrets (for skip_provision mode):
 #   PVETEST_HOST       - Hostname or IP of a pre-existing nested PVE
@@ -139,8 +140,7 @@ jobs:
           PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
           PVE_TARGET_NODE: ${{ vars.PVE_TARGET_NODE }}
           PVE_PASSWORD: ${{ secrets.PVE_TEST_PASSWORD }}
-          STORAGE_VM_IP: ${{ vars.STORAGE_VM_IP }}
-          STORAGE_VM_GATEWAY: ${{ vars.STORAGE_VM_GATEWAY }}
+          STORAGE_VM_FQDN: ${{ vars.STORAGE_VM_FQDN }}
           TF_VAR_disk_storage: ${{ vars.DISK_STORAGE }}
           TF_VAR_iso_storage: ${{ vars.ISO_STORAGE }}
           TF_VAR_network_bridge: ${{ vars.NETWORK_BRIDGE }}
@@ -214,8 +214,7 @@ jobs:
           PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
           PVE_TARGET_NODE: ${{ vars.PVE_TARGET_NODE }}
           PVE_PASSWORD: ${{ secrets.PVE_TEST_PASSWORD }}
-          STORAGE_VM_IP: ${{ vars.STORAGE_VM_IP }}
-          STORAGE_VM_GATEWAY: ${{ vars.STORAGE_VM_GATEWAY }}
+          STORAGE_VM_FQDN: ${{ vars.STORAGE_VM_FQDN }}
           TF_VAR_disk_storage: ${{ vars.DISK_STORAGE }}
           TF_VAR_iso_storage: ${{ vars.ISO_STORAGE }}
           TF_VAR_network_bridge: ${{ vars.NETWORK_BRIDGE }}

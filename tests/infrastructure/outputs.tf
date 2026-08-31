@@ -7,8 +7,3 @@ output "pve_test_node_name" {
   value       = "pve"
   description = "Default node name inside a fresh PVE install"
 }
-
-output "storage_vm_ip" {
-  description = "Static address of the shared NFS/iSCSI storage VM"
-  value       = var.storage_vm_ip
-}
