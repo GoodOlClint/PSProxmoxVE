@@ -43,9 +43,9 @@
 #   MODULE_ARTIFACT    Path to built module DLLs (default: ./publish/netstandard2.0)
 #   PVE_VERSIONS       Space-separated versions to provision (default: "9"; "9 8" still works)
 #   STORAGE_ISCSI_IQN  iSCSI IQN for storage target (default: iqn.2024-01.local.test:storage)
-#   STORAGE_VM_IP      Static CIDR address for the storage VM on the CI VLAN,
-#                      outside the DHCP range (default: 172.16.60.60/24)
-#   STORAGE_VM_GATEWAY Gateway + DNS for the storage VM (default: 172.16.60.1)
+#   STORAGE_VM_FQDN    DNS name of the storage VM; it boots via DHCP with
+#                      hostname pvetest-storage and must be resolvable from
+#                      the runner and the CI VLAN (default: pvetest-storage.test.local)
 #   STORAGE_VMID       VMID for the storage VM (default: 5080)
 
 set -euo pipefail
@@ -66,10 +66,8 @@ MODULE_ARTIFACT="${MODULE_ARTIFACT:-$REPO_ROOT/publish/netstandard2.0}"
 PVE_VERSIONS="${PVE_VERSIONS:-9}"
 SKIP_PROVISION="${SKIP_PROVISION:-false}"
 STORAGE_ISCSI_IQN="${STORAGE_ISCSI_IQN:-iqn.2024-01.local.test:storage}"
-STORAGE_VM_IP="${STORAGE_VM_IP:-172.16.60.60/24}"
-STORAGE_VM_GATEWAY="${STORAGE_VM_GATEWAY:-172.16.60.1}"
+STORAGE_VM_FQDN="${STORAGE_VM_FQDN:-pvetest-storage.test.local}"
 STORAGE_VMID="${STORAGE_VMID:-5080}"
-STORAGE_VM_HOST="${STORAGE_VM_IP%%/*}"
 # Keypair for SSH to the storage VM (cloud images refuse password SSH)
 STORAGE_VM_SSH_KEY="${STORAGE_VM_SSH_KEY:-$WORK_DIR/storage-vm-key}"
 # Must match CLOUD_IMAGE_FILENAME in ensure-cloud-images.sh
@@ -95,7 +93,7 @@ pve_iso() {
 pve_auto_iso() {
     local base
     base="$(pve_iso "$1")"
-    echo "${base%.iso}-auto-${STORAGE_VM_HOST//./-}.iso"
+    echo "${base%.iso}-auto-${STORAGE_VM_FQDN//./-}.iso"
 }
 
 pve_vmid() {
@@ -224,7 +222,7 @@ cmd_provision() {
     log "Starting provisioning..."
     log "  Versions: $provision_versions"
     log "  Nodes:$provision_nodes"
-    log "  Storage: dedicated VM at $STORAGE_VM_HOST (NFS + iSCSI + answer server)"
+    log "  Storage: dedicated VM at $STORAGE_VM_FQDN (NFS + iSCSI + answer server)"
     require_env PVE_ENDPOINT
     require_env PVE_API_TOKEN
     require_env PVE_PASSWORD
@@ -280,7 +278,7 @@ cmd_provision() {
             log "Preparing HTTP auto-install ISO for PVE $v..."
             proxmox-auto-install-assistant prepare-iso \
                 --fetch-from http \
-                --url "http://${STORAGE_VM_HOST}:8000/answer" \
+                --url "http://${STORAGE_VM_FQDN}:8000/answer" \
                 --on-first-boot "$SCRIPT_DIR/first-boot.sh" \
                 --tmp "$WORK_DIR" \
                 --output "$generic_iso" \
@@ -348,8 +346,6 @@ cmd_provision() {
             TF_VAR_target_node="$PVE_TARGET_NODE" \
             TF_VAR_test_vm_password="$PVE_PASSWORD" \
             TF_VAR_cloud_image_path="$CLOUD_IMAGE_PATH" \
-            TF_VAR_storage_vm_ip="$STORAGE_VM_IP" \
-            TF_VAR_storage_vm_gateway="$STORAGE_VM_GATEWAY" \
             TF_VAR_storage_vmid="$STORAGE_VMID" \
             TF_VAR_storage_vm_ssh_public_key="$(cat "${STORAGE_VM_SSH_KEY}.pub")" \
             terraform apply -auto-approve -input=false -state="$TF_STATE_FILE" -var-file="$tfvars" "$@")
@@ -360,9 +356,9 @@ cmd_provision() {
         -target=proxmox_virtual_environment_file.storage_cloud_image \
         -target=proxmox_virtual_environment_vm.storage
 
-    log "Configuring storage VM at $STORAGE_VM_HOST..."
+    log "Configuring storage VM at $STORAGE_VM_FQDN..."
     bash "$SCRIPT_DIR/setup-storage-server.sh" \
-        "$STORAGE_VM_HOST" "$STORAGE_VM_SSH_KEY" "$STORAGE_ISCSI_IQN" "$WORK_DIR/answer-server"
+        "$STORAGE_VM_FQDN" "$STORAGE_VM_SSH_KEY" "$STORAGE_ISCSI_IQN" "$WORK_DIR/answer-server"
 
     log "Running Terraform apply (PVE nodes)..."
     local tf_targets=""
@@ -424,7 +420,7 @@ cmd_provision() {
     config=$(jq \
         --arg cloud_image "${CLOUD_IMAGE_PATH:-}" \
         --arg ova "${OVA_PATH:-}" \
-        --arg storage_ip "$STORAGE_VM_HOST" \
+        --arg storage_ip "$STORAGE_VM_FQDN" \
         --arg storage_iqn "$STORAGE_ISCSI_IQN" \
         '. + {
             storage: {ip: $storage_ip, iscsi_iqn: $storage_iqn, nfs_export: ($storage_ip + ":/srv/nfs/shared")},
@@ -661,8 +657,6 @@ cmd_cleanup() {
         TF_VAR_proxmox_api_token="$PVE_API_TOKEN" \
         TF_VAR_target_node="$PVE_TARGET_NODE" \
         TF_VAR_test_vm_password="${PVE_PASSWORD:-placeholder}" \
-        TF_VAR_storage_vm_ip="$STORAGE_VM_IP" \
-        TF_VAR_storage_vm_gateway="$STORAGE_VM_GATEWAY" \
         TF_VAR_storage_vmid="$STORAGE_VMID" \
         terraform destroy -auto-approve -input=false -state="$TF_STATE_FILE" -var-file="$tfvars" $tf_targets)
 

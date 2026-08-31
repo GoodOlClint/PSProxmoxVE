@@ -84,27 +84,10 @@ variable "storage_vmid" {
   default     = 5080
 }
 
-variable "storage_vm_ip" {
-  description = "Static IPv4 address in CIDR form for the storage VM, outside the VLAN's DHCP range"
-  type        = string
-  default     = "172.16.60.60/24"
-
-  validation {
-    condition     = can(cidrnetmask(var.storage_vm_ip))
-    error_message = "storage_vm_ip must be CIDR notation, e.g. 172.16.60.60/24."
-  }
-}
-
 variable "storage_vm_ssh_public_key" {
   description = "SSH public key granted to the storage VM's ubuntu user (cloud images refuse password SSH; required for provision, unused on destroy)"
   type        = string
   default     = ""
-}
-
-variable "storage_vm_gateway" {
-  description = "Gateway (and DNS server) for the storage VM"
-  type        = string
-  default     = "172.16.60.1"
 }
 
 variable "cloud_image_path" {
