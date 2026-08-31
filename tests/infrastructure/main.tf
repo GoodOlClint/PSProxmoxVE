@@ -3,11 +3,8 @@ terraform {
   required_providers {
     proxmox = {
       source  = "bpg/proxmox"
-      version = ">= 0.70.0"
-    }
-    docker = {
-      source  = "kreuzwerker/docker"
-      version = ">= 3.0.0"
+      # disk.import_from and content_type "import" need >= 0.79.0
+      version = ">= 0.79.0"
     }
   }
 }
@@ -16,11 +13,6 @@ provider "proxmox" {
   endpoint  = var.proxmox_endpoint
   api_token = var.proxmox_api_token
   insecure  = var.proxmox_insecure
-}
-
-provider "docker" {
-  # Uses the Docker socket from the dev-infra container
-  # (mounted at /var/run/docker.sock)
 }
 
 resource "proxmox_virtual_environment_file" "auto_iso" {
@@ -91,9 +83,10 @@ resource "proxmox_virtual_environment_vm" "nested_pve" {
 
   started = true
 
-  # VMs must not boot until the HTTP answer server is running,
-  # otherwise the PVE auto-installer can't fetch its answer file.
-  depends_on = [docker_container.answer_server]
+  # VMs must not boot until the storage VM exists — it serves the HTTP answer
+  # files the PVE auto-installer fetches. run-integration.sh additionally
+  # configures the storage VM (phase one) before applying these resources.
+  depends_on = [proxmox_virtual_environment_vm.storage]
 
   lifecycle {
     ignore_changes = [started, cdrom]

@@ -163,7 +163,9 @@ Note that AMD nested virtualization can be less stable than Intel in some config
 | `main.tf` | Provider config, VM resource, provisioners |
 | `variables.tf` | Input variable definitions with defaults |
 | `outputs.tf` | Test connection details for integration tests |
+| `storage-vm.tf` | Shared NFS/iSCSI/answer-server VM on the CI VLAN |
 | `answer.toml.tftpl` | Unattended PVE installer answer file template |
+| `scripts/setup-storage-server.sh` | Configures services on the storage VM over SSH |
 | `scripts/wait-for-api.sh` | Polls PVE API until responsive |
 | `terraform.tfvars.example` | Example variable values |
 | `.gitignore` | Excludes state, provider cache, secrets |
