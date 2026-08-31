@@ -4,11 +4,12 @@
 # Single source of truth for the provision → test → cleanup lifecycle.
 # Called by both the GitHub Actions workflow and the local dev container.
 #
-# Provisions two PVE nodes per version (a/b) for cluster testing, plus
-# Docker containers on the runner host for iSCSI/NFS shared storage.
+# Provisions two PVE nodes per version (a/b) for cluster testing, plus a
+# small storage VM on the same isolated VLAN serving NFS, iSCSI, and the
+# auto-install answer files.
 #
 # Usage:
-#   run-integration.sh provision [8|9|all]         Provision nested PVE VMs + start storage containers
+#   run-integration.sh provision [8|9|all]         Provision storage VM + nested PVE VMs
 #   run-integration.sh test [8|9|all] [filter]    Run integration tests (default: all, no filter)
 #   run-integration.sh cleanup [8|9|all]           Destroy provisioned VMs
 #   run-integration.sh all [8|9|all]              Full lifecycle: provision → test → cleanup
@@ -42,6 +43,10 @@
 #   MODULE_ARTIFACT    Path to built module DLLs (default: ./publish/netstandard2.0)
 #   PVE_VERSIONS       Space-separated versions to provision (default: "9 8")
 #   STORAGE_ISCSI_IQN  iSCSI IQN for storage target (default: iqn.2024-01.local.test:storage)
+#   STORAGE_VM_IP      Static CIDR address for the storage VM on the CI VLAN,
+#                      outside the DHCP range (default: 172.16.60.60/24)
+#   STORAGE_VM_GATEWAY Gateway + DNS for the storage VM (default: 172.16.60.1)
+#   STORAGE_VMID       VMID for the storage VM (default: 5080)
 
 set -euo pipefail
 
@@ -50,7 +55,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INFRA_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$INFRA_DIR/../.." && pwd)"
 
-# ── Defaults ────────────────────────────────────────────────────────
+# ── Defaults ──────────────────────────────────────────────────────
 CACHE_DIR="${CACHE_DIR:-/opt/pve-integration}"
 # Always use a path under CACHE_DIR (shared mount) so files are visible
 # to sibling Docker containers. Do NOT use RUNNER_TEMP — it's container-local
@@ -61,11 +66,18 @@ MODULE_ARTIFACT="${MODULE_ARTIFACT:-$REPO_ROOT/publish/netstandard2.0}"
 PVE_VERSIONS="${PVE_VERSIONS:-9 8}"
 SKIP_PROVISION="${SKIP_PROVISION:-false}"
 STORAGE_ISCSI_IQN="${STORAGE_ISCSI_IQN:-iqn.2024-01.local.test:storage}"
-STORAGE_COMPOSE="$INFRA_DIR/docker-compose.storage.yml"
+STORAGE_VM_IP="${STORAGE_VM_IP:-172.16.60.60/24}"
+STORAGE_VM_GATEWAY="${STORAGE_VM_GATEWAY:-172.16.60.1}"
+STORAGE_VMID="${STORAGE_VMID:-5080}"
+STORAGE_VM_HOST="${STORAGE_VM_IP%%/*}"
+# Keypair for SSH to the storage VM (cloud images refuse password SSH)
+STORAGE_VM_SSH_KEY="${STORAGE_VM_SSH_KEY:-$WORK_DIR/storage-vm-key}"
+# Must match CLOUD_IMAGE_FILENAME in ensure-cloud-images.sh
+CLOUD_IMAGE_NAME="noble-server-cloudimg-amd64.qcow2"
 # Store Terraform state on the shared mount so it persists across CI jobs
 TF_STATE_FILE="$WORK_DIR/terraform.tfstate"
 
-# ── Node config ───────────────────────────────────────────────────
+# ── Node config ─────────────────────────────────────────────────
 # Each version gets two nodes: a (primary) and b (secondary).
 # ISOs are per-version; nodes within a version share the same base ISO.
 
@@ -76,6 +88,14 @@ pve_iso() {
         8) echo "${PVE8_ISO:-proxmox-ve_8.4-1.iso}" ;;
         *) echo "ERROR: unknown PVE version '$ver'" >&2; exit 1 ;;
     esac
+}
+
+# Generic auto-install ISO name; embeds the answer-server host so a cached
+# ISO baked with an older answer URL is never reused.
+pve_auto_iso() {
+    local base
+    base="$(pve_iso "$1")"
+    echo "${base%.iso}-auto-${STORAGE_VM_HOST//./-}.iso"
 }
 
 pve_vmid() {
@@ -122,7 +142,7 @@ expand_nodes() {
 
 ALL_NODES="$(expand_nodes)"
 
-# ── CI helpers ──────────────────────────────────────────────────────
+# ── CI helpers ────────────────────────────────────────────────────
 ci_mask()  { [[ "${GITHUB_ACTIONS:-}" == "true" ]] && echo "::add-mask::$1" || true; }
 ci_error() { [[ "${GITHUB_ACTIONS:-}" == "true" ]] && echo "::error::$1" || echo "ERROR: $1" >&2; }
 
@@ -157,7 +177,8 @@ pve_free_nodes() {
 # the parent hypervisor.
 resolve_target_node() {
     local count="$1"
-    local need=$(( count * ${PVE_VM_MEM_GB:-8} + ${PVE_MEM_HEADROOM_GB:-8} ))
+    # +2 GiB for the storage VM provisioned alongside the nested nodes
+    local need=$(( count * ${PVE_VM_MEM_GB:-8} + 2 + ${PVE_MEM_HEADROOM_GB:-8} ))
     local nodes
     nodes="$(pve_free_nodes || true)"
 
@@ -186,7 +207,7 @@ resolve_target_node() {
     export PVE_TARGET_NODE
 }
 
-# ── Subcommands ─────────────────────────────────────────────────────
+# ── Subcommands ───────────────────────────────────────────────────
 
 cmd_provision() {
     local requested="${1:-all}"
@@ -203,7 +224,7 @@ cmd_provision() {
     log "Starting provisioning..."
     log "  Versions: $provision_versions"
     log "  Nodes:$provision_nodes"
-    log "  Storage: Docker containers (iSCSI + NFS)"
+    log "  Storage: dedicated VM at $STORAGE_VM_HOST (NFS + iSCSI + answer server)"
     require_env PVE_ENDPOINT
     require_env PVE_API_TOKEN
     require_env PVE_PASSWORD
@@ -224,19 +245,6 @@ cmd_provision() {
     cloud_output=$(bash "$SCRIPT_DIR/ensure-cloud-images.sh" "$CACHE_DIR")
     CLOUD_IMAGE_PATH=$(echo "$cloud_output" | grep "^CLOUD_IMAGE_PATH=" | cut -d= -f2)
     OVA_PATH=$(echo "$cloud_output" | grep "^OVA_PATH=" | cut -d= -f2)
-
-    # Discover Docker host IP early — needed for the HTTP auto-install ISO URL
-    # and for the docker_host_ip Terraform variable.
-    local storage_ip
-    storage_ip=$(docker run --rm --net=host alpine ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
-    if [ -z "$storage_ip" ]; then
-        storage_ip=$(docker info --format '{{.Swarm.NodeAddr}}' 2>/dev/null | cut -d: -f1)
-    fi
-    if [ -z "$storage_ip" ]; then
-        ci_error "Could not determine Docker host IP for storage services"
-        exit 1
-    fi
-    log "Docker host IP: $storage_ip"
 
     # Generate per-MAC answer files for the HTTP answer server.
     # Each node gets a file named by its MAC address so the server can
@@ -267,12 +275,12 @@ cmd_provision() {
     for v in $provision_versions; do
         local base_iso_name generic_iso
         base_iso_name="$(pve_iso "$v")"
-        generic_iso="$WORK_DIR/${base_iso_name%.iso}-http-auto.iso"
+        generic_iso="$WORK_DIR/$(pve_auto_iso "$v")"
         if [ ! -f "$generic_iso" ]; then
             log "Preparing HTTP auto-install ISO for PVE $v..."
             proxmox-auto-install-assistant prepare-iso \
                 --fetch-from http \
-                --url "http://${storage_ip}:8000/answer" \
+                --url "http://${STORAGE_VM_HOST}:8000/answer" \
                 --on-first-boot "$SCRIPT_DIR/first-boot.sh" \
                 --tmp "$WORK_DIR" \
                 --output "$generic_iso" \
@@ -297,9 +305,7 @@ cmd_provision() {
     # Build pve_isos map: version -> ISO path (one per version)
     local isos='{}'
     for v in $PVE_VERSIONS; do
-        local iso_name
-        iso_name="$(pve_iso "$v")"
-        local iso_path="$WORK_DIR/${iso_name%.iso}-http-auto.iso"
+        local iso_path="$WORK_DIR/$(pve_auto_iso "$v")"
         isos="$(jq --arg key "$v" --arg path "$iso_path" \
             '. + {($key): $path}' <<<"$isos")"
     done
@@ -325,6 +331,39 @@ cmd_provision() {
     jq -n --argjson pve_instances "$instances" --argjson pve_isos "$isos" \
         '{pve_instances: $pve_instances, pve_isos: $pve_isos}' > "$tfvars"
 
+    # The nested PVE installers fetch their answer files from the storage VM,
+    # so it must be provisioned and configured before they boot: phase one
+    # creates and configures the storage VM, phase two everything else.
+    if [[ ! -f "$STORAGE_VM_SSH_KEY" ]]; then
+        ssh-keygen -t ed25519 -f "$STORAGE_VM_SSH_KEY" -N '' -C 'pvetest-storage' >/dev/null
+    fi
+
+    tf_apply() {
+        # TMPDIR: use work dir to avoid filling the container's /tmp with
+        # multi-GB ISO uploads.
+        (cd "$INFRA_DIR" && \
+            TMPDIR="$WORK_DIR" \
+            TF_VAR_proxmox_endpoint="$PVE_ENDPOINT" \
+            TF_VAR_proxmox_api_token="$PVE_API_TOKEN" \
+            TF_VAR_target_node="$PVE_TARGET_NODE" \
+            TF_VAR_test_vm_password="$PVE_PASSWORD" \
+            TF_VAR_cloud_image_path="$CLOUD_IMAGE_PATH" \
+            TF_VAR_storage_vm_ip="$STORAGE_VM_IP" \
+            TF_VAR_storage_vm_gateway="$STORAGE_VM_GATEWAY" \
+            TF_VAR_storage_vmid="$STORAGE_VMID" \
+            TF_VAR_storage_vm_ssh_public_key="$(cat "${STORAGE_VM_SSH_KEY}.pub")" \
+            terraform apply -auto-approve -input=false -state="$TF_STATE_FILE" -var-file="$tfvars" "$@")
+    }
+
+    log "Running Terraform apply (storage VM)..."
+    tf_apply \
+        -target=proxmox_virtual_environment_file.storage_cloud_image \
+        -target=proxmox_virtual_environment_vm.storage
+
+    log "Configuring storage VM at $STORAGE_VM_HOST..."
+    bash "$SCRIPT_DIR/setup-storage-server.sh" \
+        "$STORAGE_VM_HOST" "$STORAGE_VM_SSH_KEY" "$STORAGE_ISCSI_IQN" "$WORK_DIR/answer-server"
+
     log "Running Terraform apply (PVE nodes)..."
     local tf_targets=""
     if [[ "$requested" != "all" ]]; then
@@ -334,26 +373,10 @@ cmd_provision() {
         for node in $provision_nodes; do
             tf_targets="$tf_targets -target=proxmox_virtual_environment_vm.nested_pve[\"$node\"]"
         done
-        # Always include shared Docker storage and answer server resources
-        tf_targets="$tf_targets -target=docker_image.ubuntu"
-        tf_targets="$tf_targets -target=docker_container.iscsi_target"
-        tf_targets="$tf_targets -target=docker_container.nfs_server"
-        tf_targets="$tf_targets -target=docker_container.answer_server"
-        tf_targets="$tf_targets -target=docker_volume.iscsi_data"
-        tf_targets="$tf_targets -target=docker_volume.nfs_data"
         log "Terraform targets: $tf_targets"
     fi
 
-    # TMPDIR: use work dir to avoid filling the container's /tmp with multi-GB ISO uploads.
-    (cd "$INFRA_DIR" && \
-        TMPDIR="$WORK_DIR" \
-        TF_VAR_proxmox_endpoint="$PVE_ENDPOINT" \
-        TF_VAR_proxmox_api_token="$PVE_API_TOKEN" \
-        TF_VAR_target_node="$PVE_TARGET_NODE" \
-        TF_VAR_test_vm_password="$PVE_PASSWORD" \
-        TF_VAR_docker_host_ip="$storage_ip" \
-        TF_VAR_answer_server_dir="$WORK_DIR/answer-server" \
-        terraform apply -auto-approve -input=false -state="$TF_STATE_FILE" -var-file="$tfvars" $tf_targets)
+    tf_apply $tf_targets
 
     # Wait for PVE instances to boot and discover IPs
     for node in $provision_nodes; do
@@ -401,7 +424,7 @@ cmd_provision() {
     config=$(jq \
         --arg cloud_image "${CLOUD_IMAGE_PATH:-}" \
         --arg ova "${OVA_PATH:-}" \
-        --arg storage_ip "$storage_ip" \
+        --arg storage_ip "$STORAGE_VM_HOST" \
         --arg storage_iqn "$STORAGE_ISCSI_IQN" \
         '. + {
             storage: {ip: $storage_ip, iscsi_iqn: $storage_iqn, nfs_export: ($storage_ip + ":/srv/nfs/shared")},
@@ -480,7 +503,7 @@ cmd_test() {
             export PVETEST_OVA_PATH=$(jq -r '.ova_path' "$CONFIG_FILE")
             # Secondary node (b)
             export PVETEST_HOST_B=$(jq -r ".pve${v}.nodes.b.host" "$CONFIG_FILE")
-            # Storage services (Docker on runner)
+            # Storage services (dedicated VM on the CI VLAN)
             export PVETEST_STORAGE_VM_IP=$(jq -r '.storage.ip' "$CONFIG_FILE")
             export PVETEST_ISCSI_IQN=$(jq -r '.storage.iscsi_iqn' "$CONFIG_FILE")
             export PVETEST_NFS_EXPORT=$(jq -r '.storage.nfs_export' "$CONFIG_FILE")
@@ -552,11 +575,19 @@ cmd_test() {
             }
 
             \$config.Filter.Tag = 'Integration'
+            \$config.Run.PassThru = \$true
             \$config.Output.Verbosity = 'Detailed'
             \$config.TestResult.Enabled = \$true
             \$config.TestResult.OutputFormat = 'NUnitXml'
             \$config.TestResult.OutputPath = \"TestResults/integration-results-pve\${PveVersion}.xml\"
-            Invoke-Pester -Configuration \$config
+            \$result = Invoke-Pester -Configuration \$config
+            if (-not \$result -or \$result.TotalCount -eq 0) {
+                Write-Error 'No integration tests were discovered or executed'
+                exit 1
+            }
+            if (\$result.FailedCount -gt 0) {
+                exit 1
+            }
         " || test_exit=$?
 
         if [[ $test_exit -ne 0 ]]; then
@@ -580,13 +611,6 @@ cmd_cleanup() {
         PVE_TARGET_NODE="$(cat "$TARGET_NODE_FILE" 2>/dev/null || true)"
     fi
     require_env PVE_TARGET_NODE
-
-    # Discover Docker host IP for the docker_host_ip variable
-    local storage_ip
-    storage_ip=$(docker run --rm --net=host alpine ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')
-    if [ -z "$storage_ip" ]; then
-        storage_ip=$(docker info --format '{{.Swarm.NodeAddr}}' 2>/dev/null | cut -d: -f1)
-    fi
 
     # Build tfvars for all versions (Terraform needs the full variable map)
     local tfvars="$WORK_DIR/instances.tfvars.json"
@@ -616,10 +640,6 @@ cmd_cleanup() {
 
     (cd "$INFRA_DIR" && terraform init -input=false 2>/dev/null)
 
-    # Ensure answer server dir exists (terraform destroy validates host_path mounts)
-    mkdir -p "$WORK_DIR/answer-server/answers"
-    touch "$WORK_DIR/answer-server/default.toml"
-
     # Build -target flags when destroying a subset
     local tf_targets=""
     if [[ "$requested" != "all" ]]; then
@@ -641,8 +661,9 @@ cmd_cleanup() {
         TF_VAR_proxmox_api_token="$PVE_API_TOKEN" \
         TF_VAR_target_node="$PVE_TARGET_NODE" \
         TF_VAR_test_vm_password="${PVE_PASSWORD:-placeholder}" \
-        TF_VAR_docker_host_ip="${storage_ip:-127.0.0.1}" \
-        TF_VAR_answer_server_dir="${WORK_DIR}/answer-server" \
+        TF_VAR_storage_vm_ip="$STORAGE_VM_IP" \
+        TF_VAR_storage_vm_gateway="$STORAGE_VM_GATEWAY" \
+        TF_VAR_storage_vmid="$STORAGE_VMID" \
         terraform destroy -auto-approve -input=false -state="$TF_STATE_FILE" -var-file="$tfvars" $tf_targets)
 
     # Clean up work directory when destroying all
@@ -665,6 +686,8 @@ cmd_force_cleanup() {
 
     log "Force cleanup — bypassing Terraform, using direct API calls..."
 
+    # preflight-cleanup.sh reads PVE_TARGET_NODE from the environment; in auto
+    # mode resolve it from the node provision picked.
     if [[ -z "${PVE_TARGET_NODE:-}" || "$PVE_TARGET_NODE" == "auto" ]]; then
         PVE_TARGET_NODE="$(cat "$TARGET_NODE_FILE" 2>/dev/null || true)"
         [[ -n "$PVE_TARGET_NODE" ]] && export PVE_TARGET_NODE
@@ -674,14 +697,13 @@ cmd_force_cleanup() {
     # Track which versions we've already cleaned up ISOs for (generic ISOs are shared)
     local cleaned_iso_versions=""
     for node in $cleanup_nodes; do
-        local vm_id v iso_name iso_file
+        local vm_id v iso_file
         vm_id="$(pve_vmid "$node")"
         v="${node%[ab]}"
-        iso_name="$(pve_iso "$v")"
         # Only clean up the generic ISO once per version
         iso_file=""
         if [[ ! " $cleaned_iso_versions " =~ " $v " ]]; then
-            iso_file="${iso_name%.iso}-http-auto.iso"
+            iso_file="$(pve_auto_iso "$v")"
             cleaned_iso_versions="$cleaned_iso_versions $v"
         fi
         log "Force cleaning $node (VMID $vm_id)..."
@@ -691,11 +713,13 @@ cmd_force_cleanup() {
             || true
     done
 
-    # Always stop Docker containers in force mode — leaving them causes
-    # Terraform to fail on next provision (container already exists).
-    log "Stopping storage and answer server containers..."
-    docker rm -f pvetest-iscsi pvetest-nfs pvetest-answer-server 2>/dev/null || true
-    docker volume rm pvetest-iscsi-data pvetest-nfs-data 2>/dev/null || true
+    # Unconditional: the state wipe below is unconditional too, and a storage
+    # VM surviving its state entry cannot be reclaimed by the next provision.
+    log "Force cleaning storage VM (VMID $STORAGE_VMID)..."
+    bash "$SCRIPT_DIR/preflight-cleanup.sh" \
+        "${PVE_ENDPOINT:-}" "${PVE_API_TOKEN:-}" \
+        "$STORAGE_VMID" "$CLOUD_IMAGE_NAME" "$INFRA_DIR" \
+        || true
 
     # Remove Terraform state (both local and shared mount) so next provision starts clean.
     # Keep .terraform.lock.hcl (provider version lock) for reproducibility.
@@ -704,8 +728,9 @@ cmd_force_cleanup() {
     rm -f "$TF_STATE_FILE" "${TF_STATE_FILE}.backup"
     rm -rf "$INFRA_DIR/.terraform"
 
-    # Remove work artifacts
+    # Remove work artifacts, including locally cached auto-install ISOs
     rm -f "$CONFIG_FILE" "$WORK_DIR"/instances.tfvars.json "$TARGET_NODE_FILE"
+    rm -f "$WORK_DIR"/*-auto-*.iso "$WORK_DIR"/*-http-auto.iso
 
     log "Force cleanup complete. Next provision will start from scratch."
 }
@@ -759,7 +784,7 @@ cmd_all() {
     return $test_exit
 }
 
-# ── Main ────────────────────────────────────────────────────────────
+# ── Main ───────────────────────────────────────────────────────────
 main() {
     local cmd="${1:-}"
     shift || true
@@ -775,7 +800,7 @@ main() {
             echo "Usage: $(basename "$0") {provision|test|cleanup|force-cleanup|taint|all} [8|9|all] [test-filter]"
             echo ""
             echo "Subcommands:"
-            echo "  provision [8|9|all]        Provision nested PVE VMs + storage containers"
+            echo "  provision [8|9|all]        Provision storage VM + nested PVE VMs"
             echo "  test [8|9|all] [filter]    Run integration tests (default: all versions, no filter)"
             echo "  cleanup [8|9|all]          Destroy resources via terraform destroy (default: all)"
             echo "  force-cleanup [8|9|all]    Bypass Terraform — destroy via API + wipe state (recovery)"
