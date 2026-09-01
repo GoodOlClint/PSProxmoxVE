@@ -93,13 +93,7 @@ or delete the installed copy. (`dotnet build` writes there; only `dotnet publish
 ./publish/netstandard2.0`, which CI runs, creates `publish/`.)
 
 The integration flow needs the `dev-infra` container — the same image CI runs its jobs in
-(`tests/Dockerfile.test`, target `dev-infra`).
-
-The image is amd64-only: `proxmox-auto-install-assistant` and the HashiCorp apt repo publish no
-arm64. On Apple Silicon turn on Docker Desktop's **Use Rosetta for x86_64/amd64 emulation**
-before building or running it. Under the default qemu translation `pwsh` starts but segfaults
-on module discovery, which fails the image build at `Install-Module Pester`; under Rosetta the
-same Dockerfile builds byte-equivalent to CI's.
+(`tests/Dockerfile.test`, target `dev-infra`). On x86 Linux, compose builds and runs it:
 
 ```bash
 pve() {
@@ -112,8 +106,62 @@ pve test 9 Cluster,VMs   # the area filter is optional
 pve force-cleanup
 ```
 
-Copy `tests/.env.test.example` to `tests/.env.test` first — it lists every required
-variable, including the Terraform storage pools CI supplies from repository variables.
+### Running it on macOS (Apple Silicon)
+
+The image is amd64-only — `proxmox-auto-install-assistant` and the HashiCorp apt repo publish no
+arm64 — so it runs under emulation. **Turn on Docker Desktop's "Use Rosetta for x86_64/amd64
+emulation" (Settings → General) first.** Under the default qemu translation `pwsh` starts and
+reports its version, then segfaults on module discovery (`uncaught target signal 11`). That fails
+the image build at `Install-Module Pester`, and would fail Pester at test time. The build exits 1
+with no diagnostic output, so it reads as a Dockerfile defect rather than an emulation problem.
+
+With Rosetta on, the same Dockerfile builds to within 150 bytes of the image CI pushes.
+
+Two ways to get the image. Pulling what CI built is faster and is the exact artifact CI ran:
+
+```bash
+# Needs a CLASSIC PAT with read:packages — GHCR does not accept fine-grained tokens.
+read -rs PAT && echo "$PAT" | docker login ghcr.io -u <user> --password-stdin && unset PAT
+docker pull --platform linux/amd64 ghcr.io/goodolclint/psproxmoxve-integration:latest
+
+# or build it locally
+docker build --platform linux/amd64 --target dev-infra -f tests/Dockerfile.test -t pve-dev .
+```
+
+Then drive `run-integration.sh` directly. Compose is not used here: its `dev-infra` service builds
+rather than pulls, and bind-mounts `/opt/pve-integration`, which does not exist on a Mac.
+
+```bash
+pve() {
+    docker run --rm --platform linux/amd64 \
+        --env-file tests/.env.test \
+        -v "$HOME/pve-integration:/opt/pve-integration" \
+        -v "$PWD:/repo" -w /repo \
+        ghcr.io/goodolclint/psproxmoxve-integration:latest \
+        bash tests/infrastructure/scripts/run-integration.sh "$@"
+}
+
+mkdir -p ~/pve-integration
+pve provision 9
+pve test 9
+pve force-cleanup          # always run this — see below
+```
+
+**Expect lifecycle-test failures that CI does not see.** Emulation runs the suite roughly 40%
+slower, which widens the `qemu-server` flock race in #113 — typically `Reset-PveVm`, clone and
+`Set-PveVmConfig` failing with `can't lock file '/var/lock/qemu-server/lock-<vmid>.conf'`. Those
+are the emulated client losing a race CI wins, not regressions. Provisioning and cleanup are
+unaffected.
+
+### Before any integration run, on any host
+
+Copy `tests/.env.test.example` to `tests/.env.test` — it lists every required variable,
+including the Terraform storage pools CI supplies from repository variables.
+
+**The nested VMIDs are fixed constants** (5080, 5091, 5092 — `run-integration.sh:106-138`) and
+are shared with CI on the same parent cluster. Never start a local run while a CI integration run
+is in flight, and always finish with `force-cleanup`: leftover guests fail the next run's
+headroom guard.
 
 ## Key Conventions
 
