@@ -88,12 +88,15 @@ pve_iso() {
     esac
 }
 
-# Generic auto-install ISO name; embeds the answer-server host so a cached
-# ISO baked with an older answer URL is never reused.
+# Generic auto-install ISO name. The answer-server host and first-boot.sh are
+# both baked into the ISO, so both are in its name: WORK_DIR survives a run
+# whose cleanup was skipped, and two lanes with differing first-boot.sh must
+# not collide on one cached name.
 pve_auto_iso() {
-    local base
+    local base first_boot_hash
     base="$(pve_iso "$1")"
-    echo "${base%.iso}-auto-${STORAGE_VM_FQDN//./-}.iso"
+    first_boot_hash="$(sha256sum "$SCRIPT_DIR/first-boot.sh" | cut -c1-12)"
+    echo "${base%.iso}-auto-${STORAGE_VM_FQDN//./-}-${first_boot_hash}.iso"
 }
 
 pve_vmid() {
