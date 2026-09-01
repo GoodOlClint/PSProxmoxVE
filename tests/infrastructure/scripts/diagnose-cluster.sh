@@ -66,6 +66,11 @@ journalctl -u corosync -n 60 --no-pager 2>&1
 echo
 echo "--- journalctl -u pve-cluster (last 30) ---"
 journalctl -u pve-cluster -n 30 --no-pager 2>&1
+echo
+echo "--- cluster task logs ---"
+# "Cluster join aborted!" is generic; the reason is only in the task log.
+find /var/log/pve/tasks -type f \( -name '*clusterjoin*' -o -name '*clustercreate*' \) \
+    -exec echo "== {} ==" \; -exec cat {} \; 2>&1 | tail -80
 REMOTE
 }
 
