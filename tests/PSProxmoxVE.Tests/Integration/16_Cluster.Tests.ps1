@@ -204,9 +204,13 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
             $script:NodeBName | Should -Not -BeNullOrEmpty
         }
 
-        It 'Get-PveClusterStatus shows 2 nodes online' {
+        It 'Get-PveClusterStatus shows node B online by name' {
             if (Skip-IfNoNodeB) { return }
             if (Skip-IfNoCluster) { return }
+            if (-not $script:NodeBName) {
+                Set-ItResult -Skipped -Because 'Node B name was not discovered'
+                return
+            }
 
             # Corosync membership reaches the status endpoint seconds after
             # the join task completes — poll rather than assert instantly.
@@ -214,8 +218,8 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
             do {
                 $status = Get-PveClusterStatus -ErrorAction Stop
                 $nodeEntries = @($status) | Where-Object { $_.Type -eq 'node' }
-                $onlineNodes = @($nodeEntries) | Where-Object { $_.Online -eq 1 }
-                if (@($onlineNodes).Count -ge 2) { break }
+                $nodeB = @($nodeEntries) | Where-Object { $_.Name -eq $script:NodeBName } | Select-Object -First 1
+                if ($nodeB -and $nodeB.Online -eq 1) { break }
                 Start-Sleep -Seconds 3
             } while ([DateTime]::UtcNow -lt $deadline)
 
@@ -225,8 +229,45 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
                 Write-Host "  node=$($n.Name) nodeid=$($n.NodeId) ring0=$($n.Ip) online=$($n.Online) local=$($n.Local)"
             }
 
-            @($nodeEntries).Count | Should -BeGreaterOrEqual 2
-            @($onlineNodes).Count | Should -BeGreaterOrEqual 2
+            $nodeB | Should -Not -BeNullOrEmpty -Because "node A's cluster status should list $($script:NodeBName)"
+            $nodeB.Online | Should -Be 1 -Because "node A should see $($script:NodeBName) online"
+        }
+
+        It 'Node B reports itself as part of the cluster' {
+            if (Skip-IfNoNodeB) { return }
+            if (Skip-IfNoCluster) { return }
+            if (-not $script:NodeBName) {
+                Set-ItResult -Skipped -Because 'Node B name was not discovered'
+                return
+            }
+
+            # Node A seeing node B is not the same claim as node B believing it
+            # joined: in the #93 failure node B's pmxcfs stayed in local mode and
+            # reported online=0 while corosync membership looked healthy.
+            $secPw = ConvertTo-SecureString $script:PasswordB -AsPlainText -Force
+            $credB = New-Object System.Management.Automation.PSCredential('root@pam', $secPw)
+            Connect-PveServer `
+                -Server $script:HostB `
+                -Port $script:Port `
+                -Credential $credB `
+                -SkipCertificateCheck
+
+            try {
+                $statusB = Get-PveClusterStatus -ErrorAction Stop
+                $clusterB = @($statusB) | Where-Object { $_.Type -eq 'cluster' } | Select-Object -First 1
+                $selfB = @($statusB) |
+                    Where-Object { $_.Type -eq 'node' -and $_.Name -eq $script:NodeBName } |
+                    Select-Object -First 1
+
+                Write-Host "node B's own view: cluster=$($clusterB.Name) quorate=$($clusterB.Quorate) self-online=$($selfB.Online) self-local=$($selfB.Local)"
+
+                $clusterB | Should -Not -BeNullOrEmpty -Because "$($script:NodeBName) should report a cluster entry, not local mode"
+                $selfB | Should -Not -BeNullOrEmpty -Because "$($script:NodeBName) should list itself as a cluster node"
+                $selfB.Online | Should -Be 1 -Because "$($script:NodeBName) should consider itself online in the cluster"
+            }
+            finally {
+                Connect-TestPve
+            }
         }
     }
 
