@@ -9,6 +9,7 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Fixed
 
+- Lifecycle cmdlets with `-Wait` (`Start`/`Stop`/`Restart`/`Reset`/`Resume` for VMs and containers) now wait for the guest's config lock to clear, not just for the status to change. PVE reports the target status before the operation releases the lock, so a caller acting immediately afterwards could fail with `can't lock file '/var/lock/qemu-server/lock-<vmid>.conf' - got timeout`. Observed as a cascade of 4 integration failures in run 183. If the lock outlasts `-Timeout` the cmdlet still returns success, as before. See `DECISIONS.md` D015.
 - `New-PveCluster -Wait` now blocks until the cluster reports quorum, not merely until the creation task finishes. PVE's create task returns before corosync converges (~6s earlier in testing), so the natural `New-PveCluster -Wait` → `Add-PveClusterMember` sequence failed with `cluster not ready - no quorum?`. Adds `-Timeout` (seconds, default 60, range 1-3600) following the `-Wait` timeout convention used by `Stop-PveContainer` and `Reset-PveVm`. See `DECISIONS.md` D014.
 
 ## [0.2.0] - 2026-05-22
