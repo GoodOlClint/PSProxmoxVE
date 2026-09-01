@@ -65,6 +65,10 @@ CONFIG_FILE="${CONFIG_FILE:-$WORK_DIR/config.json}"
 MODULE_ARTIFACT="${MODULE_ARTIFACT:-$REPO_ROOT/publish/netstandard2.0}"
 PVE_VERSIONS="${PVE_VERSIONS:-9}"
 SKIP_PROVISION="${SKIP_PROVISION:-false}"
+# Currency lane only: dist-upgrade each nested node, record its package set,
+# and reboot before the suite runs. Off for the pinned gating lane — the ISO is
+# the pin, and upgrading is what produced the pve-cluster version mismatch.
+PVE_DIST_UPGRADE="${PVE_DIST_UPGRADE:-0}"
 STORAGE_ISCSI_IQN="${STORAGE_ISCSI_IQN:-iqn.2024-01.local.test:storage}"
 STORAGE_VM_FQDN="${STORAGE_VM_FQDN:-pvetest-storage.test.local}"
 STORAGE_VMID="${STORAGE_VMID:-5080}"
@@ -397,7 +401,8 @@ cmd_provision() {
         local ip
         ip=$(jq -r .host "$WORK_DIR/${node}.json")
         log "Preparing test environment on $node ($ip)..."
-        bash "$SCRIPT_DIR/prepare-test-environment.sh" "$ip" "$PVE_PASSWORD"
+        bash "$SCRIPT_DIR/prepare-test-environment.sh" "$ip" "$PVE_PASSWORD" \
+            "$PVE_DIST_UPGRADE" "$WORK_DIR/${node}-packages.txt"
     done
 
     # Write test config — merge with existing config to preserve entries
