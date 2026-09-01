@@ -466,9 +466,19 @@ Add-PveClusterMember ...
 
 ## D015 — Lifecycle -Wait blocks until the guest config lock clears
 
-**Status**: Active
+**Status**: Superseded by D016 (2026-09-01) — the mechanism below is wrong
 **Finding refs**: (none — found via integration runs 183/184, 2026-09-01)
 **Resolved in scan**: n/a
+
+> **This entry misdiagnosed the failure it was written for.** Two different things in PVE are
+> called "lock": the **config lock** (the `lock:` property — `migrate`, `backup`, `clone`,
+> `snapshot` — a persisted config field, exposed as `lock` in `status/current`) and the
+> **flock** on `/var/lock/qemu-server/lock-<vmid>.conf` taken by `PVE::QemuConfig->lock_config`,
+> which is not exposed through the API at all. The integration failures were the flock; this
+> entry guards the config lock, which an ordinary start/stop never sets. Run 186 confirmed the
+> check never fired — `Restart-PveVm` took 4.11 s, unchanged. The real cause and fix are in
+> **D016**. The waiting behaviour described below is harmless and still applies when a genuine
+> config lock is present, so the code stays.
 
 ### Decision
 `WaitForStatusTransition` returns only when the guest reports the expected status **and**
@@ -516,4 +526,67 @@ if (string.Equals(effectiveStatus, expectedStatus, StringComparison.OrdinalIgnor
 var snapshot = GuestStatusSnapshot.Evaluate(json, expectedStatus);
 if (snapshot.StatusMatched && !snapshot.Locked)
     return task;
+```
+
+---
+
+## D016 — Restart-PveVm uses PVE's native reboot endpoint
+
+**Status**: Active
+**Finding refs**: (none — found via integration runs 183/185/186, root-caused on a live PVE 9.2.2 node 2026-09-01)
+**Resolved in scan**: n/a
+
+### Decision
+`Restart-PveVm` calls `POST /nodes/{node}/qemu/{vmid}/status/reboot` (`VmService.RebootVm`).
+It must **not** compose a restart client-side as `status/shutdown` followed by `status/start`.
+
+### Rationale
+Composing the restart races Proxmox's own post-stop cleanup for the guest's config flock:
+
+1. The shutdown completes and the QEMU process exits.
+2. `qmeventd` forks `/usr/sbin/qm cleanup <vmid> ...`.
+3. The client sees `status == stopped` and immediately posts `status/start`. `vm_start` takes
+   the flock, wins the race, starts a **new** QEMU, releases.
+4. `qm cleanup` then takes the flock with a **60 s** timeout and polls `vm_running_locally`
+   for up to **30 s**, holding it the whole time, because it sees the new PID as the old one
+   failing to exit. PVE's own warning names this: `"QEMU process $pid for VM $vmid still
+   running (or newly started)"`.
+5. Every subsequent call fails: `lock_config` defaults to **10 s**, so the client gets
+   `can't lock file '/var/lock/qemu-server/lock-<vmid>.conf' - got timeout`.
+
+Measured on a reproduction (integration run 187), three distinct source constants matching:
+
+```
+qmstart    ends  t+3    <- qm cleanup takes the flock, sees the NEW pid
+qmstop #1  FAIL  t+14   10 s = lock_config default
+qmstop #2  FAIL  t+24   10 s = lock_config default
+qmclone    FAIL  t+25    1 s = qmclone's separate source-VM lock timeout
+qmstop #3  OK    t+33   <- released; hold was t+3..t+33 = 30 s = cleanup's wait loop
+```
+
+`vm_reboot` avoids all of it by holding the config lock across the entire shutdown and letting
+`qm cleanup` perform the restart while it already holds that same lock — there is no window for
+a client call to interleave.
+
+This surfaced on PVE 9.2 and not 9.1 because of two May 2026 qemu-server changes (cleanup
+deduplication, shipped for 9.1.13, and the 30 s cleanup wait). Neither touches the REST surface,
+so the API changelog showed nothing — "the API did not change, therefore behaviour did not" is
+not a valid inference for this class of bug.
+
+**Containers are not affected by this decision**: `/nodes/{node}/lxc/{vmid}/status/reboot` does
+not exist, so `Restart-PveContainer` necessarily keeps shutdown + start.
+
+### Anti-pattern (do not reintroduce)
+```csharp
+// NEVER compose a VM restart from two client calls — it races qmeventd's cleanup
+var shutdownTask = vmService.ShutdownVm(session, node, vmid, timeout);
+WaitForStatusTransition(session, node, shutdownTask, vmid, "stopped", timeout);
+var startTask = vmService.StartVm(session, node, vmid);
+```
+
+### Correct pattern
+```csharp
+var task = vmService.RebootVm(session, node, vmid, timeout);
+if (Wait.IsPresent)
+    task = WaitForStatusTransition(session, node, task, vmid, "running", timeout);
 ```
