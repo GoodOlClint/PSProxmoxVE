@@ -158,7 +158,8 @@ unaffected.
 Copy `tests/.env.test.example` to `tests/.env.test` — it lists every required variable,
 including the Terraform storage pools CI supplies from repository variables.
 
-**The nested VMIDs are fixed constants** (5080, 5091, 5092 — `run-integration.sh:106-138`) and
+**The nested VMIDs are fixed constants** (storage VM 5080 at `run-integration.sh:80`; nodes 5091
+and 5092 in `pve_vmid()` at `:112`) and
 are shared with CI on the same parent cluster. Never start a local run while a CI integration run
 is in flight, and always finish with `force-cleanup`: leftover guests fail the next run's
 headroom guard.
