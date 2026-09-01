@@ -63,25 +63,84 @@ elif [ -z "$ISO_STORAGE" ]; then
     fi
     echo "WARNING: TF_VAR_iso_storage is unset — skipping ISO cleanup rather than guessing a storage pool"
 else
-ISO_EXISTS=$(curl -sk -H "Authorization: PVEAPIToken=${API_TOKEN}" \
+# Generated auto-install ISOs carry a hash of first-boot.sh in the name, so each
+# change to that script mints a new filename. Deleting only the current name
+# strands every earlier one on the storage, and force-cleanup wipes the
+# Terraform state that could otherwise reclaim them. Match the whole family.
+ISO_MATCHES=$(curl -sk -H "Authorization: PVEAPIToken=${API_TOKEN}" \
     "${API_BASE}/nodes/${NODE}/storage/${ISO_STORAGE}/content" 2>/dev/null \
-    | python3 -c "
-import json, sys
-data = json.load(sys.stdin).get('data', [])
-for item in data:
-    if item.get('volid', '').endswith('/${ISO_FILENAME}'):
-        print(item['volid'])
-        break
-" 2>/dev/null || true)
+    | ISO_FILENAME="$ISO_FILENAME" ISO_STORAGE="$ISO_STORAGE" python3 -c '
+import json, os, re, sys
 
-if [ -n "$ISO_EXISTS" ]; then
-    echo "Found orphaned ISO: ${ISO_EXISTS}"
-    echo "  Deleting..."
-    ENCODED=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${ISO_EXISTS}', safe=''))")
-    curl -sk -X DELETE -H "Authorization: PVEAPIToken=${API_TOKEN}" \
-        "${API_BASE}/nodes/${NODE}/storage/${ISO_STORAGE}/content/${ENCODED}" >/dev/null 2>&1
-    sleep 2
-    echo "  ISO cleanup done"
+name = os.environ["ISO_FILENAME"]
+storage = os.environ["ISO_STORAGE"]
+# Generated names are <base>-auto-<storage-vm-fqdn-dashed>-<12 hex of first-boot.sh>.iso.
+# Siblings differ only in the hash, so sweep the family by rebuilding the full
+# shape — a prefix test alone would also match a longer FQDN or a hand-uploaded
+# "-manual-backup.iso", and this script deletes what it matches.
+family = re.match(r"^(.+-auto-.+-)[0-9a-f]{12}\.iso$", name)
+
+try:
+    data = json.load(sys.stdin).get("data", [])
+except Exception:
+    sys.exit(0)
+
+def candidates():
+    for item in data:
+        volid = item.get("volid", "")
+        # The channel to the shell is newline-delimited, so a volid carrying a
+        # newline would arrive as two lines and the tail would be deleted without
+        # ever having matched. The anchored sibling pattern below already
+        # excludes such a volid, so this is unreachable today and no test can
+        # cover it — it is here so loosening that pattern cannot silently
+        # reintroduce the split.
+        if any(c in volid for c in "\r\n\0"):
+            continue
+        # A volid names its own storage. Deleting one through a different
+        # storage endpoint is never right.
+        if not volid.startswith(storage + ":"):
+            continue
+        yield volid, volid.rsplit("/", 1)[-1]
+
+if family:
+    sibling = re.compile(r"^" + re.escape(family.group(1)) + r"[0-9a-f]{12}\.iso$")
+    for volid, base in candidates():
+        if sibling.match(base):
+            print(volid)
+else:
+    # Anything else (the storage VM cloud image) keeps the original one-shot
+    # behaviour: a basename can repeat across content namespaces, and a
+    # non-generated name carries nothing that identifies a family.
+    for volid, base in candidates():
+        if base == name:
+            print(volid)
+            break
+' 2>/dev/null || true)
+
+if [ -n "$ISO_MATCHES" ]; then
+    while IFS= read -r volid; do
+        [ -n "$volid" ] || continue
+        echo "Found orphaned ISO: ${volid}"
+        echo "  Deleting..."
+        ENCODED=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$volid")
+        if [ -z "$ENCODED" ]; then
+            echo "  WARNING: could not encode ${volid} — skipping rather than issuing a bare DELETE" >&2
+            continue
+        fi
+        code=$(curl -sk -o /dev/null -w '%{http_code}' -X DELETE \
+            -H "Authorization: PVEAPIToken=${API_TOKEN}" \
+            "${API_BASE}/nodes/${NODE}/storage/${ISO_STORAGE}/content/${ENCODED}" 2>/dev/null || echo 000)
+        sleep 2
+        case "$code" in
+            2*) echo "  ISO cleanup done" ;;
+            *)  echo "  WARNING: DELETE of ${volid} returned ${code} — it is still on ${ISO_STORAGE}" >&2
+                if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+                    echo "::warning::ISO ${volid} was not deleted (HTTP ${code}); it will accumulate on ${ISO_STORAGE}"
+                fi ;;
+        esac
+    done <<EOF
+$ISO_MATCHES
+EOF
 else
     echo "No orphaned ISO found"
 fi
