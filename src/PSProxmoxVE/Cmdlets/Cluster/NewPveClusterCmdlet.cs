@@ -1,3 +1,4 @@
+using System;
 using System.Management.Automation;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
@@ -36,9 +37,14 @@ namespace PSProxmoxVE.Cmdlets.Cluster
         [Parameter(Mandatory = false, HelpMessage = "Corosync link addresses as key=value strings (e.g. 'link0=10.0.0.1').")]
         public string[]? Links { get; set; }
 
-        /// <summary>Wait for the cluster creation task to complete.</summary>
-        [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
+        /// <summary>Wait for the cluster creation task to complete and the cluster to reach quorum.</summary>
+        [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete and the cluster to reach quorum before returning.")]
         public SwitchParameter Wait { get; set; }
+
+        /// <summary>Seconds to wait for the cluster to reach quorum when -Wait is used.</summary>
+        [Parameter(Mandatory = false, HelpMessage = "Timeout in seconds for -Wait (default 60).")]
+        [ValidateRange(1, 3600)]
+        public int Timeout { get; set; } = 60;
 
         protected override void ProcessRecord()
         {
@@ -61,6 +67,11 @@ namespace PSProxmoxVE.Cmdlets.Cluster
             {
                 var taskService = new TaskService();
                 task = taskService.WaitForTask(session, node, upid);
+
+                // The create task returns before corosync converges; the cluster
+                // rejects joins until it is quorate.
+                WriteVerbose("Waiting for cluster to reach quorum...");
+                service.WaitForQuorum(session, TimeSpan.FromSeconds(Timeout));
             }
 
             WriteObject(task);

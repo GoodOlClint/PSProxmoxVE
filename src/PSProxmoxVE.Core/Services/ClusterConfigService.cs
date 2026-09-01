@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Client;
+using PSProxmoxVE.Core.Exceptions;
 using PSProxmoxVE.Core.Models.Cluster;
 using PSProxmoxVE.Core.Utilities;
 
@@ -15,6 +17,9 @@ namespace PSProxmoxVE.Core.Services
     public class ClusterConfigService
     {
         private readonly IPveHttpClient? _injectedClient;
+
+        private static readonly TimeSpan DefaultQuorumTimeout = TimeSpan.FromSeconds(60);
+        private static readonly TimeSpan QuorumPollInterval = TimeSpan.FromSeconds(2);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterConfigService"/> class.
@@ -375,6 +380,48 @@ namespace PSProxmoxVE.Core.Services
             finally
             {
                 if (_injectedClient == null) client.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Blocks until the cluster reports quorum (GET /cluster/status, quorate = 1).
+        /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="timeout">Maximum time to wait. Defaults to 60 seconds.</param>
+        /// <remarks>
+        /// The cluster-create task completes before corosync converges; until the node
+        /// is quorate it rejects joins with "cluster not ready - no quorum?". API errors
+        /// during that window are transient and are retried until the deadline.
+        /// </remarks>
+        /// <exception cref="TimeoutException">Quorum was not reached before the deadline.</exception>
+        public void WaitForQuorum(PveSession session, TimeSpan? timeout = null)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+
+            var effectiveTimeout = timeout ?? DefaultQuorumTimeout;
+            var deadline = DateTime.UtcNow.Add(effectiveTimeout);
+
+            while (true)
+            {
+                try
+                {
+                    foreach (var entry in GetClusterStatus(session))
+                    {
+                        if (string.Equals(entry.Type, "cluster", StringComparison.OrdinalIgnoreCase)
+                            && entry.Quorate == 1)
+                            return;
+                    }
+                }
+                catch (PveApiException)
+                {
+                    // pmxcfs and corosync restart while the cluster forms.
+                }
+
+                if (DateTime.UtcNow >= deadline)
+                    throw new TimeoutException(
+                        $"Cluster did not reach quorum within {effectiveTimeout.TotalSeconds:0} seconds.");
+
+                Thread.Sleep(QuorumPollInterval);
             }
         }
 

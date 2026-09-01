@@ -7,6 +7,10 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+### Fixed
+
+- `New-PveCluster -Wait` now blocks until the cluster reports quorum, not merely until the creation task finishes. PVE's create task returns before corosync converges (~6s earlier in testing), so the natural `New-PveCluster -Wait` → `Add-PveClusterMember` sequence failed with `cluster not ready - no quorum?`. Adds `-Timeout` (seconds, default 60, range 1-3600) following the `-Wait` timeout convention used by `Stop-PveContainer` and `Reset-PveVm`. See `DECISIONS.md` D014.
+
 ## [0.2.0] - 2026-05-22
 
 ### Added

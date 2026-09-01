@@ -53,6 +53,11 @@ on:
         required: false
         type: boolean
         default: false
+      keep_vms:
+        description: 'Skip cleanup so the nested PVE VMs survive for inspection'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -183,6 +188,13 @@ jobs:
           PVETEST_PASSWORD: ${{ secrets.PVE_TEST_PASSWORD }}
         run: bash ${SCRIPTS_DIR}/run-integration.sh test ${{ matrix.pve_version }}
 
+      - name: Diagnose cluster state
+        if: failure()
+        shell: bash
+        env:
+          PVE_PASSWORD: ${{ secrets.PVE_TEST_PASSWORD }}
+        run: bash ${SCRIPTS_DIR}/diagnose-cluster.sh ${{ matrix.pve_version }}
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v7
@@ -193,7 +205,7 @@ jobs:
   # ── Cleanup: destroy all VMs (always runs) ──────────────────────
   cleanup:
     needs: [provision, test]
-    if: always() && needs.provision.result != 'skipped' && github.actor != 'dependabot[bot]'
+    if: always() && needs.provision.result != 'skipped' && github.actor != 'dependabot[bot]' && !inputs.keep_vms
     runs-on: psproxmoxve
     timeout-minutes: 15
     container:

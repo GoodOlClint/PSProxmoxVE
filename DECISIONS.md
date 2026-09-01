@@ -407,3 +407,57 @@ public List<Dictionary<string, object?>>? Members { get; set; }
 // or
 [OutputType(typeof(PSObject))]
 ```
+
+---
+
+## D014 — New-PveCluster -Wait blocks until the cluster is quorate
+
+**Status**: Active
+**Finding refs**: (none — found via integration run 172, 2026-09-01)
+**Resolved in scan**: n/a
+
+### Decision
+`New-PveCluster -Wait` returns only after the cluster reports quorum, not merely when the
+create task completes. `ClusterConfigService.WaitForQuorum` implements the wait; it polls
+`GET /cluster/status` for the `cluster` entry with `quorate = 1` and tolerates transient API
+errors while corosync and pmxcfs restart.
+
+The wait is bounded and throws `TimeoutException` on expiry. It follows the `-Wait` timeout
+convention already used by `Stop-PveContainer`, `Reset-PveVm` and `New-PveBackup`:
+`[ValidateRange(1, 3600)] public int Timeout` with a default (60 here), **no `0 = infinite`**.
+
+Note there are two distinct timeout conventions in this module; do not mix them:
+- **`-Wait` waits** (`Timeout`, `int` with a default, range 1-3600, no infinite) — task/state waits.
+- **HTTP client timeouts** (`TimeoutSeconds`, `int?`, range 0-int.MaxValue, `0 = infinite`) —
+  `Connect-PveServer`, `Send-PveFile`, `Invoke-PveStorageDownload`, which set `HttpClient.Timeout`.
+
+A single-node cluster reaches quorum in seconds (~6 s observed), so a node still not quorate
+after 60 s is broken rather than slow.
+
+`-Wait` on every other cmdlet still means "wait for the task". Cluster creation is the
+exception because the task completing does not make the cluster usable.
+
+### Rationale
+PVE's cluster-create task returns before corosync converges. Until the node is quorate it
+rejects a join with `cluster not ready - no quorum?`, so the natural sequence
+`New-PveCluster -Wait` → `Add-PveClusterMember` fails intermittently for every caller.
+
+Observed on node A in integration run 172: the create task returned, corosync started ~1 s
+later, and `node has quorum` appeared ~6 s after that. The integration test had guarded this
+with `Start-Sleep -Seconds 5` — a fixed sleep against a longer, variable convergence — which
+is why the cluster tests had never passed.
+
+### Anti-pattern (do not reintroduce)
+```powershell
+# NEVER guard cluster convergence with a fixed sleep
+New-PveCluster -ClusterName 'c1' -Wait
+Start-Sleep -Seconds 5
+Add-PveClusterMember ...
+```
+
+### Correct pattern
+```powershell
+# -Wait already guarantees quorum; join immediately
+New-PveCluster -ClusterName 'c1' -Wait
+Add-PveClusterMember ...
+```
