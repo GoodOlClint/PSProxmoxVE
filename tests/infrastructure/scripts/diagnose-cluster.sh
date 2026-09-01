@@ -49,6 +49,26 @@ echo
 echo "--- addresses ---"
 ip -4 -o addr show scope global
 echo
+echo "--- pmxcfs mode: cluster or local? ---"
+# /etc/pve/corosync.conf is database-backed; pmxcfs only creates it when it
+# starts with no config.db and imports /etc/corosync/corosync.conf. A surviving
+# standalone config.db means silent local mode with corosync otherwise healthy.
+dpkg-query -W pve-cluster corosync 2>&1
+tr '\0' ' ' < "/proc/$(systemctl show pve-cluster -p MainPID --value)/cmdline" 2>&1; echo
+findmnt --target /etc/pve --output TARGET,SOURCE,FSTYPE 2>&1
+echo ".members: $(cat /etc/pve/.members 2>&1 | tr -d '\n')"
+ls -la /var/lib/pve-cluster/ 2>&1
+ls -la /var/lib/pve-cluster/backup/ 2>&1
+if command -v sqlite3 >/dev/null 2>&1; then
+    sqlite3 -readonly /var/lib/pve-cluster/config.db \
+        "PRAGMA quick_check; SELECT name,version,writer,mtime,length(data) FROM tree WHERE name='corosync.conf';" 2>&1
+else
+    echo "sqlite3 absent; corosync.conf occurrences in config.db: $(strings /var/lib/pve-cluster/config.db 2>/dev/null | grep -c '^corosync\.conf$')"
+fi
+echo
+echo "--- corosync-cpgtool (pmxcfs joins dcdb/status CPG groups when clustered) ---"
+corosync-cpgtool 2>&1
+echo
 echo "--- corosync.conf ---"
 cat /etc/pve/corosync.conf 2>&1 || cat /etc/corosync/corosync.conf 2>&1
 echo
