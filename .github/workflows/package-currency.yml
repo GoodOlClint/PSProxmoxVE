@@ -160,6 +160,8 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
       volumes:
         - /opt/pve-integration:/opt/pve-integration
+    outputs:
+      suite_rc: ${{ steps.suite.outputs.suite_rc }}
     strategy:
       fail-fast: false
       matrix:
@@ -214,6 +216,53 @@ jobs:
         with:
           name: currency-test-results-pve${{ matrix.pve_version }}
           path: TestResults/
+
+  # ── Report: diff the package set, keep one rolling issue ─────────────
+  report:
+    needs: [provision, test]
+    # !cancelled() not always(): always() is true on cancellation too, and a
+    # run the operator aborted must not publish a baseline or edit the issue.
+    if: ${{ !cancelled() && needs.provision.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write   # push the ci/package-baseline data branch
+      issues: write     # maintain the rolling issue
+    steps:
+      # Credentials persist deliberately: this job pushes the data branch.
+      # No pull-requests: write — the baseline goes to an unprotected data
+      # branch, not a PR, so nothing here can reach main or the review agent.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Download recorded package set
+        uses: actions/download-artifact@v8
+        with:
+          name: pve-package-set
+          path: packages/
+
+      - name: Report package currency
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SUITE_RC: ${{ needs.test.outputs.suite_rc }}
+        run: |
+          # Empty means the suite job was skipped or cancelled — that is not the
+          # same claim as "failed against current PVE".
+          # 3 is the only rc that means "tests ran and failed". Anything else
+          # non-zero means the suite never produced a verdict, and the report
+          # must not claim the module failed against current PVE.
+          if [ -z "${SUITE_RC:-}" ]; then
+            outcome=not-run
+          elif [ "${SUITE_RC}" = "0" ]; then
+            outcome=success
+          elif [ "${SUITE_RC}" = "3" ]; then
+            outcome=failure
+          else
+            outcome=inconclusive
+          fi
+          bash "${SCRIPTS_DIR}/report-package-currency.sh" packages "${outcome}"
 
   # ── Cleanup: destroy all VMs (always runs) ──────────────────────
   cleanup:
