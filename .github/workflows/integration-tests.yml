@@ -70,6 +70,10 @@ env:
   # PVE 8 reached EOL 2026-08-31; CI provisions and tests PVE 9 only.
   # run-integration.sh still accepts "8" for local runs against old targets.
   PVE_VERSIONS: '9'
+  # Base ISO for the nested nodes. Set here rather than in run-integration.sh
+  # so provision and cleanup agree on the name — force-cleanup deletes the
+  # generated ISO by name and would miss it otherwise.
+  PVE9_ISO: proxmox-ve_9.2-1.iso
 
 jobs:
   # ── Build module artifact (GitHub-hosted) ────────────────────────
