@@ -153,3 +153,27 @@ jobs:
         with:
           name: pester-results-${{ matrix.os }}-ps${{ matrix.ps_version }}
           path: TestResults/
+
+  # ── CI infrastructure shell self-checks ─────────────────────────────
+  # These guard the provisioning and reporting scripts, whose real exercise is
+  # a ~45-minute nested-PVE run. They stub ssh/gh/git and finish in seconds, so
+  # a regression in them is caught on the PR rather than a week later.
+  shell-selfchecks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: prepare-test-environment self-check
+        run: bash tests/infrastructure/scripts/prepare-test-environment.test.sh
+
+      - name: report-package-currency self-check
+        run: bash tests/infrastructure/scripts/report-package-currency.test.sh
+
+      - name: Shell syntax check
+        run: |
+          for f in tests/infrastructure/scripts/*.sh; do
+            bash -n "$f" || exit 1
+          done
