@@ -49,6 +49,12 @@ if [[ "${DIST_UPGRADE}" == "1" ]]; then
     # immediately would match the pre-reboot node and return at once.
     sleep 30
     bash "${SCRIPT_DIR}/wait-for-api.sh" "${NESTED_IP}" 8006 600
+
+    # The running kernel is the point of the reboot: the package set alone
+    # cannot show whether the node actually booted what it installed.
+    if [[ -n "${PKG_OUT}" ]]; then
+        ${SSH_CMD} "echo \"# running-kernel\t\$(uname -r)\"" >> "${PKG_OUT}"
+    fi
 fi
 
 # Enable snippets and import content types on local storage
