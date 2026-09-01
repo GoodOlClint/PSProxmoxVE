@@ -27,23 +27,6 @@ git push -u origin feat/my-feature
 gh pr create
 ```
 
-### Agent pushes go through the GitHub MCP (operator decision 2026-09-01)
-
-Agent-authored branches are pushed with the `github` MCP tools (`create_branch` +
-`push_files`, committing as the `goodolclint-claude` App), not local `git push` over the
-operator's SSH key. Local git stays for everything else — branches, commits, diffs; only
-the push goes through the API. `push_files` creates its own commit from full file
-contents, so the commit message is passed to the tool and no `Co-Authored-By` trailer is
-needed.
-
-Every API push is byte-verified before the PR: commit the identical change locally,
-`git fetch`, and `git diff <local-commit> origin/<branch> --` must be empty. `push_files`
-cannot express a removal — use `delete_file` for deletions, and a rename is `push_files`
-of the new path plus `delete_file` of the old.
-
-**Exception: `.github/workflows/*`.** The App token has no `workflows` permission, so
-GitHub refuses those pushes; they stay on operator-attended local `git push`.
-
 ### Dev container (recommended)
 
 A Docker-based dev environment replicates the full CI setup locally. Works on ARM Macs
