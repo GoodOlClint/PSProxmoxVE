@@ -112,8 +112,11 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
             $result | Should -Not -BeNullOrEmpty
             $script:ClusterCreated = $true
 
-            # Allow corosync to fully stabilize
-            Start-Sleep -Seconds 5
+            # New-PveCluster -Wait returns only once the cluster is quorate (D014),
+            # which is what makes the join below safe without a sleep.
+            $cluster = @(Get-PveClusterStatus -ErrorAction Stop) |
+                Where-Object { $_.Type -eq 'cluster' } | Select-Object -First 1
+            $cluster.Quorate | Should -Be 1 -Because 'node A must be quorate before node B can join'
         }
 
         It 'Get-PveClusterStatus shows cluster formed' {
@@ -169,13 +172,10 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
             $joinPw = ConvertTo-SecureString $script:Password -AsPlainText -Force
 
             try {
-                # ring0 defaults to whatever node B resolves its own hostname to;
-                # pin it to the address the harness verified it answers on.
                 $result = Add-PveClusterMember `
                     -Hostname $script:Host_ `
                     -Fingerprint $fingerprint `
                     -Password $joinPw `
-                    -Links "link0=$($script:HostB)" `
                     -Wait `
                     -Confirm:$false `
                     -ErrorAction Stop
