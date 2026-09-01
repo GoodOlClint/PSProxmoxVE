@@ -172,6 +172,9 @@ jobs:
       - name: report-package-currency self-check
         run: bash tests/infrastructure/scripts/report-package-currency.test.sh
 
+      - name: preflight-cleanup self-check
+        run: bash tests/infrastructure/scripts/preflight-cleanup.test.sh
+
       - name: Shell syntax check
         run: |
           for f in tests/infrastructure/scripts/*.sh; do
