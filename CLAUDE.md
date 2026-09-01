@@ -27,6 +27,31 @@ git push -u origin feat/my-feature
 gh pr create
 ```
 
+### Review before pushing, not after
+
+**Write the code, then review it, then commit and push.** Not the other way round.
+Before `git add`/`git commit` on any non-trivial change, spawn reviews of the working
+tree and act on what they find:
+
+- **Codex** (`codex:codex-rescue`) — a second opinion from a different model.
+- **Subagent reviewers** — pick for the change: `correctness-reviewer`,
+  `security-reviewer`, `test-reviewer`, `architecture-reviewer`, `api-compat-reviewer`,
+  `performance-reviewer`, `ai-smell-reviewer`.
+
+Run them in parallel in one message; they are read-only and independent.
+
+The point is to cut review churn. A defect found before the push costs one edit; the same
+defect found by the PR reviewer costs a review cycle, a force-push and a re-review, and on
+CI-infrastructure changes a runner iteration is roughly 45 minutes. Reviewers are not
+infallible — verify a finding against the code before acting on it, and say so when you
+judge one wrong rather than silently ignoring it.
+
+When a reviewer criticises a test, mutation-test it: break the behaviour the test claims to
+cover and confirm the test fails. A suite that passes against a deliberately broken
+implementation is not evidence of anything.
+
+Trivial edits skip this: a typo, a version bump, a one-line doc change.
+
 ### Agent pushes and commit identity
 
 **Default: the `github` MCP tools.** Agent-authored branches go up with `create_branch` +
