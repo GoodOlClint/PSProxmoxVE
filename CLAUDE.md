@@ -43,8 +43,9 @@ is impractical past a certain size. `.claude/settings.json` sets `GIT_AUTHOR_*` 
 App — but they are **not verified**, because the signature comes from committing through
 the API, not from the author name. Use this path when needed, not by default.
 
-The env block applies at session start, so a session that predates this file still commits
-as the operator.
+Claude Code picks the env block up immediately — the session that adds it already commits
+as the bot, no restart needed. A `Co-Authored-By` trailer is redundant once it is in
+effect, since the App is the commit author.
 
 ### Dev container (recommended)
 
