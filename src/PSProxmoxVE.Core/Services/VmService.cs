@@ -326,6 +326,42 @@ namespace PSProxmoxVE.Core.Services
             }
         }
 
+        /// <summary>
+        /// Reboots a VM through PVE's native reboot endpoint. Returns the task UPID.
+        /// </summary>
+        /// <remarks>
+        /// PVE holds the guest's config lock across the whole shutdown and restarts the VM from
+        /// its own post-stop cleanup, so nothing can interleave between the two halves. Composing
+        /// a reboot client-side as shutdown + start instead races that cleanup: the start wins the
+        /// lock, cleanup then holds it for 30 s waiting on the newly started process, and the next
+        /// call fails with "can't lock file '/var/lock/qemu-server/lock-&lt;vmid&gt;.conf' - got timeout".
+        /// </remarks>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
+        /// <param name="timeoutSeconds">Optional maximum seconds to wait for the shutdown half.</param>
+        public PveTask RebootVm(PveSession session, string node, int vmid, int? timeoutSeconds = null)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+
+            var formData = new Dictionary<string, string>();
+            if (timeoutSeconds.HasValue)
+                formData["timeout"] = timeoutSeconds.Value.ToString();
+
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            try
+            {
+                var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/status/reboot", formData)
+                    .GetAwaiter().GetResult();
+                return ParseTask(response, node);
+            }
+            finally
+            {
+                if (_injectedClient == null) client.Dispose();
+            }
+        }
+
         /// <summary>Resets a VM (hard reset). Returns the task UPID.</summary>
         /// <param name="session">The authenticated PVE session.</param>
         /// <param name="node">The cluster node name.</param>
