@@ -461,3 +461,53 @@ Add-PveClusterMember ...
 New-PveCluster -ClusterName 'c1' -Wait
 Add-PveClusterMember ...
 ```
+
+---
+
+## D015 — Lifecycle -Wait blocks until the guest config lock clears
+
+**Status**: Active
+**Finding refs**: (none — found via integration runs 183/184, 2026-09-01)
+**Resolved in scan**: n/a
+
+### Decision
+`WaitForStatusTransition` returns only when the guest reports the expected status **and**
+its config lock has cleared. Reaching the status is not enough: PVE publishes the new
+status while the operation still holds `/var/lock/qemu-server/lock-<vmid>.conf`, and the
+next API call against that guest fails with `got timeout` trying to take the same lock.
+
+`lock` is read from the `status/current` response the poll already fetches — it is present
+on both `qemu` and `lxc` status/current and has been since PVE 5.4, well below this
+module's 7.0 floor, so this costs no extra request.
+
+If the status is reached but the lock outlasts `-Timeout`, the cmdlet returns success
+rather than throwing. The waited-for operation did complete; only the settling ran long.
+This keeps a call that succeeded before the change from becoming an exception after it.
+
+This is the same family as D014: a PVE task completing does not mean the resource is ready
+for the next operation. D014 is the cluster-quorum instance, D015 the guest-lock instance.
+
+### Rationale
+Integration run 183 failed four tests from one cause. `Restart-PveVm -Wait` returned after
+4.1 s having observed `running`; the following `Stop-PveVm` spent exactly 10.0 s failing to
+acquire the lock, which cascaded into the template convert, clone, and remove tests. Run 184,
+the same commit re-run, passed: its status poll happened to take 10.1 s, by which point the
+lock had cleared. The same settling happens either way — the only variable is whether the
+wait absorbs it or the next caller does.
+
+The check lives in `WaitForStatusTransition` rather than in each cmdlet because all nine
+lifecycle call sites route through it.
+
+### Anti-pattern (do not reintroduce)
+```csharp
+// NEVER treat the status transition alone as "ready for the next operation"
+if (string.Equals(effectiveStatus, expectedStatus, StringComparison.OrdinalIgnoreCase))
+    return task;
+```
+
+### Correct pattern
+```csharp
+var snapshot = GuestStatusSnapshot.Evaluate(json, expectedStatus);
+if (snapshot.StatusMatched && !snapshot.Locked)
+    return task;
+```
