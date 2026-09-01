@@ -483,8 +483,10 @@ SDN management requires Proxmox VE 8.0 or later. Connected server is version 7.4
 1. Clone the repository
 2. Open `PSProxmoxVE.sln` in your IDE
 3. Build: `dotnet build`
-4. Run unit tests: `./tests/dev.ps1 test`
-5. Run integration tests (provisions nested PVE, x86 only): `./tests/dev.ps1 integration`
+4. Run unit tests — import the local build first, or an installed copy of the module shadows
+   it and the suite reports failures against correct code:
+   `pwsh -Command "Import-Module ./src/PSProxmoxVE/bin/Debug/netstandard2.0/PSProxmoxVE.psd1 -Force; Invoke-Pester tests/PSProxmoxVE.Tests/ -ExcludeTagFilter Integration"`
+5. Run integration tests (provisions nested PVE, x86 only): see `CLAUDE.md`, "Local dev environment"
 
 ### Commit Convention
 

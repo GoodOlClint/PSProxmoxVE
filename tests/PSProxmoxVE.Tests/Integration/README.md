@@ -119,10 +119,20 @@ env:
 The integration suite is tagged `Integration`. Use the `-Tag` filter so that the unit
 tests and integration tests can be run independently.
 
-### Via the dev container (recommended)
+### Via the CI container (recommended)
 
-```powershell
-./tests/dev.ps1 integration
+`run-integration.sh` provisions the nested PVE nodes, installs the module, and runs the
+suite — the same path CI takes. x86 only.
+
+```bash
+pve() {
+    docker compose -f tests/docker-compose.test.yml --profile infra run --rm dev-infra \
+        bash tests/infrastructure/scripts/run-integration.sh "$@"
+}
+
+pve provision 9
+pve test 9 Cluster,VMs   # the area filter is optional
+pve force-cleanup
 ```
 
 ### Directly with Invoke-Pester

@@ -24,6 +24,12 @@
 #   PVE_ENDPOINT       Parent PVE API URL (e.g. https://pve.example.com:8006)
 #   PVE_API_TOKEN      Parent PVE API token
 #   PVE_PASSWORD       Root password for nested PVE instances
+#   TF_VAR_disk_storage  Storage pool for VM disks; must support raw format
+#   TF_VAR_iso_storage   Storage pool for uploads; must accept the iso AND
+#                        import content types
+#
+# The two TF_VAR_* values have no Terraform defaults, and this script removes
+# terraform.tfvars before applying, so the environment is the only channel.
 #
 # Required env vars (test with pre-existing PVE):
 #   PVETEST_HOST       PVE host IP (node A)
@@ -233,6 +239,8 @@ cmd_provision() {
     require_env PVE_ENDPOINT
     require_env PVE_API_TOKEN
     require_env PVE_PASSWORD
+    require_env TF_VAR_disk_storage
+    require_env TF_VAR_iso_storage
     resolve_target_node "$(wc -w <<<"$provision_nodes")"
 
     ci_mask "$PVE_PASSWORD"
@@ -622,6 +630,8 @@ cmd_cleanup() {
         PVE_TARGET_NODE="$(cat "$TARGET_NODE_FILE" 2>/dev/null || true)"
     fi
     require_env PVE_TARGET_NODE
+    require_env TF_VAR_disk_storage
+    require_env TF_VAR_iso_storage
 
     # Build tfvars for all versions (Terraform needs the full variable map)
     local tfvars="$WORK_DIR/instances.tfvars.json"

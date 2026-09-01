@@ -3,13 +3,23 @@ proxmox_endpoint  = "https://pve.example.com:8006"
 proxmox_api_token = "root@pam!terraform=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 target_node       = "pve"
 
-# Local path to the prepared auto-install ISO (output of prepare-auto-iso.sh)
-iso_local_path = "/tmp/proxmox-ve_9.1-1-auto.iso"
-disk_storage   = "local-lvm"
+test_vm_password = "root-password-for-the-nested-pve-nodes"
+
+# Storage pools. Both are required — there are no defaults.
+# iso_storage must accept the "iso" AND "import" content types.
+#
+# NOTE: this file is only read when you invoke terraform by hand.
+# run-integration.sh deletes terraform.tfvars before applying; for that path
+# set TF_VAR_disk_storage / TF_VAR_iso_storage in tests/.env.test instead.
+#
+# pve_instances and pve_isos are required too, but are machine-generated —
+# run-integration.sh builds them into $WORK_DIR/instances.tfvars.json and
+# passes that with -var-file. A by-hand apply needs the same file.
+disk_storage = "local-lvm"
+iso_storage  = "local"
 
 # Optional overrides
 # cores          = 4
 # memory         = 8192
 # disk_size      = 64
 # network_bridge = "vmbr0"
-# iso_storage    = "local"

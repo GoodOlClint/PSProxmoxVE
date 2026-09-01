@@ -29,13 +29,18 @@ dotnet test tests/PSProxmoxVE.Core.Tests/
 pwsh -Command "Invoke-Pester tests/PSProxmoxVE.Tests/ -Output Detailed"
 ```
 
-A Docker-based dev container replicates the full CI setup locally:
+The integration flow runs in the same container image CI uses. There is no wrapper
+script — call `run-integration.sh` directly (x86 only):
 
-```powershell
-./tests/dev.ps1              # Open pwsh shell in dev container
-./tests/dev.ps1 build        # Build the module
-./tests/dev.ps1 test         # Run unit tests
-./tests/dev.ps1 integration  # Provision nested PVE, run integration tests, cleanup (x86 only)
+```bash
+pve() {
+    docker compose -f tests/docker-compose.test.yml --profile infra run --rm dev-infra \
+        bash tests/infrastructure/scripts/run-integration.sh "$@"
+}
+
+pve provision 9
+pve test 9 Cluster,VMs   # the area filter is optional
+pve force-cleanup
 ```
 
 ## Key Coding Conventions
