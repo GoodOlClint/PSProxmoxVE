@@ -565,7 +565,11 @@ cmd_test() {
         pwsh -NoProfile -Command "
             \$PveVersion = '$v'
             \$TestFilter = '$pester_filter_arg'
-            Import-Module Pester -MinimumVersion 5.0
+            \$pesterVersion = \$env:PESTER_VERSION
+            if ([string]::IsNullOrWhiteSpace(\$pesterVersion)) {
+                throw 'PESTER_VERSION is not set — refusing to import whichever Pester happens to be present'
+            }
+            Import-Module Pester -RequiredVersion \$pesterVersion
             \$config = New-PesterConfiguration
 
             if (\$TestFilter) {

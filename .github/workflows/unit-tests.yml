@@ -1,5 +1,11 @@
 name: Unit Tests
 
+# Pinned, not floored. Pester is installed fresh on every run, so a version range
+# lets a new major reach the required checks with no commit to this repo (#112).
+# Keep in step with PESTER_VERSION in tests/Dockerfile.test.
+env:
+  PESTER_VERSION: 6.1.0
+
 on:
   push:
     branches: [ main ]
@@ -81,17 +87,26 @@ jobs:
           name: module-${{ matrix.framework }}-${{ matrix.artifact_os }}
           path: ./publish/${{ matrix.framework }}/
 
-      - name: Install Pester 5 (PS 5.1)
+      # -RequiredVersion accepts an empty value and degrades to "latest" with
+      # exit 0, so an unset variable would silently restore the float this pin
+      # removes. Fail the job instead.
+      - name: Verify PESTER_VERSION is set
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:PESTER_VERSION)) { throw 'PESTER_VERSION is not set' }
+          "Pinning Pester to $env:PESTER_VERSION"
+
+      - name: Install Pester (PS 5.1)
         if: matrix.ps_version == '5.1'
         shell: powershell
         run: |
-          Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser -SkipPublisherCheck
+          Install-Module -Name Pester -RequiredVersion $env:PESTER_VERSION -Force -Scope CurrentUser -SkipPublisherCheck
 
-      - name: Install Pester 5 (PS 7.x)
+      - name: Install Pester (PS 7.x)
         if: matrix.ps_version != '5.1'
         shell: pwsh
         run: |
-          Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser
+          Install-Module -Name Pester -RequiredVersion $env:PESTER_VERSION -Force -Scope CurrentUser
 
       - name: Copy module to module path (PS 5.1)
         if: matrix.ps_version == '5.1'
@@ -121,7 +136,7 @@ jobs:
         if: matrix.ps_version == '5.1'
         shell: powershell
         run: |
-          Import-Module Pester -MinimumVersion 5.0
+          Import-Module Pester -RequiredVersion $env:PESTER_VERSION
           $config = New-PesterConfiguration
           $config.Run.Path = "tests/PSProxmoxVE.Tests"
           $config.Run.Exit = $true
@@ -136,7 +151,7 @@ jobs:
         if: matrix.ps_version != '5.1'
         shell: pwsh
         run: |
-          Import-Module Pester -MinimumVersion 5.0
+          Import-Module Pester -RequiredVersion $env:PESTER_VERSION
           $config = New-PesterConfiguration
           $config.Run.Path = "tests/PSProxmoxVE.Tests"
           $config.Run.Exit = $true
@@ -171,6 +186,16 @@ jobs:
 
       - name: report-package-currency self-check
         run: bash tests/infrastructure/scripts/report-package-currency.test.sh
+
+      # The pin lives in two files; split-brain is exactly the unexplained
+      # breakage D017 exists to prevent, so assert they agree.
+      - name: Pester pin agrees across workflow and image
+        run: |
+          wf=$(sed -n 's/^  PESTER_VERSION: *//p' .github/workflows/unit-tests.yml)
+          img=$(sed -n 's/^ARG PESTER_VERSION=//p' tests/Dockerfile.test)
+          echo "workflow=$wf image=$img"
+          [ -n "$wf" ] && [ -n "$img" ] || { echo "could not read one of the pins" >&2; exit 1; }
+          [ "$wf" = "$img" ] || { echo "PESTER_VERSION differs: workflow=$wf image=$img" >&2; exit 1; }
 
       - name: Shell syntax check
         run: |

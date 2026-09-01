@@ -6,7 +6,8 @@ C# binary PowerShell module for managing Proxmox VE (PVE) infrastructure. Two pr
 - `src/PSProxmoxVE/` — Cmdlets and module surface (targets netstandard2.0)
 - `src/PSProxmoxVE.Core/` — Services, models, HTTP client (targets netstandard2.0)
 
-Tests: xUnit (`tests/PSProxmoxVE.Core.Tests/`) and Pester 5 (`tests/PSProxmoxVE.Tests/`).
+Tests: xUnit (`tests/PSProxmoxVE.Core.Tests/`) and Pester (`tests/PSProxmoxVE.Tests/`), pinned by
+`PESTER_VERSION` in `.github/workflows/unit-tests.yml` and `tests/Dockerfile.test`.
 
 ## Development Workflow
 
