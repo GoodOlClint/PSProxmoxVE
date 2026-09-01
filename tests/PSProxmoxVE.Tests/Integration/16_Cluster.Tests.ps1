@@ -205,11 +205,18 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
             if (Skip-IfNoNodeB) { return }
             if (Skip-IfNoCluster) { return }
 
-            $status = Get-PveClusterStatus -ErrorAction Stop
-            $nodeEntries = @($status) | Where-Object { $_.Type -eq 'node' }
-            @($nodeEntries).Count | Should -BeGreaterOrEqual 2
+            # Corosync membership reaches the status endpoint seconds after
+            # the join task completes — poll rather than assert instantly.
+            $deadline = [DateTime]::UtcNow.AddSeconds(60)
+            do {
+                $status = Get-PveClusterStatus -ErrorAction Stop
+                $nodeEntries = @($status) | Where-Object { $_.Type -eq 'node' }
+                $onlineNodes = @($nodeEntries) | Where-Object { $_.Online -eq 1 }
+                if (@($onlineNodes).Count -ge 2) { break }
+                Start-Sleep -Seconds 3
+            } while ([DateTime]::UtcNow -lt $deadline)
 
-            $onlineNodes = @($nodeEntries) | Where-Object { $_.Online -eq 1 }
+            @($nodeEntries).Count | Should -BeGreaterOrEqual 2
             @($onlineNodes).Count | Should -BeGreaterOrEqual 2
         }
     }
