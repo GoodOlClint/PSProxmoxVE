@@ -109,5 +109,61 @@ namespace PSProxmoxVE.Core.Tests.Services
                     "cmd.exe", new[] { "/c", null!, "echo" }));
             Assert.Equal("args", ex.ParamName);
         }
+
+        [Fact]
+        public void RebootVm_PostsToTheNativeRebootEndpoint()
+        {
+            string? resource = null;
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient
+                .Setup(c => c.PostAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+                .Callback<string, Dictionary<string, string>>((r, _) => resource = r)
+                .ReturnsAsync("{\"data\":\"UPID:pve1:00001234:00005678:6A970AAB:qmreboot:100:root@pam:\"}");
+
+            var service = new VmService(mockClient.Object);
+            var task = service.RebootVm(CreateSession(), TestNode, TestVmId);
+
+            // Composing a reboot as shutdown + start races PVE's post-stop cleanup for the
+            // config lock; the native endpoint keeps the whole restart server-side.
+            Assert.Equal($"nodes/{TestNode}/qemu/{TestVmId}/status/reboot", resource);
+            Assert.Contains("qmreboot", task.Upid);
+        }
+
+        [Fact]
+        public void RebootVm_SendsTimeoutWhenSupplied()
+        {
+            List<KeyValuePair<string, string>>? captured = null;
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient
+                .Setup(c => c.PostAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+                .Callback<string, Dictionary<string, string>>((_, data) => captured = data.ToList())
+                .ReturnsAsync("{\"data\":\"UPID:pve1:00001234:00005678:6A970AAB:qmreboot:100:root@pam:\"}");
+
+            var service = new VmService(mockClient.Object);
+            service.RebootVm(CreateSession(), TestNode, TestVmId, 45);
+
+            Assert.NotNull(captured);
+            Assert.Single(captured!);
+            Assert.Equal("timeout", captured![0].Key);
+            Assert.Equal("45", captured![0].Value);
+        }
+
+        [Fact]
+        public void RebootVm_OmitsTimeoutWhenNotSupplied()
+        {
+            List<KeyValuePair<string, string>>? captured = null;
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient
+                .Setup(c => c.PostAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+                .Callback<string, Dictionary<string, string>>((_, data) => captured = data.ToList())
+                .ReturnsAsync("{\"data\":\"UPID:pve1:00001234:00005678:6A970AAB:qmreboot:100:root@pam:\"}");
+
+            var service = new VmService(mockClient.Object);
+            service.RebootVm(CreateSession(), TestNode, TestVmId);
+
+            Assert.NotNull(captured);
+            Assert.Empty(captured!);
+        }
+
     }
 }
