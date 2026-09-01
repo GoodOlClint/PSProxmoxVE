@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading.Tasks;
 using Moq;
 using Newtonsoft.Json.Linq;
 using Xunit;
 using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Client;
+using PSProxmoxVE.Core.Exceptions;
 using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Core.Tests.Services
@@ -465,6 +467,50 @@ namespace PSProxmoxVE.Core.Tests.Services
         public void Constructor_NullClient_ThrowsArgumentNullException()
         {
             Assert.Throws<ArgumentNullException>(() => new ClusterConfigService(null!));
+        }
+
+        [Fact]
+        public void WaitForQuorum_ReturnsOnceClusterIsQuorate()
+        {
+            var notQuorate = @"{""data"": [{""type"": ""cluster"", ""name"": ""c1"", ""quorate"": 0}]}";
+            var quorate = @"{""data"": [{""type"": ""cluster"", ""name"": ""c1"", ""quorate"": 1}]}";
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient.SetupSequence(c => c.GetAsync("cluster/status"))
+                .ReturnsAsync(notQuorate)
+                .ReturnsAsync(quorate);
+            var service = new ClusterConfigService(mockClient.Object);
+
+            service.WaitForQuorum(CreateSession(), TimeSpan.FromSeconds(30));
+
+            mockClient.Verify(c => c.GetAsync("cluster/status"), Times.Exactly(2));
+        }
+
+        [Fact]
+        public void WaitForQuorum_ThrowsWhenQuorumNeverReached()
+        {
+            var notQuorate = @"{""data"": [{""type"": ""cluster"", ""name"": ""c1"", ""quorate"": 0}]}";
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient.Setup(c => c.GetAsync("cluster/status")).ReturnsAsync(notQuorate);
+            var service = new ClusterConfigService(mockClient.Object);
+
+            Assert.Throws<TimeoutException>(() =>
+                service.WaitForQuorum(CreateSession(), TimeSpan.FromMilliseconds(1)));
+        }
+
+        [Fact]
+        public void WaitForQuorum_RetriesWhileTheApiIsRestarting()
+        {
+            var quorate = @"{""data"": [{""type"": ""cluster"", ""name"": ""c1"", ""quorate"": 1}]}";
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient.SetupSequence(c => c.GetAsync("cluster/status"))
+                .ThrowsAsync(new PveApiException(HttpStatusCode.InternalServerError,
+                    "cluster not ready", "cluster/status", "GET"))
+                .ReturnsAsync(quorate);
+            var service = new ClusterConfigService(mockClient.Object);
+
+            service.WaitForQuorum(CreateSession(), TimeSpan.FromSeconds(30));
+
+            mockClient.Verify(c => c.GetAsync("cluster/status"), Times.Exactly(2));
         }
     }
 }
