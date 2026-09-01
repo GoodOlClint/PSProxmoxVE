@@ -36,11 +36,21 @@ RUN if [ "$(dpkg --print-architecture)" = "amd64" ]; then \
         && ln -s /root/.dotnet/tools/pwsh /usr/local/bin/pwsh; \
     fi
 
-# Install Pester and prepare module directory
+# Install Pester and prepare module directory.
+# Pinned, not floored: this image is rebuilt on every CI run, so a version range
+# lets a new Pester major reach the gating lane with no commit to this repo.
+# Bump deliberately, the way D017 treats the nested PVE package set.
+ARG PESTER_VERSION=6.1.0
 RUN pwsh -NoProfile -Command \
-       'Set-PSRepository -Name PSGallery -InstallationPolicy Trusted; \
-        Install-Module -Name Pester -MinimumVersion 5.0 -Scope AllUsers -Force' \
+       "Set-PSRepository -Name PSGallery -InstallationPolicy Trusted; \
+        Install-Module -Name Pester -RequiredVersion $PESTER_VERSION -Scope AllUsers -Force" \
+    && pwsh -NoProfile -Command \
+       "if (-not (Get-Module -ListAvailable Pester | Where-Object Version -eq '$PESTER_VERSION')) { throw 'Pester $PESTER_VERSION not installed' }" \
     && mkdir -p /usr/local/share/powershell/Modules/PSProxmoxVE
+
+# Promoted to ENV so the suite can pin its import too — the install pin alone
+# does not bind the point of use if a second Pester ever reaches PSModulePath.
+ENV PESTER_VERSION=$PESTER_VERSION
 
 WORKDIR /repo
 CMD ["pwsh", "-NoProfile"]

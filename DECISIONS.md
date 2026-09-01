@@ -634,6 +634,27 @@ still fails the job. `run-integration.sh` returns 3 for a genuine test failure a
 reach or authenticate to a node; only 3 is suppressed. Suppressing both would let a botched reboot
 report success while the lane learned nothing.
 
+### Amendment 2026-09-01 — the pin covers the test tooling, not just the nested PVE packages
+
+The gating lane's own tooling is pinned by exact version for the same reason its nested PVE packages
+are: `Pester` in `tests/Dockerfile.test` (`ARG PESTER_VERSION`) and in `.github/workflows/unit-tests.yml`
+(`env.PESTER_VERSION`), installed and imported with `-RequiredVersion` at every site, including the
+suite's own import inside the container. The Dockerfile promotes the ARG to `ENV` so the version is
+discoverable at runtime. Both files must name the same version, and `shell-selfchecks` asserts it.
+
+Before this, both sites used `-MinimumVersion 5.0` with no ceiling. The image is rebuilt on every CI
+run and Pester is installed fresh on every unit-test run, so PSGallery decided the version — a new
+major could reach the merge gate with no commit to this repository, surfacing as unexplained test
+breakage on whichever PR happened to run next. That is the same class of moving input the lane split
+exists to eliminate; the difference is only that it moves in the test runner rather than in PVE.
+
+It had already happened silently: steps named "Install Pester 5" were resolving 6.1.0 on both the
+PowerShell 5.1 and 7.x legs, because Pester 6 declares `PowerShellVersion 5.1` and so installs on
+Windows PowerShell too. Nothing broke — the suite uses only constructs common to 5 and 6 — but
+nobody chose it.
+
+Bumping is a deliberate commit that changes both files together.
+
 ### Anti-pattern (do not reintroduce)
 ```bash
 # NEVER in first-boot.sh — this is the mismatch that left a node unclustered
