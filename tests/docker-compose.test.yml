@@ -4,9 +4,11 @@
 ##   docker compose -f tests/docker-compose.test.yml up -d
 ##   docker exec -it psproxmoxve-dev pwsh
 ##
-## Full CI infra (x86 only — adds Terraform + PVE provisioning tools):
-##   docker compose -f tests/docker-compose.test.yml --profile infra up -d
-##   docker exec -it psproxmoxve-dev-infra bash
+## Full CI infra (x86 only — adds Terraform + PVE provisioning tools).
+## dev-infra is the same image CI runs its jobs in (Dockerfile.test target
+## dev-infra), so the local flow is the CI flow:
+##   docker compose -f tests/docker-compose.test.yml --profile infra run --rm \
+##       dev-infra bash tests/infrastructure/scripts/run-integration.sh provision 9
 ##
 ## Stop:
 ##   docker compose -f tests/docker-compose.test.yml down
@@ -38,9 +40,6 @@ services:
     volumes:
       - ..:/repo
       - /opt/pve-integration:/opt/pve-integration
-      # WARNING: Mounting the Docker socket grants this container root-equivalent
-      # access to the host's Docker daemon. Only use on trusted, isolated machines.
-      - /var/run/docker.sock:/var/run/docker.sock
     working_dir: /repo
     stdin_open: true
     tty: true

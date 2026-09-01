@@ -72,36 +72,42 @@ Claude Code picks the env block up immediately — the session that adds it alre
 as the bot, no restart needed. A `Co-Authored-By` trailer is redundant once it is in
 effect, since the App is the commit author.
 
-### Dev container (recommended)
+### Local dev environment
 
-A Docker-based dev environment replicates the full CI setup locally. Works on ARM Macs
-(build + test) and x86 (full provisioning flow).
+`tests/infrastructure/scripts/run-integration.sh` is the single source of truth for the
+provision → test → cleanup lifecycle. CI calls it directly, and so should you — there is
+no wrapper script.
 
-```powershell
-./tests/dev.ps1              # Open pwsh shell in dev container
-./tests/dev.ps1 build        # Build the module
-./tests/dev.ps1 test         # Run unit tests (ARM + x86)
-./tests/dev.ps1 integration  # Provision nested PVE, run tests, cleanup (x86 only)
-./tests/dev.ps1 provision    # Provision nested PVE only, no tests (x86 only)
-```
-
-Configure parent PVE credentials by copying `tests/.env.test.example` to `tests/.env.test`.
-
-### Build & test without container
+Build and unit tests run natively, no container needed:
 
 ```bash
-# Build
 dotnet build PSProxmoxVE.sln
-
-# xUnit tests
 dotnet test tests/PSProxmoxVE.Core.Tests/
-
-# Pester tests (requires pwsh)
-pwsh -Command "Invoke-Pester tests/PSProxmoxVE.Tests/ -Output Detailed"
-
-# Run all tests via dev container
-./tests/dev.ps1 test
+pwsh -Command "Invoke-Pester tests/PSProxmoxVE.Tests/ -ExcludeTagFilter Integration -Output Detailed"
 ```
+
+An installed `PSProxmoxVE` in `~/.local/share/powershell/Modules/` shadows the local build,
+because `_TestHelper.ps1` tries `Import-Module PSProxmoxVE` by name first. Force the local
+build with `Import-Module ./src/PSProxmoxVE/bin/Debug/netstandard2.0/PSProxmoxVE.psd1 -Force`,
+or delete the installed copy. (`dotnet build` writes there; only `dotnet publish -o
+./publish/netstandard2.0`, which CI runs, creates `publish/`.)
+
+The integration flow needs the `dev-infra` container — the same image CI runs its jobs in
+(`tests/Dockerfile.test`, target `dev-infra`). x86 only:
+
+```bash
+pve() {
+    docker compose -f tests/docker-compose.test.yml --profile infra run --rm dev-infra \
+        bash tests/infrastructure/scripts/run-integration.sh "$@"
+}
+
+pve provision 9
+pve test 9 Cluster,VMs   # the area filter is optional
+pve force-cleanup
+```
+
+Copy `tests/.env.test.example` to `tests/.env.test` first — it lists every required
+variable, including the Terraform storage pools CI supplies from repository variables.
 
 ## Key Conventions
 

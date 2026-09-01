@@ -19,7 +19,7 @@ if [ -z "$NODE" ]; then
     NODES_JSON=$(curl -sk -H "Authorization: PVEAPIToken=${API_TOKEN}" "${API_BASE}/nodes" 2>/dev/null)
     NODE=$(echo "$NODES_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['data'][0]['node'])" 2>/dev/null || echo "pve")
 fi
-ISO_STORAGE="${TF_VAR_iso_storage:-local}"
+ISO_STORAGE="${TF_VAR_iso_storage:-}"
 
 echo "=== Pre-flight cleanup (node: ${NODE}, vmid: ${VM_ID}) ==="
 
@@ -55,6 +55,13 @@ fi
 # --- Clean up orphaned ISO ---
 if [ -z "$ISO_FILENAME" ]; then
     echo "No ISO filename specified, skipping ISO cleanup"
+elif [ -z "$ISO_STORAGE" ]; then
+    # force-cleanup is the only cleanup CI runs and it wipes Terraform state, so a
+    # skipped ISO delete here strands the upload with nothing left to reclaim it.
+    if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+        echo "::warning::TF_VAR_iso_storage is unset — ISO cleanup skipped; the uploaded auto-install ISO is stranded"
+    fi
+    echo "WARNING: TF_VAR_iso_storage is unset — skipping ISO cleanup rather than guessing a storage pool"
 else
 ISO_EXISTS=$(curl -sk -H "Authorization: PVEAPIToken=${API_TOKEN}" \
     "${API_BASE}/nodes/${NODE}/storage/${ISO_STORAGE}/content" 2>/dev/null \

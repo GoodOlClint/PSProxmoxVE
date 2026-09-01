@@ -55,15 +55,13 @@ variable "disk_size" {
 }
 
 variable "disk_storage" {
-  description = "Proxmox storage pool for VM disks (must support raw format)"
+  description = "Proxmox storage pool for VM disks (must support raw format). Required, no default. run-integration.sh removes terraform.tfvars before applying, so set TF_VAR_disk_storage in the environment (tests/.env.test)."
   type        = string
-  default     = "nas-iSCSI-lvm"
 }
 
 variable "iso_storage" {
-  description = "Proxmox storage pool for uploads (must accept the iso AND import content types — import is not enabled by default on most storages)"
+  description = "Proxmox storage pool for uploads (must accept the iso AND import content types — import is not enabled by default on most storages). Required, no default. run-integration.sh removes terraform.tfvars before applying, so set TF_VAR_iso_storage in the environment (tests/.env.test)."
   type        = string
-  default     = "local"
 }
 
 variable "network_bridge" {

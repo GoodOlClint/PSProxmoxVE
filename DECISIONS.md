@@ -714,3 +714,46 @@ if [[ -z "${boot_after}" || "${boot_after}" == "${boot_before}" ]]; then
 fi
 bash "${SCRIPT_DIR}/wait-for-api.sh" "${NESTED_IP}" 8006 600
 ```
+
+---
+
+## D019 — Local dev calls run-integration.sh directly; there is no wrapper script
+
+**Status**: Active
+**Finding refs**: (none — found auditing the local dev path against the post-ARC CI, 2026-09-01)
+**Resolved in scan**: n/a
+
+### Decision
+`tests/infrastructure/scripts/run-integration.sh` is the only entry point to the
+provision → test → cleanup lifecycle, for CI and for local development alike. Local runs
+invoke it inside the `dev-infra` container — the same image CI runs its jobs in. Do not add
+a convenience wrapper around it.
+
+Build and unit tests need no container at all; they run natively against the solution.
+
+### Rationale
+`tests/dev.ps1` was a 291-line PowerShell wrapper over roughly six `docker compose` and
+`docker exec` calls. Every capability it had was already available elsewhere: build and unit
+tests are plain `dotnet` and `Invoke-Pester` invocations, and the module build it performed
+is duplicated inside `run-integration.sh` itself, which publishes and installs the module
+before running the suite.
+
+Being a second entry point, it drifted from the script it wrapped and from the CI it claimed
+to replicate. By the time it was removed it still offered a `-Version 8` leg retired in #88,
+mounted the Docker socket for storage containers replaced by the storage VM in #87, and
+defaulted its remote-host examples to a runner decommissioned in the ARC migration.
+
+Four documentation files described a positional calling convention (`./tests/dev.ps1 test`)
+that did not do what it read as. The script took its actions from switches (`-Test`), but
+also declared `[string[]] $Tests`, so the bare word bound to `-Tests` — the integration-area
+filter. With no action switch set, the script then fell through to its `-Shell` default and
+silently opened an interactive container shell. Every documented command was wrong, and
+wrong in the quietest possible way: it succeeded at something nobody asked for.
+
+A wrapper that must be kept in sync with the thing it wraps earns its place only when it
+removes real friction. This one removed none.
+
+### Anti-pattern (do not reintroduce)
+A `dev.ps1`, `Makefile` target, or shell function that re-implements provisioning steps,
+module installation, or test invocation. If a local flow is awkward, fix it in
+`run-integration.sh` so CI gets the fix too.
