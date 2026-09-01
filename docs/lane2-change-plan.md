@@ -27,7 +27,7 @@ From the cluster/CI workstream tracker, and not reopened here:
 |---|---|---|
 | 1 | Lane home | New `.github/workflows/package-currency.yml` |
 | 2 | Scope | Full Pester suite; test failures reported, **not** fatal |
-| 3 | Baseline store | Committed file, updated by an auto-merging PR, only when the package set actually changed |
+| 3 | Baseline store | **Superseded during build** — see 3.3. An unprotected `ci/package-baseline` data branch, not a committed file in a PR |
 
 ### 3.1 Why a separate workflow
 
@@ -39,22 +39,20 @@ Package drift that doesn't break anything is not interesting. The thing worth kn
 
 **Consequence to accept:** a genuinely broken module against current PVE is a green check with an updated issue. The issue is the signal, not the check colour.
 
-### 3.3 Baseline: what works and what doesn't
+### 3.3 Baseline: superseded during implementation
 
-The operator asked whether the baseline could go through a PR that auto-merges and skips CI, committing only when versions differ. Three parts, and they don't all hold:
+The original choice was a committed baseline file updated by an auto-merging PR. **That cannot work on this repo**, and the reason only surfaced in review:
 
-**Commit only on change — yes.** The lane computes the set, diffs against the committed baseline, and does nothing when identical. On a pinned no-subscription repo most ticks are no-ops.
+- A PR opened with `GITHUB_TOKEN` never triggers `pull_request` workflows — GitHub suppresses them to prevent recursion. `build.yml`, `unit-tests.yml` and `claude-code-review.yml` are all `pull_request`-triggered, so the baseline PR would report **zero required checks** and be permanently unmergeable under branch protection. Not "waits for a human to merge it" — cannot be merged.
+- Auto-merge is enabled on the repo, but auto-merge waits for required checks that will never report, so it does not help.
+- `pve_api` solves this by pushing straight to `main` as `github-actions[bot]` with `contents: write`. That works because its `main` is unprotected. This repo's is (required checks, required review, admin enforced), so the same action is rejected.
+- Using a GitHub App installation token would fire the checks — but it puts output from a machine that just ran `dist-upgrade` against an upstream repo in front of the `claude-review` agent, which holds `pull-requests: write` and is instructed to end with `--approve`. That is a known [required-reviews bypass](https://medium.com/cider-sec/bypassing-required-reviews-using-github-actions-6e1b29135cc7) shape, and not worth opening for a generated data file.
 
-**Auto-merge — yes.** `enablePullRequestAutoMerge` merges once required checks pass and required reviews are satisfied. PR #100 established that `claude[bot]`'s APPROVED alone takes `mergeable_state` to `clean` on this repo, with the operator's code-owner review still pending. So the chain closes with no human: App opens the baseline PR → `claude-review` approves → build + unit tests go green → auto-merge fires. "Allow auto-merge" is already enabled on this repo (operator confirmed 2026-09-01).
+**Adopted instead: an unprotected data branch**, `ci/package-baseline`, holding exactly one file. This is the established pattern for generated data against a protected main — [github-archive-action](https://github.com/githubocto/github-archive-action) writes to an orphan branch for the same reasons. Branch protection covers `main` only, so `contents: write` plus `GITHUB_TOKEN` is sufficient: no PR, no checks, no protection conflict, and no path from node output to the review agent.
 
-**Skip CI — no, and it's worth being precise about why.** Both mechanisms deadlock against branch protection:
+It is written with git plumbing (`hash-object` → `mktree` → `commit-tree` → `push <sha>:refs/heads/…`) so the job's checkout is never touched and no local branch is created, which also makes a re-run unable to collide with itself.
 
-- `paths-ignore` on `build.yml` / `unit-tests.yml` → the workflow never runs → the required check never reports → the PR is blocked forever, and auto-merge waits forever.
-- `[skip ci]` in the commit message → GitHub skips the whole run → identical deadlock.
-
-The only way to skip the *work* while still satisfying protection is to keep the trigger and have each job short-circuit to an immediate `exit 0` on a baseline-only diff, so the check still reports success. That means editing `build.yml` and `unit-tests.yml` — two files with no other stake in this lane — to special-case it.
-
-**Recommendation: let CI run.** Both workflows trigger on every PR to `main` with no path filters today. On PR #100 the full set settled in roughly two minutes, and a baseline PR only exists on ticks where versions actually moved. Paying two minutes a handful of times a year is cheaper than a permanent special case in the two workflows that gate every merge. If the baseline turns out to churn weekly, add the short-circuit then.
+Artifacts alone were considered — the operator's own suggestion — and rejected on the stated goal: artifacts expire (90 days by default), so a weekly cadence would retain roughly 13 data points and lose the history. `git log ci/package-baseline` keeps it indefinitely.
 
 ## 4. Change plan
 
@@ -77,13 +75,18 @@ Add an opt-in third argument (default off), so lane 1's behaviour is byte-identi
 
 Schedule + `workflow_dispatch`; `concurrency: group: integration-tests`; provisions with `PVE_DIST_UPGRADE=1`; runs the full suite with `continue-on-error` on the test step; uploads the package set as an artifact.
 
-### Commit 3 — reporting
+### Commit 3 — reporting *(landed as #108, revised)*
 
-Diff the recorded set against `tests/infrastructure/pve-package-baseline.txt`. On difference: update the rolling issue (find by label, create if absent) with the diff and the suite result, and open the baseline-bump PR with auto-merge enabled. On no difference: exit quietly.
+Diff the reference node against the baseline on `ci/package-baseline`. On difference: update the data branch, then upsert the rolling issue (`pve-currency`). On no difference: exit quietly.
+
+Two additions beyond the plan:
+
+- **Node-vs-node comparison.** A package mismatch *between* the two nested nodes is the failure that left a node unclustered and cost three CI runs to diagnose (see D017). It is reported even when the set is otherwise unchanged.
+- **Input validation.** The package files come from a machine that just installed from an upstream repo and their contents reach a GitHub issue body, so anything that is not a dpkg name/version pair fails the run.
 
 ### Commit 4 — `DECISIONS.md`
 
-D017 (two-lane CI: pinned gating lane + report-only currency lane, and why `first-boot.sh` must never upgrade) and D018 (currency lane reboots unconditionally after `dist-upgrade`).
+D017 (two-lane CI: pinned gating lane + report-only currency lane, and why `first-boot.sh` must never upgrade) and D018 (the currency lane reboots after `dist-upgrade` **and proves it rebooted** — the verification was missing from the first draft and is the part easiest to omit).
 
 ## 5. Convention conflict, surfaced
 

@@ -590,3 +590,127 @@ var task = vmService.RebootVm(session, node, vmid, timeout);
 if (Wait.IsPresent)
     task = WaitForStatusTransition(session, node, task, vmid, "running", timeout);
 ```
+
+---
+
+## D017 — CI runs two lanes: a pinned gating lane and a report-only currency lane
+
+**Status**: Active
+**Finding refs**: (none — arose from integration runs 176–180, root-caused 2026-09-01)
+**Resolved in scan**: n/a
+
+### Decision
+CI provisions nested PVE nodes in two distinct modes, and they must not be merged into one:
+
+- **Lane 1, `integration-tests.yml`** — nodes stay pinned to what the ISO ships. `first-boot.sh`
+  must never run `apt-get upgrade` or `dist-upgrade`. This lane gates merges.
+- **Lane 2, `package-currency.yml`** — nodes are `dist-upgrade`d to current PVE and the suite runs
+  against them. **Report-only**: test failures do not fail the job.
+
+Both declare `concurrency: group: integration-tests`. They drive the same nested VMIDs on the same
+parent node, so they must never run at once.
+
+### Rationale
+`apt-get upgrade` holds back packages that need new dependencies. On the nested nodes that produced
+`pve-cluster` 9.1.6 against `libpve-cluster-api-perl` 9.1.0 — a combination no real install ever
+has — and its symptom was not a package error. The node's pmxcfs came back in local mode after a
+cluster join, `/etc/pve/corosync.conf` never appeared, and the node reported `online=0` while
+corosync itself had healthy 2-node membership. Three CI runs went into diagnosing that, and removing
+the upgrade was the entire fix: run 180 was the first fully green integration run.
+
+So the pin is what makes lane 1 a trustworthy merge gate. But a permanently pinned CI never
+exercises the module against a current PVE, and that gap is exactly where an upstream regression
+would hide. Lane 2 closes it without putting the instability back into the gating path.
+
+Report-only is deliberate. A scheduled job that goes red on an upstream change nobody has chosen to
+chase becomes noise, and a noisy cron gets ignored — which is the failure mode that makes a canary
+worthless. The signal is the rolling issue and the recorded package set, not the check colour.
+
+**Consequence accepted**: a module genuinely broken against current PVE shows a green weekly check
+plus an updated issue. Operator ruling 2026-09-01, to be revisited after a few releases.
+
+A failure of the lane's own machinery — provisioning, the upgrade, the reboot, an unreachable node —
+still fails the job. `run-integration.sh` returns 3 for a genuine test failure and 4 when it cannot
+reach or authenticate to a node; only 3 is suppressed. Suppressing both would let a botched reboot
+report success while the lane learned nothing.
+
+### Anti-pattern (do not reintroduce)
+```bash
+# NEVER in first-boot.sh — this is the mismatch that left a node unclustered
+apt-get update -qq
+apt-get -y upgrade
+```
+
+### Correct pattern
+```bash
+# first-boot.sh installs only what provisioning needs; the ISO is the pin
+apt-get update -qq
+apt-get install -y -qq --no-install-recommends qemu-guest-agent open-iscsi
+```
+```yaml
+# package-currency.yml opts in explicitly; lane 1 never sets this
+env:
+  PVE_DIST_UPGRADE: '1'
+```
+
+---
+
+## D018 — The currency lane reboots after dist-upgrade, and proves it rebooted
+
+**Status**: Active
+**Finding refs**: (none — found in pre-push review of PR #106, 2026-09-01)
+**Resolved in scan**: n/a
+
+### Decision
+After `dist-upgrade`, `prepare-test-environment.sh` reboots the node **unconditionally** and then
+**verifies the reboot happened** by comparing `/proc/sys/kernel/random/boot_id` before and after.
+An unchanged boot id is fatal. The reboot lives here, not in `first-boot.sh`.
+
+### Rationale
+A PVE `dist-upgrade` pulls `proxmox-kernel-*`. Without a reboot the node runs new userspace on the
+old kernel, so the lane records a package set it never actually ran and is blind to kernel
+regressions — it would report "current PVE" while testing something that never booted.
+
+The reboot cannot live in `first-boot.sh`: that runs `ordering = "fully-up"` while the parent is
+still polling, so `wait-for-pve.sh` can discover the IP, see the API, pass auth, and then have the
+node reboot out from under provisioning. That presents as an intermittent network fault.
+
+It is unconditional rather than gated on `/var/run/reboot-required`, because that file comes from
+`update-notifier-common`, which is not guaranteed present on a PVE node.
+
+Verification is the part that is easy to omit and was omitted in the first draft. `ssh … reboot`
+returns non-zero when the connection dies, so it needs `|| true` — which swallows *every* ssh
+failure, including the reboot never being issued. `wait-for-api.sh` then matches the
+**still-running pre-reboot** pveproxy on its first poll and returns `responsive after 0s`. The
+script exits 0 having proved nothing. A blind `sleep` before polling does not fix this; it is wrong
+in both directions and verifies nothing either way.
+
+Order matters: prove the boot id changed first (ssh returns before pveproxy does), then wait for the
+API, then wait for pmxcfs — `pvesm set` writes `/etc/pve/storage.cfg`, which needs `/etc/pve`
+mounted, and on a fresh boot that lags the API by seconds.
+
+### Anti-pattern (do not reintroduce)
+```bash
+# NEVER — `|| true` hides a reboot that never happened, and the poll then
+# matches the pre-reboot node and returns immediately
+${SSH_CMD} "systemctl reboot" || true
+sleep 30
+bash "${SCRIPT_DIR}/wait-for-api.sh" "${NESTED_IP}" 8006 600
+```
+
+### Correct pattern
+```bash
+boot_before="$(${SSH_CMD} "cat /proc/sys/kernel/random/boot_id")"
+${SSH_CMD} "systemctl reboot" || true
+boot_after=""
+for _ in $(seq 1 60); do
+    boot_after="$(${SSH_CMD} "cat /proc/sys/kernel/random/boot_id" 2>/dev/null || true)"
+    [[ -n "${boot_after}" && "${boot_after}" != "${boot_before}" ]] && break
+    sleep 5
+done
+if [[ -z "${boot_after}" || "${boot_after}" == "${boot_before}" ]]; then
+    echo "ERROR: ${NESTED_IP} did not reboot (boot_id unchanged)" >&2
+    exit 1
+fi
+bash "${SCRIPT_DIR}/wait-for-api.sh" "${NESTED_IP}" 8006 600
+```
