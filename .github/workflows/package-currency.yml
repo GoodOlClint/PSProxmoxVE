@@ -34,9 +34,12 @@ on:
         type: boolean
         default: false
 
+# packages: write is granted per-job to container-image, the only job that
+# pushes. The self-hosted jobs get read-only tokens: they SSH into freshly
+# upgraded nodes and should not be able to overwrite published GHCR images.
 permissions:
   contents: read
-  packages: write
+  packages: read
 
 env:
   SCRIPTS_DIR: tests/infrastructure/scripts
@@ -74,6 +77,9 @@ jobs:
   container-image:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v7
 
@@ -107,7 +113,12 @@ jobs:
         - /opt/pve-integration:/opt/pve-integration
 
     steps:
+      # persist-credentials: false on the self-hosted jobs — nothing downstream
+      # uses git, and the token would otherwise be written into .git/config on
+      # a runner that outlives the job's container.
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Provision PVE instances and dist-upgrade
         shell: bash
@@ -156,6 +167,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Download module artifact
         uses: actions/download-artifact@v8
@@ -163,24 +176,33 @@ jobs:
           name: module-currency
           path: ./publish/netstandard2.0/
 
-      # continue-on-error is the report-only decision made concrete: a module
-      # broken against current PVE must not turn this cron red.
+      # Report-only applies to TEST failures, not to the lane's own machinery.
+      # cmd_test returns 3 for genuine Pester failures and 4 when it cannot
+      # reach or authenticate to a node. A blanket continue-on-error would
+      # swallow 4 as well — and an unreachable node is exactly the symptom of a
+      # reboot gone wrong, so the lane would go green having learned nothing.
       - name: Run integration tests (PVE ${{ matrix.pve_version }})
         id: suite
-        continue-on-error: true
         shell: bash
         env:
           PVE_PASSWORD: ${{ secrets.PVE_TEST_PASSWORD }}
           MODULE_ARTIFACT: ./publish/netstandard2.0
-        run: bash ${SCRIPTS_DIR}/run-integration.sh test ${{ matrix.pve_version }}
-
-      - name: Record suite outcome
-        shell: bash
         run: |
-          echo "Suite outcome against current PVE: ${{ steps.suite.outcome }}"
+          set +e
+          bash ${SCRIPTS_DIR}/run-integration.sh test ${{ matrix.pve_version }}
+          rc=$?
+          echo "suite_rc=${rc}" >> "$GITHUB_OUTPUT"
+          if [ "${rc}" -eq 0 ]; then
+            echo "Suite passed against current PVE."
+          elif [ "${rc}" -eq 3 ]; then
+            echo "::warning title=Suite failed against current PVE::Report-only - tests failed (rc=3). See the uploaded results."
+          else
+            echo "::error title=Currency lane machinery failed::run-integration.sh exited ${rc}, which is not a test failure. The lane learned nothing about package currency."
+          fi
+          [ "${rc}" -eq 0 ] || [ "${rc}" -eq 3 ]
 
       - name: Diagnose cluster state
-        if: steps.suite.outcome == 'failure'
+        if: always() && steps.suite.outputs.suite_rc != '0'
         shell: bash
         env:
           PVE_PASSWORD: ${{ secrets.PVE_TEST_PASSWORD }}
@@ -209,6 +231,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Cleanup PVE instances
         shell: bash

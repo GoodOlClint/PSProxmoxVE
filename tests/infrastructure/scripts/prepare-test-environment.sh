@@ -35,25 +35,57 @@ if [[ "${DIST_UPGRADE}" == "1" ]]; then
 
     if [[ -n "${PKG_OUT}" ]]; then
         echo "Recording package set to ${PKG_OUT}..."
-        ${SSH_CMD} "dpkg-query -W -f='\${binary:Package}\t\${Version}\n' | sort" > "${PKG_OUT}"
+        # pipefail must be set in the REMOTE shell. ssh returns the remote
+        # pipeline's status, which is sort's — and sort succeeds on the empty
+        # input a failed dpkg-query produces, so a broken query would otherwise
+        # leave a zero-byte file and still exit 0.
+        ${SSH_CMD} "set -o pipefail; dpkg-query -W -f='\${binary:Package}\t\${Version}\n' | sort" > "${PKG_OUT}"
+        if [[ ! -s "${PKG_OUT}" ]]; then
+            echo "ERROR: empty package set from ${NESTED_IP}" >&2
+            exit 1
+        fi
     fi
 
     # A PVE dist-upgrade pulls proxmox-kernel-*; without a reboot the node runs
     # new userspace on the old kernel. Reboot unconditionally rather than
     # testing /var/run/reboot-required — that file comes from
     # update-notifier-common, which is not guaranteed on a PVE node.
+    #
+    # boot_id is the evidence that the reboot happened. Without it the `|| true`
+    # below swallows every ssh failure, the node stays up, and wait-for-api.sh
+    # matches the still-running pre-reboot pveproxy on its first poll.
+    boot_before="$(${SSH_CMD} "cat /proc/sys/kernel/random/boot_id")"
+
     echo "Rebooting after dist-upgrade..."
     ${SSH_CMD} "systemctl reboot" || true
 
-    # The API stays up for a few seconds after the reboot is issued, so polling
-    # immediately would match the pre-reboot node and return at once.
-    sleep 30
+    # Order matters: prove the reboot first (ssh returns before pveproxy does),
+    # then wait for the API, then for pmxcfs.
+    boot_after=""
+    for _ in $(seq 1 60); do
+        boot_after="$(${SSH_CMD} "cat /proc/sys/kernel/random/boot_id" 2>/dev/null || true)"
+        [[ -n "${boot_after}" && "${boot_after}" != "${boot_before}" ]] && break
+        sleep 5
+    done
+    if [[ -z "${boot_after}" || "${boot_after}" == "${boot_before}" ]]; then
+        echo "ERROR: ${NESTED_IP} did not reboot (boot_id unchanged)" >&2
+        exit 1
+    fi
+
     bash "${SCRIPT_DIR}/wait-for-api.sh" "${NESTED_IP}" 8006 600
 
-    # The running kernel is the point of the reboot: the package set alone
-    # cannot show whether the node actually booted what it installed.
+    # wait-for-api.sh only proves pveproxy answers. `pvesm set` below writes
+    # /etc/pve/storage.cfg, which needs pmxcfs to have mounted /etc/pve — on a
+    # freshly rebooted node those are seconds apart.
+    for _ in $(seq 1 30); do
+        ${SSH_CMD} "test -f /etc/pve/storage.cfg" 2>/dev/null && break
+        sleep 5
+    done
+
+    # printf, not echo: bash's builtin echo does not interpret \t without -e,
+    # which would make this the one row in the file without a real tab.
     if [[ -n "${PKG_OUT}" ]]; then
-        ${SSH_CMD} "echo \"# running-kernel\t\$(uname -r)\"" >> "${PKG_OUT}"
+        ${SSH_CMD} "printf '# running-kernel\t%s\n' \"\$(uname -r)\"" >> "${PKG_OUT}"
     fi
 fi
 
