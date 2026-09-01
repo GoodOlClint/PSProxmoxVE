@@ -7,9 +7,10 @@ namespace PSProxmoxVE.Cmdlets.Vms
     /// <summary>
     /// <para type="synopsis">Gracefully restarts a QEMU/KVM virtual machine on a Proxmox VE node.</para>
     /// <para type="description">
-    /// Performs a graceful shutdown of the VM followed by a start, via the Proxmox VE API.
-    /// A configurable timeout controls how long to wait for the guest to shut down cleanly
-    /// before the operation is considered failed. Use -Wait to block until both tasks complete.
+    /// Reboots the VM through Proxmox VE's native reboot endpoint, which shuts the guest down
+    /// and starts it again as a single server-side operation. A configurable timeout controls
+    /// how long to wait for the guest to shut down cleanly. Use -Wait to block until the VM is
+    /// running again.
     /// </para>
     /// </summary>
     [Cmdlet(VerbsLifecycle.Restart, "PveVm", SupportsShouldProcess = true, ConfirmImpact = ConfirmImpact.High)]
@@ -41,7 +42,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
         public int Timeout { get; set; } = 60;
 
         /// <summary>
-        /// <para type="description">When specified, waits for both shutdown and start tasks to complete before returning.</para>
+        /// <para type="description">When specified, waits until the VM is running again before returning.</para>
         /// </summary>
         [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
@@ -56,19 +57,12 @@ namespace PSProxmoxVE.Cmdlets.Vms
 
             WriteVerbose($"Restarting VM {VmId} on node '{Node}'...");
 
-            // Graceful shutdown
-            var shutdownTask = vmService.ShutdownVm(session, Node, VmId, Timeout);
+            var task = vmService.RebootVm(session, Node, VmId, Timeout);
 
             if (Wait.IsPresent)
-                WaitForStatusTransition(session, Node, shutdownTask, VmId, "stopped", Timeout);
+                task = WaitForStatusTransition(session, Node, task, VmId, "running", Timeout);
 
-            // Start
-            var startTask = vmService.StartVm(session, Node, VmId);
-
-            if (Wait.IsPresent)
-                startTask = WaitForStatusTransition(session, Node, startTask, VmId, "running", Timeout);
-
-            WriteObject(startTask);
+            WriteObject(task);
         }
     }
 }
