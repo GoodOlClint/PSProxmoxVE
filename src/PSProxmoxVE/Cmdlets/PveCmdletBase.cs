@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Management.Automation;
-using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Exceptions;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
+using PSProxmoxVE.Core.Utilities;
 
 namespace PSProxmoxVE.Cmdlets
 {
@@ -131,21 +131,25 @@ namespace PSProxmoxVE.Cmdlets
                 : $"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/status/current";
 
             var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
+            var lastMatched = false;
             using var pollClient = new PveHttpClient(session);
             while (DateTime.UtcNow < deadline)
             {
                 try
                 {
                     var json = pollClient.GetAsync(statusResource).GetAwaiter().GetResult();
-                    var data = JObject.Parse(json)["data"];
-                    var status = data?["status"]?.ToString();
-                    var qmpStatus = data?["qmpstatus"]?.ToString();
+                    var snapshot = GuestStatusSnapshot.Evaluate(json, expectedStatus);
+                    lastMatched = snapshot.StatusMatched;
 
-                    // Use qmpstatus when available (more accurate for VM pause state)
-                    var effectiveStatus = qmpStatus ?? status;
-
-                    if (string.Equals(effectiveStatus, expectedStatus, StringComparison.OrdinalIgnoreCase))
-                        return task;
+                    if (snapshot.StatusMatched)
+                    {
+                        // PVE reports the target status before the operation releases the
+                        // config lock. A caller that issues its next request inside that
+                        // window gets "can't lock file '/var/lock/qemu-server/lock-<vmid>.conf'
+                        // - got timeout" from its own API call.
+                        if (!snapshot.Locked)
+                            return task;
+                    }
                 }
                 catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
                 {
@@ -154,6 +158,11 @@ namespace PSProxmoxVE.Cmdlets
 
                 System.Threading.Thread.Sleep(2000);
             }
+
+            // The guest still reports the expected status on the final poll and only the
+            // lock outlasted the deadline.
+            if (lastMatched)
+                return task;
 
             throw new PveTaskTimeoutException(
                 task.Upid ?? "unknown",
