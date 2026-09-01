@@ -169,10 +169,13 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
             $joinPw = ConvertTo-SecureString $script:Password -AsPlainText -Force
 
             try {
+                # ring0 defaults to whatever node B resolves its own hostname to;
+                # pin it to the address the harness verified it answers on.
                 $result = Add-PveClusterMember `
                     -Hostname $script:Host_ `
                     -Fingerprint $fingerprint `
                     -Password $joinPw `
+                    -Links "link0=$($script:HostB)" `
                     -Wait `
                     -Confirm:$false `
                     -ErrorAction Stop
@@ -215,6 +218,12 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
                 if (@($onlineNodes).Count -ge 2) { break }
                 Start-Sleep -Seconds 3
             } while ([DateTime]::UtcNow -lt $deadline)
+
+            $cluster = @($status) | Where-Object { $_.Type -eq 'cluster' } | Select-Object -First 1
+            Write-Host "cluster: quorate=$($cluster.Quorate) nodes=$($cluster.Nodes); node B answers on $($script:HostB)"
+            foreach ($n in $nodeEntries) {
+                Write-Host "  node=$($n.Name) nodeid=$($n.NodeId) ring0=$($n.Ip) online=$($n.Online) local=$($n.Local)"
+            }
 
             @($nodeEntries).Count | Should -BeGreaterOrEqual 2
             @($onlineNodes).Count | Should -BeGreaterOrEqual 2
