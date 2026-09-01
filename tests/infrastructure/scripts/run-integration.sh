@@ -238,6 +238,11 @@ cmd_provision() {
     ci_mask "$PVE_PASSWORD"
     mkdir -p "$WORK_DIR" "$CACHE_DIR"
 
+    # WORK_DIR is a persistent shared mount. Stale package sets from an earlier
+    # run would otherwise be uploaded as if they were current — the artifact
+    # guard checks existence, not freshness.
+    rm -f "$WORK_DIR"/*-packages.txt
+
     # Ensure base ISOs (one per version, not per node)
     for v in $provision_versions; do
         log "Ensuring base ISO for PVE $v..."
@@ -523,7 +528,9 @@ cmd_test() {
             -d "username=root@pam&password=${PVETEST_PASSWORD}" \
             "https://${PVETEST_HOST}:${PVETEST_PORT}/api2/json/access/ticket" | grep -q '"ticket"'; then
             ci_error "Cannot authenticate to PVE $v node A at ${PVETEST_HOST}:${PVETEST_PORT}"
-            overall_exit=3
+            # 4, not 3: this is a machinery failure, not a test failure. The
+            # currency lane suppresses 3 (report-only) but must fail on 4.
+            overall_exit=4
             continue
         fi
 
@@ -534,7 +541,7 @@ cmd_test() {
                 -d "username=root@pam&password=${PVETEST_PASSWORD}" \
                 "https://${PVETEST_HOST_B}:${PVETEST_PORT}/api2/json/access/ticket" | grep -q '"ticket"'; then
                 ci_error "Cannot authenticate to PVE $v node B at ${PVETEST_HOST_B}:${PVETEST_PORT}"
-                overall_exit=3
+                overall_exit=4
                 continue
             fi
         fi
@@ -733,6 +740,7 @@ cmd_force_cleanup() {
     # Remove work artifacts, including locally cached auto-install ISOs
     rm -f "$CONFIG_FILE" "$WORK_DIR"/instances.tfvars.json "$TARGET_NODE_FILE"
     rm -f "$WORK_DIR"/*-auto-*.iso "$WORK_DIR"/*-http-auto.iso
+    rm -f "$WORK_DIR"/*-packages.txt
 
     log "Force cleanup complete. Next provision will start from scratch."
 }

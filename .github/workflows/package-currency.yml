@@ -1,0 +1,249 @@
+name: PVE Package Currency
+
+# Lane 2 of the two-lane CI split (see docs/lane2-change-plan.md).
+#
+# Lane 1 (integration-tests.yml) pins the nested nodes to what the ISO ships
+# and never upgrades — that pin is what makes it a stable merge gate.
+# This lane does the opposite: it dist-upgrades the nested nodes to current
+# PVE, reboots onto the new kernel, records the package set, and runs the full
+# suite against it.
+#
+# REPORT-ONLY. Test failures here do NOT fail the job — this lane never gates
+# a merge, and a red weekly cron nobody can action becomes noise. The signal is
+# the recorded package set and (from commit 3) the rolling issue, not the check
+# colour. A failure of the lane's own machinery — provisioning, upgrade, reboot
+# — still fails the job, because that means the lane learned nothing.
+#
+# Shares the `integration-tests` concurrency group: both lanes drive the same
+# nested VMIDs on the same parent node, so they must never run at once.
+
+concurrency:
+  group: integration-tests
+  cancel-in-progress: false
+
+on:
+  schedule:
+    # Mondays 06:00 UTC. Weekly is deliberate: this lane exists to notice
+    # upstream drift, and PVE's no-subscription repo does not move hourly.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      keep_vms:
+        description: 'Skip cleanup so the nested PVE VMs survive for inspection'
+        required: false
+        type: boolean
+        default: false
+
+# packages: write is granted per-job to container-image, the only job that
+# pushes. The self-hosted jobs get read-only tokens: they SSH into freshly
+# upgraded nodes and should not be able to overwrite published GHCR images.
+permissions:
+  contents: read
+  packages: read
+
+env:
+  SCRIPTS_DIR: tests/infrastructure/scripts
+  TEST_IMAGE: ghcr.io/goodolclint/psproxmoxve-integration
+  CACHE_DIR: /opt/pve-integration
+  PVE_VERSIONS: '9'
+  PVE9_ISO: proxmox-ve_9.2-1.iso
+
+jobs:
+  # ── Build module artifact (GitHub-hosted) ────────────────────────
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build module
+        run: dotnet publish src/PSProxmoxVE/PSProxmoxVE.csproj --configuration Release --framework netstandard2.0 --output ./publish/netstandard2.0
+
+      - name: Clean publish output
+        run: rm -f ./publish/netstandard2.0/*.deps.json
+
+      - name: Upload module artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: module-currency
+          path: ./publish/netstandard2.0/
+
+  # ── Build test container image (GitHub-hosted) ───────────────────────
+  container-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: tests/Dockerfile.test
+          target: dev-infra
+          push: true
+          tags: ${{ env.TEST_IMAGE }}:${{ github.sha }}
+
+  # ── Provision, dist-upgrade, reboot (self-hosted) ────────────────────
+  provision:
+    needs: [build, container-image]
+    runs-on: psproxmoxve
+    timeout-minutes: 60
+    container:
+      image: ghcr.io/goodolclint/psproxmoxve-integration:${{ github.sha }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      volumes:
+        - /opt/pve-integration:/opt/pve-integration
+
+    steps:
+      # persist-credentials: false on the self-hosted jobs — nothing downstream
+      # uses git, and the token would otherwise be written into .git/config on
+      # a runner that outlives the job's container.
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Provision PVE instances and dist-upgrade
+        shell: bash
+        env:
+          PVE_ENDPOINT: ${{ secrets.PVE_ENDPOINT }}
+          PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
+          PVE_TARGET_NODE: ${{ vars.PVE_TARGET_NODE }}
+          PVE_PASSWORD: ${{ secrets.PVE_TEST_PASSWORD }}
+          STORAGE_VM_FQDN: ${{ vars.STORAGE_VM_FQDN }}
+          TF_VAR_disk_storage: ${{ vars.DISK_STORAGE }}
+          TF_VAR_iso_storage: ${{ vars.ISO_STORAGE }}
+          TF_VAR_network_bridge: ${{ vars.NETWORK_BRIDGE }}
+          TF_VAR_pool_id: ${{ vars.POOL_ID }}
+          # The one line that separates this lane from lane 1.
+          PVE_DIST_UPGRADE: '1'
+        run: bash ${SCRIPTS_DIR}/run-integration.sh provision
+
+      # success() not always(): when provisioning succeeded the package file
+      # must exist, and if-no-files-found: error enforces that invariant. When
+      # provisioning failed the job is already red, and a missing-artifact
+      # error would only bury the real cause.
+      - name: Upload recorded package set
+        if: success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pve-package-set
+          path: ${{ env.CACHE_DIR }}/work/*-packages.txt
+          if-no-files-found: error
+
+  # ── Integration tests against the upgraded nodes ─────────────────────
+  test:
+    needs: [build, provision]
+    runs-on: psproxmoxve
+    timeout-minutes: 20
+    container:
+      image: ghcr.io/goodolclint/psproxmoxve-integration:${{ github.sha }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      volumes:
+        - /opt/pve-integration:/opt/pve-integration
+    strategy:
+      fail-fast: false
+      matrix:
+        pve_version: ['9']
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Download module artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: module-currency
+          path: ./publish/netstandard2.0/
+
+      # Report-only applies to TEST failures, not to the lane's own machinery.
+      # cmd_test returns 3 for genuine Pester failures and 4 when it cannot
+      # reach or authenticate to a node. A blanket continue-on-error would
+      # swallow 4 as well — and an unreachable node is exactly the symptom of a
+      # reboot gone wrong, so the lane would go green having learned nothing.
+      - name: Run integration tests (PVE ${{ matrix.pve_version }})
+        id: suite
+        shell: bash
+        env:
+          PVE_PASSWORD: ${{ secrets.PVE_TEST_PASSWORD }}
+          MODULE_ARTIFACT: ./publish/netstandard2.0
+        run: |
+          set +e
+          bash ${SCRIPTS_DIR}/run-integration.sh test ${{ matrix.pve_version }}
+          rc=$?
+          echo "suite_rc=${rc}" >> "$GITHUB_OUTPUT"
+          if [ "${rc}" -eq 0 ]; then
+            echo "Suite passed against current PVE."
+          elif [ "${rc}" -eq 3 ]; then
+            echo "::warning title=Suite failed against current PVE::Report-only - tests failed (rc=3). See the uploaded results."
+          else
+            echo "::error title=Currency lane machinery failed::run-integration.sh exited ${rc}, which is not a test failure. The lane learned nothing about package currency."
+          fi
+          [ "${rc}" -eq 0 ] || [ "${rc}" -eq 3 ]
+
+      - name: Diagnose cluster state
+        if: always() && steps.suite.outputs.suite_rc != '0'
+        shell: bash
+        env:
+          PVE_PASSWORD: ${{ secrets.PVE_TEST_PASSWORD }}
+        run: bash ${SCRIPTS_DIR}/diagnose-cluster.sh ${{ matrix.pve_version }}
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: currency-test-results-pve${{ matrix.pve_version }}
+          path: TestResults/
+
+  # ── Cleanup: destroy all VMs (always runs) ──────────────────────
+  cleanup:
+    needs: [provision, test]
+    if: always() && needs.provision.result != 'skipped' && !inputs.keep_vms
+    runs-on: psproxmoxve
+    timeout-minutes: 15
+    container:
+      image: ghcr.io/goodolclint/psproxmoxve-integration:${{ github.sha }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      volumes:
+        - /opt/pve-integration:/opt/pve-integration
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Cleanup PVE instances
+        shell: bash
+        env:
+          PVE_ENDPOINT: ${{ secrets.PVE_ENDPOINT }}
+          PVE_API_TOKEN: ${{ secrets.PVE_API_TOKEN }}
+          PVE_TARGET_NODE: ${{ vars.PVE_TARGET_NODE }}
+          PVE_PASSWORD: ${{ secrets.PVE_TEST_PASSWORD }}
+          STORAGE_VM_FQDN: ${{ vars.STORAGE_VM_FQDN }}
+          TF_VAR_disk_storage: ${{ vars.DISK_STORAGE }}
+          TF_VAR_iso_storage: ${{ vars.ISO_STORAGE }}
+          TF_VAR_network_bridge: ${{ vars.NETWORK_BRIDGE }}
+          TF_VAR_pool_id: ${{ vars.POOL_ID }}
+        run: bash ${SCRIPTS_DIR}/run-integration.sh force-cleanup
