@@ -27,6 +27,26 @@ git push -u origin feat/my-feature
 gh pr create
 ```
 
+### Agent pushes and commit identity
+
+**Default: the `github` MCP tools.** Agent-authored branches go up with `create_branch` +
+`push_files`, which commits as the `goodolclint-claude` App and produces a **verified**
+commit. `push_files` re-uploads full file contents, so byte-verify before opening the PR:
+commit the identical change locally, `git fetch`, and `git diff <local-commit>
+origin/<branch> --` must be empty. `push_files` cannot express a removal — use
+`delete_file` for deletions, and a rename is `push_files` of the new path plus
+`delete_file` of the old.
+
+**Fallback: local `git push`, for large pushes only.** Re-uploading full contents inline
+is impractical past a certain size. `.claude/settings.json` sets `GIT_AUTHOR_*` /
+`GIT_COMMITTER_*` to `goodolclint-claude[bot]` so those commits are still attributed to the
+App — but they are **not verified**, because the signature comes from committing through
+the API, not from the author name. Use this path when needed, not by default.
+
+Claude Code picks the env block up immediately — the session that adds it already commits
+as the bot, no restart needed. A `Co-Authored-By` trailer is redundant once it is in
+effect, since the App is the commit author.
+
 ### Dev container (recommended)
 
 A Docker-based dev environment replicates the full CI setup locally. Works on ARM Macs
