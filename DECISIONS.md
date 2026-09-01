@@ -480,9 +480,15 @@ next API call against that guest fails with `got timeout` trying to take the sam
 on both `qemu` and `lxc` status/current and has been since PVE 5.4, well below this
 module's 7.0 floor, so this costs no extra request.
 
-If the status is reached but the lock outlasts `-Timeout`, the cmdlet returns success
-rather than throwing. The waited-for operation did complete; only the settling ran long.
-This keeps a call that succeeded before the change from becoming an exception after it.
+If the guest still reports the expected status on the final poll but the lock outlasts
+`-Timeout`, the cmdlet returns success rather than throwing. The waited-for operation did
+complete; only the settling ran long. This keeps a call that succeeded before the change
+from becoming an exception after it.
+
+That fallback tests the **most recent** observation, not "matched at some point during the
+wait". A guest that reached the expected status and then drifted away from it has not
+satisfied the wait and still raises `PveTaskTimeoutException`. A poll that fails outright
+leaves the previous observation standing, so a single API blip is not read as divergence.
 
 This is the same family as D014: a PVE task completing does not mean the resource is ready
 for the next operation. D014 is the cluster-quorum instance, D015 the guest-lock instance.
