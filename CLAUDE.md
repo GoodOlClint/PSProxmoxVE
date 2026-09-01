@@ -93,7 +93,13 @@ or delete the installed copy. (`dotnet build` writes there; only `dotnet publish
 ./publish/netstandard2.0`, which CI runs, creates `publish/`.)
 
 The integration flow needs the `dev-infra` container — the same image CI runs its jobs in
-(`tests/Dockerfile.test`, target `dev-infra`). x86 only:
+(`tests/Dockerfile.test`, target `dev-infra`).
+
+The image is amd64-only: `proxmox-auto-install-assistant` and the HashiCorp apt repo publish no
+arm64. On Apple Silicon turn on Docker Desktop's **Use Rosetta for x86_64/amd64 emulation**
+before building or running it. Under the default qemu translation `pwsh` starts but segfaults
+on module discovery, which fails the image build at `Install-Module Pester`; under Rosetta the
+same Dockerfile builds byte-equivalent to CI's.
 
 ```bash
 pve() {
