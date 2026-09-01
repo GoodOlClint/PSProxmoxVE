@@ -27,6 +27,17 @@ git push -u origin feat/my-feature
 gh pr create
 ```
 
+### Agent commit identity
+
+`.claude/settings.json` sets `GIT_AUTHOR_*` / `GIT_COMMITTER_*` to
+`goodolclint-claude[bot]`, so commits made from an agent session are attributed to the App
+rather than to the operator. The push itself is an ordinary local `git push` over the
+operator's SSH key — the env vars change authorship, not transport. No `Co-Authored-By`
+trailer is needed when they are in effect.
+
+The env block applies at session start, so a session that predates this file still commits
+as the operator.
+
 ### Dev container (recommended)
 
 A Docker-based dev environment replicates the full CI setup locally. Works on ARM Macs
