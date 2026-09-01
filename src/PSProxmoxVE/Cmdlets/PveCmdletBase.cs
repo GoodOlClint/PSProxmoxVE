@@ -131,7 +131,7 @@ namespace PSProxmoxVE.Cmdlets
                 : $"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/status/current";
 
             var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
-            var statusReached = false;
+            var lastMatched = false;
             using var pollClient = new PveHttpClient(session);
             while (DateTime.UtcNow < deadline)
             {
@@ -139,11 +139,10 @@ namespace PSProxmoxVE.Cmdlets
                 {
                     var json = pollClient.GetAsync(statusResource).GetAwaiter().GetResult();
                     var snapshot = GuestStatusSnapshot.Evaluate(json, expectedStatus);
+                    lastMatched = snapshot.StatusMatched;
 
                     if (snapshot.StatusMatched)
                     {
-                        statusReached = true;
-
                         // PVE reports the target status before the operation releases the
                         // config lock. A caller that issues its next request inside that
                         // window gets "can't lock file '/var/lock/qemu-server/lock-<vmid>.conf'
@@ -160,8 +159,9 @@ namespace PSProxmoxVE.Cmdlets
                 System.Threading.Thread.Sleep(2000);
             }
 
-            // Status reached and only the lock outlasted the deadline.
-            if (statusReached)
+            // The guest still reports the expected status on the final poll and only the
+            // lock outlasted the deadline.
+            if (lastMatched)
                 return task;
 
             throw new PveTaskTimeoutException(
