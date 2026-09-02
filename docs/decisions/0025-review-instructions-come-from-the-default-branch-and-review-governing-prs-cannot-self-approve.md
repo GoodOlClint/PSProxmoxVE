@@ -65,11 +65,13 @@ Operator ruling 2026-09-02: narrow the ownership rather than accept the weakness
 
 This inverts the design. With the setting enabled, GitHub enforces the property, and it enforces it far better than the workflow step can: it is not a one-shot check, it has no pagination limit, it does not depend on matching the right bot identity, it needs no dismissal permission, and it applies to an approval from **any** source — including `.github/workflows/claude.yml`, the ungated second path noted below, which the dismissal step cannot see.
 
-The workflow gate stays, as defence-in-depth and as the only control while the setting is off. **Enabling the setting is the operator's action and is not done by this decision.** Until it is, the dismissal step is still load-bearing and should be read that way.
+**Enabled 2026-09-02**, together with required-pull-request, required-approving-review and dismiss-stale-reviews-on-push. Enabling it also closed a gap nobody had noticed: direct pushes to `main` were still permitted until that moment, despite `CLAUDE.md` having claimed otherwise since March.
+
+So the workflow gate is now **defence-in-depth rather than the load-bearing control**. GitHub enforces the property directly, and a `claude[bot]` approval cannot satisfy a code-owner requirement however it was obtained — including through `.github/workflows/claude.yml`, the ungated second path described below, which the dismissal step cannot see. The gate still matters if the setting is ever turned off, and it still catches an automated approval early with a clear message rather than leaving it sitting on the PR.
+
+Admin bypass is deliberately left **available**. GitHub does not permit an author to approve their own pull request, so without bypass an operator-authored change to a governance path would deadlock with no eligible reviewer. It does not weaken the threat model: App installations do not receive admin bypass, so it is unavailable to a compromised or prompt-injected bot, which is the adversary this decision is about.
 
 The two lists must be kept in sync; both files say so. Drift is the failure mode, and it is silent in the direction that matters — a path in the detector but not in `CODEOWNERS` is protected only by the weaker mechanism.
-
-One edge case is worth knowing before enabling the setting: **GitHub does not let an author approve their own pull request.** An operator-authored PR touching a governance path would have no eligible code-owner reviewer, and with admin enforcement on there is no bypass. In practice every recent PR is authored by `goodolclint-claude[bot]`, so the operator is free to approve; but an operator-authored governance change would need admin enforcement toggled, or to go through the bot.
 
 Three limits remain, and are not closed by this decision:
 

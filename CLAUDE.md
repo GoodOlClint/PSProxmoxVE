@@ -11,8 +11,28 @@ Tests: xUnit (`tests/PSProxmoxVE.Core.Tests/`) and Pester (`tests/PSProxmoxVE.Te
 
 ## Development Workflow
 
-**All changes go through pull requests.** The `main` branch has branch protection enabled
-(required build checks, required review, admin enforced). Never push directly to main.
+**All changes go through pull requests.** Never push directly to `main`.
+
+Protection on `main`, as configured 2026-09-02:
+
+- required status checks
+- required pull request, with an approving review
+- stale reviews dismissed on push — a new commit invalidates the existing approval, and the
+  automated review re-runs on `synchronize`
+- **review from Code Owners required**
+
+`CODEOWNERS` is deliberately narrow. It names only the paths that govern review or publishing —
+workflows, `.claude/`, `.mcp.json`, any `CLAUDE.md`/`AGENTS.md`, `DECISIONS.md`,
+`docs/decisions/`, the test fixtures, the module manifest and `CHANGELOG.md`. A PR touching any
+of those needs the operator's approval and cannot be merged on an automated one. Everything else
+has no code owner, so the automated review still merges it.
+
+Admin bypass is **available** to the operator, deliberately. GitHub does not let an author
+approve their own pull request, so without it an operator-authored change to a governance path
+would deadlock. It is not a hole in the threat model this protects against: App installations
+do not get admin bypass, so it does nothing for a compromised or prompt-injected bot.
+
+See [ADR 0025](docs/decisions/0025-review-instructions-come-from-the-default-branch-and-review-governing-prs-cannot-self-approve.md).
 
 ```bash
 # Create a feature branch
