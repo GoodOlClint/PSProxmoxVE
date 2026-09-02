@@ -29,6 +29,7 @@ if [[ -z "${PVE_PASSWORD:-}" ]]; then
 fi
 
 SSH_OPTS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ConnectTimeout=10)
+export SSHPASS="$PVE_PASSWORD"
 
 dump_node() {
     local label="$1" ip="$2"
@@ -39,7 +40,7 @@ dump_node() {
         return
     fi
 
-    sshpass -p "$PVE_PASSWORD" ssh "${SSH_OPTS[@]}" "root@${ip}" bash -s <<'REMOTE' 2>&1 || echo "  ssh to $ip failed (rc=$?)"
+    sshpass -e ssh "${SSH_OPTS[@]}" "root@${ip}" bash -s <<'REMOTE' 2>&1 || echo "  ssh to $ip failed (rc=$?)"
 set +e
 echo "--- hostname / resolution ---"
 hostname -f

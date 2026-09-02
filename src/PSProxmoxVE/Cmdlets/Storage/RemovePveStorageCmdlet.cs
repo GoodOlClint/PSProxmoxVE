@@ -1,5 +1,5 @@
 using System.Management.Automation;
-using PSProxmoxVE.Core.Client;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Storage
 {
@@ -18,6 +18,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
     {
         /// <summary>The storage identifier to remove.</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The storage pool name.")]
+        [ValidatePattern(@"\A[A-Za-z0-9][A-Za-z0-9._-]*\z")]
         public string Storage { get; set; } = string.Empty;
 
         protected override void ProcessRecord()
@@ -26,10 +27,10 @@ namespace PSProxmoxVE.Cmdlets.Storage
                 return;
 
             var session = GetSession();
-            using var client = new PveHttpClient(session);
+            var service = new StorageService();
 
             WriteVerbose($"Removing storage '{Storage}'...");
-            client.DeleteAsync($"storage/{Storage}").GetAwaiter().GetResult();
+            service.RemoveStorage(session, Storage);
         }
     }
 }
