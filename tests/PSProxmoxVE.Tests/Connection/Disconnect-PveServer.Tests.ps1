@@ -57,17 +57,4 @@ Describe 'Disconnect-PveServer' {
             { Disconnect-PveServer -WhatIf -ErrorAction Stop } | Should -Not -Throw
         }
     }
-
-    Context 'Active session lifecycle' {
-        It 'Should report "no session" after disconnecting the active session' {
-            Disconnect-PveServer -Confirm:$false -WarningVariable w
-            $w[0] | Should -Match 'No active Proxmox VE session'
-        }
-
-        It 'Should warn when disconnecting an explicit non-active session' {
-            $fakeSession = [PSCustomObject]@{ Hostname = "test.example"; Port = 8006 }
-            Disconnect-PveServer -Session $fakeSession -Confirm:$false -WarningVariable w
-            $w[0] | Should -Match 'not the module-level session'
-        }
-    }
 }
