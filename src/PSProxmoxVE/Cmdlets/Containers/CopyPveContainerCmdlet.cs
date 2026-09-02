@@ -80,19 +80,23 @@ namespace PSProxmoxVE.Cmdlets.Containers
             var containerService = new ContainerService();
 
             WriteVerbose($"Cloning container {VmId}...");
+            var newid = NewVmId ?? new ClusterConfigService().GetNextId(session);
+            if (!NewVmId.HasValue)
+                WriteVerbose($"Auto-assigned container ID: {newid}");
             var task = containerService.CloneContainer(
                 session,
                 SourceNode,
                 VmId,
-                NewVmId ?? 0,
+                newid,
                 NewName,
                 TargetNode,
-                Full.IsPresent);
+                Full.IsPresent,
+                Storage);
 
             if (Wait.IsPresent)
             {
                 var taskService = new TaskService();
-                task = taskService.WaitForTask(session, task.Node ?? SourceNode, task.Upid!, null, null, null);
+                task = taskService.WaitForTask(session, task.Node ?? SourceNode, task.Upid!);
             }
 
             WriteObject(task);

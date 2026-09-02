@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Moq;
 using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Client;
@@ -60,6 +61,57 @@ namespace PSProxmoxVE.Core.Tests.Services
             service.RemoveContainer(CreateSession(), TestNode, TestVmId, purge: true, force: true);
 
             Assert.Equal($"nodes/{TestNode}/lxc/{TestVmId}?purge=1&force=1", resource);
+        }
+
+        [Fact]
+        public void CloneContainer_WithStorage_IncludesStorageInFormBody()
+        {
+            Dictionary<string, string>? captured = null;
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient
+                .Setup(c => c.PostAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+                .Callback<string, Dictionary<string, string>>((_, data) => captured = data)
+                .ReturnsAsync("{\"data\":\"UPID:pve1:00001234:00005678:6A970AAB:vzclone:100:root@pam:\"}");
+
+            var service = new ContainerService(mockClient.Object);
+            service.CloneContainer(CreateSession(), TestNode, TestVmId, 200, storage: "local-zfs");
+
+            Assert.NotNull(captured);
+            Assert.Equal("local-zfs", captured!["storage"]);
+        }
+
+        [Fact]
+        public void CloneContainer_WithoutStorage_OmitsStorageFromFormBody()
+        {
+            Dictionary<string, string>? captured = null;
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient
+                .Setup(c => c.PostAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+                .Callback<string, Dictionary<string, string>>((_, data) => captured = data)
+                .ReturnsAsync("{\"data\":\"UPID:pve1:00001234:00005678:6A970AAB:vzclone:100:root@pam:\"}");
+
+            var service = new ContainerService(mockClient.Object);
+            service.CloneContainer(CreateSession(), TestNode, TestVmId, 200);
+
+            Assert.NotNull(captured);
+            Assert.False(captured!.ContainsKey("storage"));
+        }
+
+        [Fact]
+        public void CloneContainer_SendsAllocatedNewidNeverZero()
+        {
+            Dictionary<string, string>? captured = null;
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient
+                .Setup(c => c.PostAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+                .Callback<string, Dictionary<string, string>>((_, data) => captured = data)
+                .ReturnsAsync("{\"data\":\"UPID:pve1:00001234:00005678:6A970AAB:vzclone:100:root@pam:\"}");
+
+            var service = new ContainerService(mockClient.Object);
+            service.CloneContainer(CreateSession(), TestNode, TestVmId, 305);
+
+            Assert.NotNull(captured);
+            Assert.Equal("305", captured!["newid"]);
         }
     }
 }

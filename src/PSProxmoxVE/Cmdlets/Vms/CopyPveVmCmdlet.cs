@@ -80,8 +80,10 @@ namespace PSProxmoxVE.Cmdlets.Vms
             var vmService = new VmService();
 
             WriteVerbose($"Cloning VM {VmId}...");
-            var newid = NewVmId ?? 0;
-            PveTask Issue() => vmService.CloneVm(session, SourceNode, VmId, newid, NewName, TargetNode, Full.IsPresent);
+            var newid = NewVmId ?? new ClusterConfigService().GetNextId(session);
+            if (!NewVmId.HasValue)
+                WriteVerbose($"Auto-assigned VM ID: {newid}");
+            PveTask Issue() => vmService.CloneVm(session, SourceNode, VmId, newid, NewName, TargetNode, Full.IsPresent, Storage);
 
             var task = Wait.IsPresent
                 ? InvokeGuestTask(session, SourceNode, Issue)

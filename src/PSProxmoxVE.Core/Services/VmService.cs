@@ -436,7 +436,8 @@ namespace PSProxmoxVE.Core.Services
             int newid,
             string? name = null,
             string? targetNode = null,
-            bool full = true)
+            bool full = true,
+            string? storage = null)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
@@ -448,6 +449,7 @@ namespace PSProxmoxVE.Core.Services
             };
             if (!string.IsNullOrEmpty(name)) formData["name"] = name!;
             if (!string.IsNullOrEmpty(targetNode)) formData["target"] = targetNode!;
+            if (!string.IsNullOrEmpty(storage)) formData["storage"] = storage!;
 
             IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
             try
