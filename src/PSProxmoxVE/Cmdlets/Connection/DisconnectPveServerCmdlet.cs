@@ -26,14 +26,14 @@ namespace PSProxmoxVE.Cmdlets.Connection
                 return;
             }
 
-            if (!ShouldProcess($"{sessionToDisconnect.Hostname}:{sessionToDisconnect.Port}", "Disconnect"))
-                return;
-
             if (!ReferenceEquals(sessionToDisconnect, ModuleState.ActiveSession))
             {
                 WriteWarning($"The supplied session for {sessionToDisconnect.Hostname}:{sessionToDisconnect.Port} is not the module-level session; nothing was changed. Discard the variable — PVE tickets cannot be revoked and expire on their own.");
                 return;
             }
+
+            if (!ShouldProcess($"{sessionToDisconnect.Hostname}:{sessionToDisconnect.Port}", "Disconnect"))
+                return;
 
             ModuleState.ActiveSession = null;
             WriteVerbose($"Disconnected from {sessionToDisconnect.Hostname}:{sessionToDisconnect.Port}.");
