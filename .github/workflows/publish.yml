@@ -72,17 +72,19 @@ jobs:
           name: module-netstandard2.0
           path: ./publish/PSProxmoxVE/
 
-      - name: Extract version from tag
-        id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-
+      # The tag name reaches the script through the environment, never through
+      # expression substitution into the script text. A tag is free-form and
+      # this job holds NUGET_API_KEY.
       - name: Update module version in manifest
         shell: pwsh
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
+          if ($env:TAG -notmatch '^v(\d+\.\d+\.\d+)(-[0-9A-Za-z.-]+)?$') {
+            throw "Tag '$env:TAG' is not vX.Y.Z or vX.Y.Z-prerelease"
+          }
           $manifestPath = './publish/PSProxmoxVE/PSProxmoxVE.psd1'
-          $version = '${{ steps.version.outputs.version }}'
-          # Strip prerelease suffix for ModuleVersion (must be X.Y.Z)
-          $moduleVersion = ($version -split '-')[0]
+          $moduleVersion = $Matches[1]
           $content = Get-Content $manifestPath -Raw
           $content = $content -replace "ModuleVersion\s*=\s*'[^']*'", "ModuleVersion     = '$moduleVersion'"
           Set-Content $manifestPath $content
