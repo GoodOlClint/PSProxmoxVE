@@ -53,7 +53,13 @@ Fork PRs are skipped rather than failed. Previously they would have gone red wit
 
 The trade is that GitHub reports a skipped required check as **passing**, so a fork PR shows green `claude-review` with nothing reviewed. A `fork-notice` job runs in its place and puts that in the run summary, but the green check is real and misleading on its own. Fork PRs are operator-reviewed by policy.
 
-Two limits remain, and are not closed by this decision:
+**The premise this all rests on: code-owner review is not enforced.** `CODEOWNERS` is `* @goodolclint`, and branch protection's "Require review from Code Owners" is **off** — verified on PR #100, where `mergeable_state` reached `clean` on `claude[bot]`'s approval alone with the operator's review still pending. Turning it on would make every bypass in this area inert, because `claude[bot]` is not a code owner and its approval could never satisfy protection.
+
+It is deliberately left off. Enabling it would end the verdict-gated merge loop entirely — every PR would need the operator, not just the governance-path ones — which is a different project from this one. The consequence is that the dismissal gate is load-bearing rather than defence-in-depth, and it should be read that way: it is the only thing standing between an automated approval and a merge on a governance PR.
+
+Three limits remain, and are not closed by this decision:
+
+- **`.github/workflows/claude.yml` is a second, ungated path to a binding approval.** It runs the same action on any `@claude` mention with `contents: write` and no `allowedTools` restriction, no materialized prompt, and no governance detection — so its standing instructions are the repository `CLAUDE.md` *from the PR's checkout*, the exact file this workflow materializes from the default branch to avoid. An approval produced there is never dismissed, because the gate here is a one-shot check inside this job and `pull_request` does not fire on review submission. Filed separately; not fixed here.
 
 - `Bash(gh api:*)` is broad enough to reach endpoints the narrower `gh pr *` grants exclude, so the tool allowlist is a guardrail for a cooperating agent, not a sandbox for a hijacked one. The real bound is the Claude App installation's permissions.
 - `docs/decisions/` is still read from the PR checkout rather than materialized. The prompt instructs the reviewer to treat an ADR added or edited by the PR under review as a claim, not as settled precedent, and the dismissal gate above backs that mechanically.

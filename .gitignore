@@ -19,3 +19,8 @@ tests/infrastructure/.terraform/
 tests/infrastructure/.terraform.lock.hcl
 tests/infrastructure/terraform.tfstate*
 tests/infrastructure/*.tfvars.json
+
+# Local Claude Code settings. This file takes precedence over
+# .claude/settings.json and supplies env + hooks to the runtime, so a copy
+# arriving through a PR would be live during that PR own review.
+.claude/settings.local.json

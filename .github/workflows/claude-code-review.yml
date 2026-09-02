@@ -4,6 +4,10 @@ on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
 
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   claude-review:
     # Fork PRs get no secrets on a `pull_request` trigger, so the action would
@@ -57,7 +61,10 @@ jobs:
           # literally named "origin/main" would silently win and supply the
           # review instructions. It exits 0 with only a stderr warning, so it
           # would not fail closed. Verified reproducible 2026-09-02.
-          sha="$(git rev-parse --verify "refs/remotes/origin/${DEFAULT_BRANCH}^{commit}")"
+          # show-ref --verify does no DWIM at all. `rev-parse --verify` on a
+          # fully-qualified ref is safe only because the ref exists; if it did
+          # not, rev-parse would walk its fallback table rather than fail.
+          sha="$(git show-ref --verify --hash "refs/remotes/origin/${DEFAULT_BRANCH}")"
           echo "review instructions materialized from ${DEFAULT_BRANCH} @ ${sha}"
 
           git show "${sha}:.github/review-prompt.md" \
@@ -83,10 +90,14 @@ jobs:
           changed="$(git diff --name-only \
             "refs/remotes/origin/${DEFAULT_BRANCH}...HEAD" -- \
             .github/review-prompt.md .github/workflows/ \
-            CLAUDE.md DECISIONS.md docs/decisions/)"
+            CLAUDE.md DECISIONS.md docs/decisions/ \
+            .claude/ .mcp.json AGENTS.md \
+            ':(glob)**/CLAUDE.md' ':(glob)**/AGENTS.md' \
+            tests/PSProxmoxVE.Core.Tests/Fixtures/ \
+            src/PSProxmoxVE/PSProxmoxVE.psd1 CHANGELOG.md)"
           if [ -n "${changed}" ]; then
             echo "governs_review=true" >> "$GITHUB_OUTPUT"
-            echo "::notice title=PR governs review::This PR changes files that govern how review works, so an automated approval will be dismissed and this check will fail. Operator review required. Files: ${changed}"
+            echo "::notice title=PR governs review::This PR changes files that govern how review works. The reviewer will still review it, but cannot approve it — an automated approval would be dismissed. A deferral is the expected outcome and passes this check. Files: ${changed}"
           else
             echo "governs_review=false" >> "$GITHUB_OUTPUT"
           fi
@@ -180,8 +191,17 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
-          ids="$(gh api "repos/$REPO/pulls/$PR_NUMBER/reviews" \
-            --jq '.[] | select(.user.login == "claude[bot]")
+          # --paginate is load-bearing. Without it GitHub returns 30 reviews,
+          # oldest first, and an approval on page 2 is invisible: the step would
+          # print "reviewer behaved correctly" and exit 0 while the approval
+          # stands. Every inline comment creates a review object, so a thorough
+          # review plus a few re-runs reaches 30 without anyone trying.
+          #
+          # Matched on .user.type == "Bot" rather than a login literal, so an
+          # approval from github-actions[bot] or another App is not invisible
+          # to the dismissal.
+          ids="$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/reviews" \
+            --jq '.[] | select(.user.type == "Bot")
                       | select(.state == "APPROVED") | .id')"
 
           if [ -z "${ids}" ]; then
@@ -189,13 +209,19 @@ jobs:
             exit 0
           fi
 
+          failed=0
           for id in ${ids}; do
             echo "Dismissing automated approval ${id}"
-            gh api -X PUT "repos/$REPO/pulls/$PR_NUMBER/reviews/${id}/dismissals" \
-              -f message="Automated approval dismissed: this PR changes files that govern how review works, so approval is reserved to the operator." \
-              -f event=DISMISS
+            if ! gh api -X PUT "repos/$REPO/pulls/$PR_NUMBER/reviews/${id}/dismissals" \
+                 -f message="Automated approval dismissed: this PR changes files that govern how review works, so approval is reserved to the operator." \
+                 -f event=DISMISS; then
+              failed=1
+              echo "::error title=Dismissal FAILED::Could not dismiss review ${id}. Branch protection may restrict who can dismiss reviews, or the App lacks the permission. THE APPROVAL IS STILL LIVE - dismiss it by hand before merging."
+            fi
           done
-          echo "::error title=Automated approval dismissed::claude[bot] approved a PR that changes .github/review-prompt.md, a workflow, CLAUDE.md, DECISIONS.md or docs/decisions/. It was instructed to defer and did not. The approval has been dismissed; treat the review body with suspicion and read the diff yourself."
+          if [ "${failed}" -eq 0 ]; then
+            echo "::error title=Automated approval dismissed::An automated reviewer approved a PR that changes files governing review. It was instructed to defer and did not. The approval has been dismissed; treat the review body with suspicion and read the diff yourself."
+          fi
           exit 1
 
       - name: Verify formal review was submitted
@@ -213,7 +239,7 @@ jobs:
           # Scoped to the head SHA. Without that this counts ANY historical
           # claude[bot] review, so a re-run after a new push goes green on a
           # verdict about the previous commit.
-          formal_count=$(gh api "repos/$REPO/pulls/$PR_NUMBER/reviews" \
+          formal_count=$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/reviews" \
             --jq '[.[] | select(.user.login == "claude[bot]") |
                    select(.commit_id == env.HEAD_SHA) |
                    select(.state == "APPROVED" or
@@ -221,7 +247,7 @@ jobs:
                           ((.body // "") | length > 0))] | length')
           echo "Formal claude[bot] reviews on PR #$PR_NUMBER: $formal_count"
           if [ "$formal_count" -eq 0 ]; then
-            echo "::error title=No formal review submitted::Claude reviewed the PR but did not call 'gh pr review'. Re-run the workflow or invoke '@claude re-review' on the PR."
+            echo "::error title=No formal review submitted::Claude reviewed the PR but did not call 'gh pr review'. Re-run this workflow. Do NOT use the @claude workflow to obtain a verdict: it is a separate, ungated action run that this gate does not police."
             exit 1
           fi
 
