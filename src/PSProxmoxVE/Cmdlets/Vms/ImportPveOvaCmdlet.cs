@@ -226,12 +226,38 @@ namespace PSProxmoxVE.Cmdlets.Vms
             if (!string.IsNullOrEmpty(metadata.OsTypeHint) && metadata.OsTypeHint != "other")
                 vmConfig["ostype"] = metadata.OsTypeHint;
 
-            // Add disk import-from parameters (use scsi bus like PVE UI)
+            // Add disk import-from parameters, placed on the bus the OVF names.
+            // Slot counts per PVE's qemu-server schema; a bus that runs out overflows to scsi.
             string? firstDisk = null;
+            var busIndexes = new Dictionary<string, int>
+            {
+                ["scsi"] = 0,
+                ["sata"] = 0,
+                ["ide"] = 0
+            };
+            var busMax = new Dictionary<string, int>
+            {
+                ["scsi"] = 30,
+                ["sata"] = 5,
+                ["ide"] = 3
+            };
             for (int i = 0; i < metadata.Disks.Count; i++)
             {
                 var disk = metadata.Disks[i];
-                var diskSlot = $"scsi{i}";
+                var bus = !string.IsNullOrEmpty(disk.BusType) && busIndexes.ContainsKey(disk.BusType) ? disk.BusType : "scsi";
+                if (busIndexes[bus] > busMax[bus])
+                    bus = "scsi";
+                if (busIndexes[bus] > busMax[bus])
+                {
+                    ThrowTerminatingError(new ErrorRecord(
+                        new InvalidOperationException($"OVF descriptor has more disks than PVE's scsi bus can hold ({busMax["scsi"] + 1})."),
+                        "TooManyDisks",
+                        ErrorCategory.LimitsExceeded,
+                        metadata.Disks));
+                    return;
+                }
+                var diskSlot = $"{bus}{busIndexes[bus]}";
+                busIndexes[bus]++;
                 var importFrom = $"{Storage}:import/{fileName}/{disk.FileName}";
                 vmConfig[diskSlot] = $"{TargetStorage}:0,import-from={importFrom}";
                 firstDisk ??= diskSlot;
