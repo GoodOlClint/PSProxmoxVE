@@ -1,3 +1,4 @@
+using System;
 using System.Management.Automation;
 using PSProxmoxVE.Core.Client;
 
@@ -27,7 +28,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             using var client = new PveHttpClient(session);
 
             WriteVerbose($"Removing SDN VNet '{Vnet}'...");
-            client.DeleteAsync($"cluster/sdn/vnets/{Vnet}").GetAwaiter().GetResult();
+            client.DeleteAsync($"cluster/sdn/vnets/{Uri.EscapeDataString(Vnet)}").GetAwaiter().GetResult();
         }
     }
 }

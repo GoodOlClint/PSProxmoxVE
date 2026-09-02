@@ -1,3 +1,4 @@
+using System;
 using System.Management.Automation;
 using PSProxmoxVE.Core.Client;
 
@@ -29,7 +30,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
             using var client = new PveHttpClient(session);
 
             WriteVerbose($"Removing storage '{Storage}'...");
-            client.DeleteAsync($"storage/{Storage}").GetAwaiter().GetResult();
+            client.DeleteAsync($"storage/{Uri.EscapeDataString(Storage)}").GetAwaiter().GetResult();
         }
     }
 }
