@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
 using PSProxmoxVE.Core.Exceptions;
@@ -164,6 +165,50 @@ namespace PSProxmoxVE.Core.Tests.Utilities
             }));
 
             Assert.Equal(1, attempts);
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_InvokesTheInjectedDelayOncePerRetryWithTheComputedInterval()
+        {
+            var attempts = 0;
+            var delays = new List<TimeSpan>();
+
+            var result = await GuestLockRetry.ExecuteAsync(() =>
+            {
+                attempts++;
+                if (attempts < 3) throw ApiError(VmLockError);
+                return Task.FromResult("written");
+            }, GuestLockRetry.DefaultWindow, delay =>
+            {
+                delays.Add(delay);
+                return Task.CompletedTask;
+            });
+
+            Assert.Equal("written", result);
+            // budget/4 capped at 2s; DefaultWindow (45s) puts the quarter above the cap.
+            Assert.Equal(new[] { TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2) }, delays);
+        }
+
+        [Fact]
+        public async Task ExecuteAsync_PublicOverloadActuallyWaitsBetweenAttempts()
+        {
+            var attempts = 0;
+            var window = TimeSpan.FromMilliseconds(200);
+            var elapsed = Stopwatch.StartNew();
+
+            await GuestLockRetry.ExecuteAsync(() =>
+            {
+                attempts++;
+                if (attempts < 2) throw ApiError(VmLockError);
+                return Task.FromResult("written");
+            }, window);
+
+            elapsed.Stop();
+            // quarter of 200ms is 50ms; a no-op delay would leave this near zero. The
+            // threshold is well under 50ms so Task.Delay's own timer slop (it can return
+            // a fraction of a millisecond early) never makes this assertion itself flaky.
+            Assert.True(elapsed.Elapsed >= TimeSpan.FromMilliseconds(20),
+                $"Expected the public overload to wait close to one retry interval; took {elapsed.Elapsed}.");
         }
 
         [Fact]

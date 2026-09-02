@@ -30,7 +30,8 @@ namespace PSProxmoxVE.Core.Client
         private readonly HttpClient _httpClient;
         private bool _disposed;
 
-        private TimeSpan _guestLockRetryWindow = GuestLockRetry.DefaultWindow;
+        private readonly TimeSpan _guestLockRetryWindow;
+        private readonly Func<TimeSpan, Task> _guestLockRetryDelay;
 
         private const string ApiTokenPrefix = "PVEAPIToken=";
         private const string AuthCookieName = "PVEAuthCookie=";
@@ -46,21 +47,56 @@ namespace PSProxmoxVE.Core.Client
         ///   to disable the timeout entirely (useful for multi-GB uploads/downloads).
         /// </param>
         public PveHttpClient(PveSession session, TimeSpan? timeoutOverride = null)
+            : this(session, timeoutOverride, guestLockRetryWindow: null, handler: null, guestLockRetryDelay: null)
+        {
+        }
+
+        /// <summary>
+        /// Test seam: builds a client against an explicit handler, lock-retry window and/or
+        /// inter-attempt delay. Production code always goes through the public constructor.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session providing credentials and base URL.</param>
+        /// <param name="timeoutOverride">Optional per-instance timeout override.</param>
+        /// <param name="guestLockRetryWindow">
+        ///   Retry budget passed to <see cref="GuestLockRetry.ExecuteAsync{T}(Func{Task{T}}, TimeSpan?, Func{TimeSpan, Task})"/>.
+        ///   Null uses <see cref="GuestLockRetry.DefaultWindow"/>, the same as the public constructor.
+        /// </param>
+        /// <param name="handler">
+        ///   Message handler to send requests through. Null builds the production
+        ///   certificate-validation handler from <see cref="PveSession.SkipCertificateCheck"/>.
+        /// </param>
+        /// <param name="guestLockRetryDelay">
+        ///   Invoked before each guest-lock reissue instead of sleeping. Null uses
+        ///   <see cref="Task.Delay(TimeSpan)"/>, the same as the public constructor.
+        /// </param>
+        internal PveHttpClient(
+            PveSession session,
+            TimeSpan? timeoutOverride,
+            TimeSpan? guestLockRetryWindow,
+            HttpMessageHandler? handler,
+            Func<TimeSpan, Task>? guestLockRetryDelay = null)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
             _baseUrl = session.BaseUrl;
+            _guestLockRetryWindow = guestLockRetryWindow ?? GuestLockRetry.DefaultWindow;
+            _guestLockRetryDelay = guestLockRetryDelay ?? Task.Delay;
 
-            var handler = new HttpClientHandler();
-            if (session.SkipCertificateCheck)
-            {
-                handler.ServerCertificateCustomValidationCallback =
-                    (HttpRequestMessage _, X509Certificate2 _, X509Chain _, SslPolicyErrors _) => true;
-            }
-            _httpClient = new HttpClient(handler);
+            _httpClient = new HttpClient(handler ?? CreateHandler(session.SkipCertificateCheck));
             _httpClient.Timeout = timeoutOverride ?? session.Timeout;
 
             _httpClient.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json"));
+        }
+
+        private static HttpClientHandler CreateHandler(bool skipCertificateCheck)
+        {
+            var handler = new HttpClientHandler();
+            if (skipCertificateCheck)
+            {
+                handler.ServerCertificateCustomValidationCallback =
+                    (HttpRequestMessage _, X509Certificate2 _, X509Chain _, SslPolicyErrors _) => true;
+            }
+            return handler;
         }
 
         /// <summary>
@@ -74,14 +110,10 @@ namespace PSProxmoxVE.Core.Client
 
             _session = null;
             _baseUrl = $"https://{hostname}:{port}";
+            _guestLockRetryWindow = GuestLockRetry.DefaultWindow;
+            _guestLockRetryDelay = Task.Delay;
 
-            var handler = new HttpClientHandler();
-            if (skipCertificateCheck)
-            {
-                handler.ServerCertificateCustomValidationCallback =
-                    (HttpRequestMessage _, X509Certificate2 _, X509Chain _, SslPolicyErrors _) => true;
-            }
-            _httpClient = new HttpClient(handler);
+            _httpClient = new HttpClient(CreateHandler(skipCertificateCheck));
             if (timeout.HasValue)
                 _httpClient.Timeout = timeout.Value;
 
@@ -385,7 +417,7 @@ namespace PSProxmoxVE.Core.Client
         /// </summary>
         private Task<string> SendAsync(Func<HttpRequestMessage> buildRequest, string resource, string httpMethod) =>
             GuestLockRetry.ExecuteAsync(
-                () => SendOnceAsync(buildRequest(), resource, httpMethod), _guestLockRetryWindow);
+                () => SendOnceAsync(buildRequest(), resource, httpMethod), _guestLockRetryWindow, _guestLockRetryDelay);
 
         private async Task<string> SendOnceAsync(HttpRequestMessage request, string resource, string httpMethod)
         {

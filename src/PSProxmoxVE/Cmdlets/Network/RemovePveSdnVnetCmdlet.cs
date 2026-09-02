@@ -1,5 +1,5 @@
 using System.Management.Automation;
-using PSProxmoxVE.Core.Client;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Network
 {
@@ -15,6 +15,7 @@ namespace PSProxmoxVE.Cmdlets.Network
     {
         /// <summary>The VNet identifier to remove.</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The SDN VNet name.")]
+        [ValidatePattern(@"\A[A-Za-z0-9][A-Za-z0-9._-]*\z")]
         public string Vnet { get; set; } = string.Empty;
 
         protected override void ProcessRecord()
@@ -24,10 +25,10 @@ namespace PSProxmoxVE.Cmdlets.Network
 
             var session = GetSession();
             RequireVersion(session, "SDN", 6, 2, 8, 0);
-            using var client = new PveHttpClient(session);
+            var service = new NetworkService();
 
             WriteVerbose($"Removing SDN VNet '{Vnet}'...");
-            client.DeleteAsync($"cluster/sdn/vnets/{Vnet}").GetAwaiter().GetResult();
+            service.RemoveSdnVnet(session, Vnet);
         }
     }
 }

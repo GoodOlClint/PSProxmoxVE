@@ -94,9 +94,21 @@ namespace PSProxmoxVE.Core.Utilities
         /// <summary>Asynchronous counterpart of <see cref="Execute{T}"/>.</summary>
         /// <param name="operation">The operation to run.</param>
         /// <param name="window">Retry budget. Defaults to <see cref="DefaultWindow"/>.</param>
-        public static async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, TimeSpan? window = null)
+        public static Task<T> ExecuteAsync<T>(Func<Task<T>> operation, TimeSpan? window = null) =>
+            ExecuteAsync(operation, window, Task.Delay);
+
+        /// <summary>
+        /// Test seam: same as <see cref="ExecuteAsync{T}(Func{Task{T}}, TimeSpan?)"/> but with the
+        /// inter-attempt wait replaceable, so a test can assert retry counts without paying the
+        /// wall-clock cost of <see cref="RetryInterval"/>.
+        /// </summary>
+        /// <param name="operation">The operation to run.</param>
+        /// <param name="window">Retry budget. Defaults to <see cref="DefaultWindow"/>.</param>
+        /// <param name="delay">Invoked with the computed retry interval before each reissue.</param>
+        internal static async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, TimeSpan? window, Func<TimeSpan, Task> delay)
         {
             if (operation == null) throw new ArgumentNullException(nameof(operation));
+            if (delay == null) throw new ArgumentNullException(nameof(delay));
 
             var budget = window ?? DefaultWindow;
             var elapsed = Stopwatch.StartNew();
@@ -108,7 +120,7 @@ namespace PSProxmoxVE.Core.Utilities
                 }
                 catch (Exception ex) when (IsLockTimeout(ex) && elapsed.Elapsed < budget)
                 {
-                    await Task.Delay(RetryInterval(budget)).ConfigureAwait(false);
+                    await delay(RetryInterval(budget)).ConfigureAwait(false);
                 }
             }
         }
