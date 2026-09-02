@@ -34,10 +34,8 @@ jobs:
             Review this pull request for the PSProxmoxVE PowerShell module.
 
             Focus areas:
-            1. **Convention compliance** — Check against the "Key Conventions"
-               list in CLAUDE.md. Any violation is a regression. Read the
-               relevant ADR in docs/decisions/ for the reasoning before
-               reporting one, and cite it by ADR number.
+            1. **DECISIONS.md compliance** — Check against the architectural
+               decisions (D001-D016). Any violation is a regression.
             2. **Code quality** — Cmdlet conventions (sealed, OutputType,
                ConfirmImpact.High for destructive, VmId ValidateRange),
                SecureString for passwords, Uri.EscapeDataString on path params,
