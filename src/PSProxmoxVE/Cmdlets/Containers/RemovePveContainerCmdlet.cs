@@ -8,7 +8,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
     /// <para type="synopsis">Removes an LXC container from a Proxmox VE node.</para>
     /// <para type="description">
     /// Deletes an LXC container and, optionally, all associated storage.
-    /// This operation is destructive and requires confirmation unless -Force is specified.
+    /// This operation is destructive and requires confirmation.
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Remove, "PveContainer",
@@ -42,10 +42,10 @@ namespace PSProxmoxVE.Cmdlets.Containers
 
         /// <summary>
         /// <para type="description">
-        /// When specified, bypasses locks and forces removal even if a lock is set on the container.
+        /// When specified, sends force=1 to PVE, allowing removal of running containers.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = false, HelpMessage = "Force the operation without additional checks.")]
+        [Parameter(Mandatory = false, HelpMessage = "Force destroy, even if running.")]
         public SwitchParameter Force { get; set; }
 
         /// <summary>
@@ -63,7 +63,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
             var containerService = new ContainerService();
 
             WriteVerbose($"Removing container {VmId} from node '{Node}'...");
-            var task = containerService.RemoveContainer(session, Node, VmId, Purge.IsPresent);
+            var task = containerService.RemoveContainer(session, Node, VmId, Purge.IsPresent, Force.IsPresent);
 
             if (Wait.IsPresent)
             {

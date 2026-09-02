@@ -394,16 +394,22 @@ namespace PSProxmoxVE.Core.Services
         /// <param name="node">The cluster node name.</param>
         /// <param name="vmid">The VM ID.</param>
         /// <param name="purge">If true, also removes all associated backup files and jobs.</param>
-        public PveTask RemoveVm(PveSession session, string node, int vmid, bool purge = false)
+        /// <param name="skipLock">If true, bypasses locks (PVE honours this for root@pam only).</param>
+        public PveTask RemoveVm(PveSession session, string node, int vmid, bool purge = false, bool skipLock = false)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            var purgeParam = purge ? "?purge=1" : "?purge=0";
+            var queryParams = new List<string>();
+            queryParams.Add(purge ? "purge=1" : "purge=0");
+            if (skipLock)
+                queryParams.Add("skiplock=1");
+            var queryString = "?" + string.Join("&", queryParams);
+
             IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
             try
             {
-                var response = client.DeleteAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}{purgeParam}")
+                var response = client.DeleteAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}{queryString}")
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
             }

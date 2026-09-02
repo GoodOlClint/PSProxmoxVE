@@ -329,16 +329,22 @@ namespace PSProxmoxVE.Core.Services
             PveSession session,
             string node,
             int vmid,
-            bool purge = false)
+            bool purge = false,
+            bool force = false)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            var purgeParam = purge ? "?purge=1" : "?purge=0";
+            var queryParams = new List<string>();
+            queryParams.Add(purge ? "purge=1" : "purge=0");
+            if (force)
+                queryParams.Add("force=1");
+            var queryString = "?" + string.Join("&", queryParams);
+
             IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
             try
             {
-                var response = client.DeleteAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}{purgeParam}")
+                var response = client.DeleteAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}{queryString}")
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
             }

@@ -165,5 +165,57 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Empty(captured!);
         }
 
+        [Fact]
+        public void RemoveVm_WithSkipLockTrue_IncludesSkiplockInQueryString()
+        {
+            string? resource = null;
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient
+                .Setup(c => c.DeleteAsync(It.IsAny<string>()))
+                .Callback<string>(r => resource = r)
+                .ReturnsAsync("{\"data\":\"UPID:pve1:00001234:00005678:6A970AAB:qmremove:100:root@pam:\"}");
+
+            var service = new VmService(mockClient.Object);
+            service.RemoveVm(CreateSession(), TestNode, TestVmId, purge: false, skipLock: true);
+
+            Assert.NotNull(resource);
+            Assert.Contains("skiplock=1", resource!);
+        }
+
+        [Fact]
+        public void RemoveVm_WithSkipLockFalse_OmitsSkiplockFromQueryString()
+        {
+            string? resource = null;
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient
+                .Setup(c => c.DeleteAsync(It.IsAny<string>()))
+                .Callback<string>(r => resource = r)
+                .ReturnsAsync("{\"data\":\"UPID:pve1:00001234:00005678:6A970AAB:qmremove:100:root@pam:\"}");
+
+            var service = new VmService(mockClient.Object);
+            service.RemoveVm(CreateSession(), TestNode, TestVmId, purge: false, skipLock: false);
+
+            Assert.NotNull(resource);
+            Assert.DoesNotContain("skiplock", resource!);
+        }
+
+        [Fact]
+        public void RemoveVm_WithPurgeAndSkipLock_IncludesBothInQueryString()
+        {
+            string? resource = null;
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient
+                .Setup(c => c.DeleteAsync(It.IsAny<string>()))
+                .Callback<string>(r => resource = r)
+                .ReturnsAsync("{\"data\":\"UPID:pve1:00001234:00005678:6A970AAB:qmremove:100:root@pam:\"}");
+
+            var service = new VmService(mockClient.Object);
+            service.RemoveVm(CreateSession(), TestNode, TestVmId, purge: true, skipLock: true);
+
+            Assert.NotNull(resource);
+            Assert.Contains("purge=1", resource!);
+            Assert.Contains("skiplock=1", resource!);
+        }
+
     }
 }
