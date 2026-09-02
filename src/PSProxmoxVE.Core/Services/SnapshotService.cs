@@ -11,10 +11,8 @@ namespace PSProxmoxVE.Core.Services
     /// Service for Proxmox VE VM snapshot API operations.
     /// All operations apply to QEMU/KVM VMs via the /nodes/{node}/qemu/{vmid}/snapshot endpoints.
     /// </summary>
-    public class SnapshotService
+    public class SnapshotService : PveServiceBase
     {
-        private readonly IPveHttpClient? _injectedClient;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="SnapshotService"/> class.
         /// </summary>
@@ -24,10 +22,7 @@ namespace PSProxmoxVE.Core.Services
         /// Initializes a new instance of the <see cref="SnapshotService"/> class with an injected HTTP client.
         /// </summary>
         /// <param name="client">The HTTP client to use for API calls. The caller owns its lifetime.</param>
-        public SnapshotService(IPveHttpClient client)
-        {
-            _injectedClient = client ?? throw new ArgumentNullException(nameof(client));
-        }
+        public SnapshotService(IPveHttpClient client) : base(client) { }
 
         /// <summary>
         /// Returns all snapshots for a VM.
@@ -40,18 +35,13 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/snapshot")
                     .GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveSnapshot[]>() ?? Array.Empty<PveSnapshot>();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -83,17 +73,12 @@ namespace PSProxmoxVE.Core.Services
             if (!string.IsNullOrEmpty(description))
                 formData["description"] = description!;
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/snapshot", formData)
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -113,17 +98,12 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
             if (string.IsNullOrWhiteSpace(snapname)) throw new ArgumentNullException(nameof(snapname));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.DeleteAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/snapshot/{Uri.EscapeDataString(snapname)}")
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -143,17 +123,12 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
             if (string.IsNullOrWhiteSpace(snapname)) throw new ArgumentNullException(nameof(snapname));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/snapshot/{Uri.EscapeDataString(snapname)}/rollback")
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         // -------------------------------------------------------------------------

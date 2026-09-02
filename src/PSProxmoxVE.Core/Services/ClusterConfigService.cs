@@ -14,10 +14,8 @@ namespace PSProxmoxVE.Core.Services
     /// Service for Proxmox VE cluster configuration API operations
     /// (/cluster/config, /cluster/options, /cluster/nextid).
     /// </summary>
-    public class ClusterConfigService
+    public class ClusterConfigService : PveServiceBase
     {
-        private readonly IPveHttpClient? _injectedClient;
-
         private static readonly TimeSpan DefaultQuorumTimeout = TimeSpan.FromSeconds(60);
         private static readonly TimeSpan QuorumPollInterval = TimeSpan.FromSeconds(2);
 
@@ -30,10 +28,7 @@ namespace PSProxmoxVE.Core.Services
         /// Initializes a new instance of the <see cref="ClusterConfigService"/> class with an injected HTTP client.
         /// </summary>
         /// <param name="client">The HTTP client to use for API calls. The caller owns its lifetime.</param>
-        public ClusterConfigService(IPveHttpClient client)
-        {
-            _injectedClient = client ?? throw new ArgumentNullException(nameof(client));
-        }
+        public ClusterConfigService(IPveHttpClient client) : base(client) { }
 
         /// <summary>
         /// Returns the cluster configuration directory (GET /cluster/config).
@@ -43,17 +38,12 @@ namespace PSProxmoxVE.Core.Services
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync("cluster/config").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data is JObject obj ? JsonHelper.ToDictionary(obj) : new Dictionary<string, object?>();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -84,17 +74,12 @@ namespace PSProxmoxVE.Core.Services
             if (votes.HasValue)
                 data["votes"] = votes.Value.ToString();
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.PostAsync("cluster/config", data).GetAwaiter().GetResult();
                 var result = JObject.Parse(response)["data"];
                 return result?.ToString() ?? string.Empty;
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -104,17 +89,12 @@ namespace PSProxmoxVE.Core.Services
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync("cluster/config/nodes").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveClusterConfigNode[]>() ?? Array.Empty<PveClusterConfigNode>();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -151,17 +131,12 @@ namespace PSProxmoxVE.Core.Services
             if (apiversion.HasValue)
                 data["apiversion"] = apiversion.Value.ToString();
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.PostAsync($"cluster/config/nodes/{Uri.EscapeDataString(node)}", data).GetAwaiter().GetResult();
                 var result = JObject.Parse(response)["data"];
                 return result?.ToString() ?? string.Empty;
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -174,15 +149,10 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrEmpty(node)) throw new ArgumentNullException(nameof(node));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.DeleteAsync($"cluster/config/nodes/{Uri.EscapeDataString(node)}").GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -198,17 +168,12 @@ namespace PSProxmoxVE.Core.Services
             if (!string.IsNullOrEmpty(node))
                 resource += $"?node={Uri.EscapeDataString(node!)}";
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync(resource).GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveClusterJoinInfo>() ?? new PveClusterJoinInfo();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -248,17 +213,12 @@ namespace PSProxmoxVE.Core.Services
             if (force.HasValue)
                 data["force"] = force.Value ? "1" : "0";
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.PostAsync("cluster/config/join", data).GetAwaiter().GetResult();
                 var result = JObject.Parse(response)["data"];
                 return result?.ToString() ?? string.Empty;
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -268,17 +228,12 @@ namespace PSProxmoxVE.Core.Services
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync("cluster/config/totem").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return JsonHelper.ToDictionary(data as JObject);
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -288,17 +243,12 @@ namespace PSProxmoxVE.Core.Services
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync("cluster/config/qdevice").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return JsonHelper.ToDictionary(data as JObject);
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -308,17 +258,12 @@ namespace PSProxmoxVE.Core.Services
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync("cluster/config/apiversion").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<int>() ?? 0;
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -328,17 +273,12 @@ namespace PSProxmoxVE.Core.Services
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync("cluster/options").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveClusterOptions>() ?? new PveClusterOptions();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -351,15 +291,10 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (options == null) throw new ArgumentNullException(nameof(options));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.PutAsync("cluster/options", options).GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -370,17 +305,12 @@ namespace PSProxmoxVE.Core.Services
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync("cluster/status").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveClusterStatus[]>() ?? Array.Empty<PveClusterStatus>();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -439,8 +369,7 @@ namespace PSProxmoxVE.Core.Services
             if (vmid.HasValue)
                 resource += $"?vmid={vmid.Value}";
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync(resource).GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
@@ -449,11 +378,7 @@ namespace PSProxmoxVE.Core.Services
                 if (int.TryParse(data.ToString(), out var id))
                     return id;
                 throw new InvalidOperationException($"API returned unexpected next VMID value: '{data}'");
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
     }
 }

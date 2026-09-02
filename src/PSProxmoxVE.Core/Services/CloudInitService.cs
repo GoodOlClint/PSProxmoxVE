@@ -12,10 +12,8 @@ namespace PSProxmoxVE.Core.Services
     /// Service for managing Cloud-Init configuration on Proxmox VE QEMU/KVM VMs.
     /// All operations target the /nodes/{node}/qemu/{vmid}/config endpoint.
     /// </summary>
-    public class CloudInitService
+    public class CloudInitService : PveServiceBase
     {
-        private readonly IPveHttpClient? _injectedClient;
-
         // Cloud-Init field names as used in the PVE API
         private static readonly string[] CloudInitFields =
         {
@@ -33,10 +31,7 @@ namespace PSProxmoxVE.Core.Services
         /// Initializes a new instance of the <see cref="CloudInitService"/> class with an injected HTTP client.
         /// </summary>
         /// <param name="client">The HTTP client to use for API calls. The caller owns its lifetime.</param>
-        public CloudInitService(IPveHttpClient client)
-        {
-            _injectedClient = client ?? throw new ArgumentNullException(nameof(client));
-        }
+        public CloudInitService(IPveHttpClient client) : base(client) { }
 
         /// <summary>
         /// Retrieves the Cloud-Init specific configuration fields for a VM.
@@ -47,8 +42,7 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/config")
                     .GetAwaiter().GetResult();
@@ -64,11 +58,7 @@ namespace PSProxmoxVE.Core.Services
                 }
 
                 return ciObj.ToObject<PveCloudInitConfig>() ?? new PveCloudInitConfig();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -89,19 +79,14 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
             if (config == null) throw new ArgumentNullException(nameof(config));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 var formData = config.ToDictionary(
                     kvp => kvp.Key,
                     kvp => kvp.Value?.ToString() ?? string.Empty);
                 client.PutAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/config", formData)
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -114,18 +99,13 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.PutAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/cloudinit", null)
                     .GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToString() ?? string.Empty;
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
     }
 }

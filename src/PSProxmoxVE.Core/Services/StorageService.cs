@@ -12,10 +12,8 @@ namespace PSProxmoxVE.Core.Services
     /// <summary>
     /// Service for Proxmox VE storage API operations.
     /// </summary>
-    public class StorageService
+    public class StorageService : PveServiceBase
     {
-        private readonly IPveHttpClient? _injectedClient;
-
         /// <summary>
         /// Initializes a new instance of <see cref="StorageService"/> with no injected client.
         /// Each method will create and dispose its own <see cref="PveHttpClient"/>.
@@ -27,10 +25,7 @@ namespace PSProxmoxVE.Core.Services
         /// The caller owns the client's lifetime; this service will not dispose it.
         /// </summary>
         /// <param name="client">The HTTP client to use for all requests.</param>
-        public StorageService(IPveHttpClient client)
-        {
-            _injectedClient = client ?? throw new ArgumentNullException(nameof(client));
-        }
+        public StorageService(IPveHttpClient client) : base(client) { }
 
         // -------------------------------------------------------------------------
         // Read operations
@@ -50,17 +45,12 @@ namespace PSProxmoxVE.Core.Services
                 ? $"nodes/{Uri.EscapeDataString(node)}/storage"
                 : "storage";
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync(resource).GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveStorage[]>() ?? Array.Empty<PveStorage>();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -86,17 +76,12 @@ namespace PSProxmoxVE.Core.Services
             if (!string.IsNullOrEmpty(contentType))
                 resource += $"?content={Uri.EscapeDataString(contentType!)}";
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync(resource).GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveStorageContent[]>() ?? Array.Empty<PveStorageContent>();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         // -------------------------------------------------------------------------
@@ -137,8 +122,7 @@ namespace PSProxmoxVE.Core.Services
                 ["content"] = "iso"
             };
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session, timeout ?? TimeSpan.FromMinutes(30));
-            try
+            return Invoke(session, timeout ?? TimeSpan.FromMinutes(30), client =>
             {
                 var response = client.UploadFileAsync(
                         $"nodes/{Uri.EscapeDataString(node)}/storage/{Uri.EscapeDataString(storage)}/upload",
@@ -149,11 +133,7 @@ namespace PSProxmoxVE.Core.Services
                         progressCallback)
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -187,17 +167,12 @@ namespace PSProxmoxVE.Core.Services
                 ["content"] = contentType
             };
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/storage/{Uri.EscapeDataString(storage)}/download-url", formData)
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         // -------------------------------------------------------------------------
@@ -215,8 +190,7 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (config == null) throw new ArgumentNullException(nameof(config));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var formData = config.ToDictionary(
                     kvp => kvp.Key,
@@ -224,11 +198,7 @@ namespace PSProxmoxVE.Core.Services
                 var response = client.PostAsync("storage", formData).GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveStorage>() ?? new PveStorage();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -241,15 +211,10 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(storage)) throw new ArgumentNullException(nameof(storage));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.DeleteAsync($"storage/{Uri.EscapeDataString(storage)}").GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -264,16 +229,11 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(storage)) throw new ArgumentNullException(nameof(storage));
             if (config == null) throw new ArgumentNullException(nameof(config));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.PutAsync($"storage/{Uri.EscapeDataString(storage)}", config)
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         // -------------------------------------------------------------------------
@@ -292,17 +252,12 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
             if (string.IsNullOrWhiteSpace(storage)) throw new ArgumentNullException(nameof(storage));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/storage/{Uri.EscapeDataString(storage)}/status").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveStorageStatus>() ?? new PveStorageStatus();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -319,16 +274,11 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(storage)) throw new ArgumentNullException(nameof(storage));
             if (string.IsNullOrWhiteSpace(volume)) throw new ArgumentNullException(nameof(volume));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.DeleteAsync($"nodes/{Uri.EscapeDataString(node)}/storage/{Uri.EscapeDataString(storage)}/content/{Uri.EscapeDataString(volume)}")
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -347,16 +297,11 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(volume)) throw new ArgumentNullException(nameof(volume));
             if (config == null) throw new ArgumentNullException(nameof(config));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.PutAsync($"nodes/{Uri.EscapeDataString(node)}/storage/{Uri.EscapeDataString(storage)}/content/{Uri.EscapeDataString(volume)}", config)
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -373,17 +318,12 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(storage)) throw new ArgumentNullException(nameof(storage));
             if (config == null) throw new ArgumentNullException(nameof(config));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/storage/{Uri.EscapeDataString(storage)}/content", config)
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         // -------------------------------------------------------------------------

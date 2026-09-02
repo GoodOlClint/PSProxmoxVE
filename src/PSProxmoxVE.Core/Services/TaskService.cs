@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Client;
@@ -12,23 +13,49 @@ namespace PSProxmoxVE.Core.Services
     /// <summary>
     /// Service for querying and waiting on Proxmox VE asynchronous tasks (UPIDs).
     /// </summary>
-    public class TaskService
+    public class TaskService : PveServiceBase
     {
-        private readonly IPveHttpClient? _injectedClient;
-
         private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(10);
-        private static readonly TimeSpan DefaultPollInterval = TimeSpan.FromSeconds(2);
         private static readonly TimeSpan MinPollInterval = TimeSpan.FromSeconds(1);
+        private static readonly TimeSpan MaxBackoffInterval = TimeSpan.FromSeconds(10);
+        private static readonly TimeSpan BackoffStep = TimeSpan.FromSeconds(1);
+
+        private readonly Func<TimeSpan, Task> _pollDelay;
 
         /// <summary>Initializes a new instance that creates its own HTTP clients.</summary>
-        public TaskService() { }
+        public TaskService() : this(Sleep) { }
 
         /// <summary>Initializes a new instance that uses the supplied HTTP client for all requests.</summary>
         /// <param name="client">The HTTP client to use. The caller owns its lifetime.</param>
-        public TaskService(IPveHttpClient client)
+        public TaskService(IPveHttpClient client) : this(client, Sleep) { }
+
+        /// <summary>
+        /// Test seam: same as <see cref="TaskService()"/> but with the wait between polls
+        /// replaceable, so a test can assert the poll schedule without sleeping for it.
+        /// </summary>
+        /// <param name="pollDelay">Invoked with each computed poll interval instead of sleeping.</param>
+        internal TaskService(Func<TimeSpan, Task> pollDelay)
         {
-            _injectedClient = client ?? throw new ArgumentNullException(nameof(client));
+            _pollDelay = pollDelay ?? throw new ArgumentNullException(nameof(pollDelay));
         }
+
+        /// <summary>
+        /// Test seam: same as <see cref="TaskService(IPveHttpClient)"/> but with the wait between
+        /// polls replaceable, so a test can assert the poll schedule without sleeping for it.
+        /// </summary>
+        /// <param name="client">The HTTP client to use. The caller owns its lifetime.</param>
+        /// <param name="pollDelay">Invoked with each computed poll interval instead of sleeping.</param>
+        internal TaskService(IPveHttpClient client, Func<TimeSpan, Task> pollDelay) : base(client)
+        {
+            _pollDelay = pollDelay ?? throw new ArgumentNullException(nameof(pollDelay));
+        }
+
+        private static Task Sleep(TimeSpan duration)
+        {
+            Thread.Sleep(duration);
+            return Task.CompletedTask;
+        }
+
 
         /// <summary>
         /// Returns the current status of a task identified by its UPID.
@@ -39,21 +66,21 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
             if (string.IsNullOrWhiteSpace(upid)) throw new ArgumentNullException(nameof(upid));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var encodedUpid = Uri.EscapeDataString(upid);
                 var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/tasks/{encodedUpid}/status")
                     .GetAwaiter().GetResult();
-                var data = JObject.Parse(response)["data"];
-                var task = data?.ToObject<PveTask>() ?? new PveTask { Upid = upid };
-                task.Node = node;
-                return task;
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+                return ParseTaskStatus(response, node, upid);
+            });
+        }
+
+        private static PveTask ParseTaskStatus(string response, string node, string upid)
+        {
+            var data = JObject.Parse(response)["data"];
+            var task = data?.ToObject<PveTask>() ?? new PveTask { Upid = upid };
+            task.Node = node;
+            return task;
         }
 
         /// <summary>
@@ -65,29 +92,29 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
             if (string.IsNullOrWhiteSpace(upid)) throw new ArgumentNullException(nameof(upid));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var encodedUpid = Uri.EscapeDataString(upid);
                 var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/tasks/{encodedUpid}/log")
                     .GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveTaskLog[]>() ?? Array.Empty<PveTaskLog>();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
-        /// Polls the task status until it completes, throws on timeout or failure.
+        /// Polls the task status until it completes, throws on timeout or failure. One HTTP
+        /// client is held open for the whole wait.
         /// </summary>
         /// <param name="session">Active PVE session.</param>
         /// <param name="node">Node name where the task is running.</param>
         /// <param name="upid">Task UPID.</param>
         /// <param name="timeout">Maximum time to wait. Defaults to 10 minutes.</param>
-        /// <param name="pollInterval">Interval between status polls. Defaults to 2 seconds. Minimum 1 second.</param>
+        /// <param name="pollInterval">
+        ///   Fixed interval between status polls, minimum 1 second. When omitted the interval
+        ///   starts at 1 second and grows by 1 second per poll up to a 10 second cap. A wait
+        ///   never sleeps past <paramref name="timeout"/>.
+        /// </param>
         /// <param name="progressCallback">Optional callback invoked on each poll with the current task.</param>
         /// <returns>The completed <see cref="PveTask"/>.</returns>
         /// <exception cref="PveTaskTimeoutException">Thrown when the task does not complete within <paramref name="timeout"/>.</exception>
@@ -105,29 +132,44 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(upid)) throw new ArgumentNullException(nameof(upid));
 
             var effectiveTimeout = timeout ?? DefaultTimeout;
-            var effectivePoll = pollInterval ?? DefaultPollInterval;
-            if (effectivePoll < MinPollInterval)
-                effectivePoll = MinPollInterval;
+            var fixedInterval = pollInterval.HasValue
+                ? (pollInterval.Value < MinPollInterval ? MinPollInterval : pollInterval.Value)
+                : (TimeSpan?)null;
 
             var deadline = DateTime.UtcNow.Add(effectiveTimeout);
+            var statusResource = $"nodes/{Uri.EscapeDataString(node)}/tasks/{Uri.EscapeDataString(upid)}/status";
 
-            while (true)
+            return Invoke(session, client =>
             {
-                var task = GetTask(session, node, upid);
-                progressCallback?.Invoke(task);
-
-                if (string.Equals(task.Status, "stopped", StringComparison.OrdinalIgnoreCase))
+                var interval = fixedInterval ?? MinPollInterval;
+                while (true)
                 {
-                    if (!string.Equals(task.ExitStatus, "OK", StringComparison.OrdinalIgnoreCase))
-                        throw new PveTaskFailedException(upid, task.ExitStatus ?? "(no exit status)");
-                    return task;
+                    var response = client.GetAsync(statusResource).GetAwaiter().GetResult();
+                    var task = ParseTaskStatus(response, node, upid);
+                    progressCallback?.Invoke(task);
+
+                    if (string.Equals(task.Status, "stopped", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!string.Equals(task.ExitStatus, "OK", StringComparison.OrdinalIgnoreCase))
+                            throw new PveTaskFailedException(upid, task.ExitStatus ?? "(no exit status)");
+                        return task;
+                    }
+
+                    var now = DateTime.UtcNow;
+                    if (now >= deadline)
+                        throw new PveTaskTimeoutException(upid, effectiveTimeout);
+
+                    var remaining = deadline - now;
+                    _pollDelay(interval < remaining ? interval : remaining).GetAwaiter().GetResult();
+
+                    if (!fixedInterval.HasValue && interval < MaxBackoffInterval)
+                    {
+                        interval += BackoffStep;
+                        if (interval > MaxBackoffInterval)
+                            interval = MaxBackoffInterval;
+                    }
                 }
-
-                if (DateTime.UtcNow >= deadline)
-                    throw new PveTaskTimeoutException(upid, effectiveTimeout);
-
-                Thread.Sleep(effectivePoll);
-            }
+            });
         }
 
         /// <summary>
@@ -145,8 +187,7 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var queryParts = new List<string> { $"limit={limit}" };
                 if (vmid.HasValue)
@@ -164,11 +205,7 @@ namespace PSProxmoxVE.Core.Services
                 foreach (var t in tasks)
                     t.Node ??= node;
                 return tasks;
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -183,17 +220,12 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
             if (string.IsNullOrWhiteSpace(upid)) throw new ArgumentNullException(nameof(upid));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 var encodedUpid = Uri.EscapeDataString(upid);
                 client.DeleteAsync($"nodes/{Uri.EscapeDataString(node)}/tasks/{encodedUpid}")
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
     }
 }

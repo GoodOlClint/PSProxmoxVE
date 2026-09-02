@@ -11,23 +11,25 @@ namespace PSProxmoxVE.Core.Services
     /// Service for Proxmox VE VM template operations.
     /// Templates are VMs with the "template" flag set to 1.
     /// </summary>
-    public class TemplateService
+    public class TemplateService : PveServiceBase
     {
-        private readonly IPveHttpClient? _injectedClient;
-        private readonly VmService _vmService = new VmService();
+        private readonly VmService _vmService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TemplateService"/> class.
         /// </summary>
-        public TemplateService() { }
+        public TemplateService()
+        {
+            _vmService = new VmService();
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TemplateService"/> class with an injected HTTP client.
         /// </summary>
         /// <param name="client">The HTTP client to use for API calls. The caller owns its lifetime.</param>
-        public TemplateService(IPveHttpClient client)
+        public TemplateService(IPveHttpClient client) : base(client)
         {
-            _injectedClient = client ?? throw new ArgumentNullException(nameof(client));
+            _vmService = new VmService(client);
         }
 
         /// <summary>
@@ -58,17 +60,12 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/template")
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>

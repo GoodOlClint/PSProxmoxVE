@@ -10,10 +10,8 @@ namespace PSProxmoxVE.Core.Services
     /// <summary>
     /// Service for Proxmox VE resource pool API operations.
     /// </summary>
-    public class PoolService
+    public class PoolService : PveServiceBase
     {
-        private readonly IPveHttpClient? _injectedClient;
-
         /// <summary>
         /// Initializes a new instance of <see cref="PoolService"/> with no injected client.
         /// Each method will create and dispose its own <see cref="PveHttpClient"/>.
@@ -25,10 +23,7 @@ namespace PSProxmoxVE.Core.Services
         /// The caller owns the client's lifetime; this service will not dispose it.
         /// </summary>
         /// <param name="client">The HTTP client to use for all requests.</param>
-        public PoolService(IPveHttpClient client)
-        {
-            _injectedClient = client ?? throw new ArgumentNullException(nameof(client));
-        }
+        public PoolService(IPveHttpClient client) : base(client) { }
 
         /// <summary>
         /// Returns all resource pools.
@@ -37,17 +32,12 @@ namespace PSProxmoxVE.Core.Services
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync("pools").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PvePool[]>() ?? Array.Empty<PvePool>();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -58,18 +48,13 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(poolId)) throw new ArgumentNullException(nameof(poolId));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync($"pools/{Uri.EscapeDataString(poolId)}")
                     .GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PvePool>();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -80,19 +65,14 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(poolId)) throw new ArgumentNullException(nameof(poolId));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 var config = new Dictionary<string, string> { { "poolid", poolId } };
                 if (!string.IsNullOrEmpty(comment))
                     config["comment"] = comment!;
 
                 client.PostAsync("pools", config).GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -104,16 +84,11 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(poolId)) throw new ArgumentNullException(nameof(poolId));
             if (config == null) throw new ArgumentNullException(nameof(config));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.PutAsync($"pools/{Uri.EscapeDataString(poolId)}", config)
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -124,16 +99,11 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(poolId)) throw new ArgumentNullException(nameof(poolId));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.DeleteAsync($"pools/{Uri.EscapeDataString(poolId)}")
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
     }
 }

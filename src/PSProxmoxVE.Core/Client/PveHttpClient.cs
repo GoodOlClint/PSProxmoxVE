@@ -12,9 +12,6 @@ using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Exceptions;
 using PSProxmoxVE.Core.Utilities;
 
-using System.Net.Security;
-using System.Security.Cryptography.X509Certificates;
-
 namespace PSProxmoxVE.Core.Client
 {
     /// <summary>
@@ -28,6 +25,7 @@ namespace PSProxmoxVE.Core.Client
 #pragma warning restore CS8625
         private readonly string _baseUrl;
         private readonly HttpClient _httpClient;
+        private readonly HttpMessageHandler _handler;
         private bool _disposed;
 
         private readonly TimeSpan _guestLockRetryWindow;
@@ -47,13 +45,26 @@ namespace PSProxmoxVE.Core.Client
         ///   to disable the timeout entirely (useful for multi-GB uploads/downloads).
         /// </param>
         public PveHttpClient(PveSession session, TimeSpan? timeoutOverride = null)
-            : this(session, timeoutOverride, guestLockRetryWindow: null, handler: null, guestLockRetryDelay: null)
+            : this(session, timeoutOverride, guestLockRetryWindow: null, handler: null, guestLockRetryDelay: null, handlerCache: null)
+        {
+        }
+
+        /// <summary>
+        /// Test seam: same as the public constructor but drawing the transport handler from
+        /// <paramref name="handlerCache"/> instead of <see cref="PveHandlerCache.Shared"/>.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session providing credentials and base URL.</param>
+        /// <param name="handlerCache">The cache to take the handler from.</param>
+        internal PveHttpClient(PveSession session, PveHandlerCache handlerCache)
+            : this(session, timeoutOverride: null, guestLockRetryWindow: null, handler: null, guestLockRetryDelay: null,
+                  handlerCache: handlerCache ?? throw new ArgumentNullException(nameof(handlerCache)))
         {
         }
 
         /// <summary>
         /// Test seam: builds a client against an explicit handler, lock-retry window and/or
         /// inter-attempt delay. Production code always goes through the public constructor.
+        /// An explicit handler is owned by this client and bypasses the shared handler cache.
         /// </summary>
         /// <param name="session">The authenticated PVE session providing credentials and base URL.</param>
         /// <param name="timeoutOverride">Optional per-instance timeout override.</param>
@@ -62,42 +73,42 @@ namespace PSProxmoxVE.Core.Client
         ///   Null uses <see cref="GuestLockRetry.DefaultWindow"/>, the same as the public constructor.
         /// </param>
         /// <param name="handler">
-        ///   Message handler to send requests through. Null builds the production
-        ///   certificate-validation handler from <see cref="PveSession.SkipCertificateCheck"/>.
+        ///   Message handler to send requests through, owned and disposed by this client. Null
+        ///   takes the shared pooled handler for the session's endpoint from the handler cache.
         /// </param>
         /// <param name="guestLockRetryDelay">
         ///   Invoked before each guest-lock reissue instead of sleeping. Null uses
         ///   <see cref="Task.Delay(TimeSpan)"/>, the same as the public constructor.
+        /// </param>
+        /// <param name="handlerCache">
+        ///   Cache to take the handler from when <paramref name="handler"/> is null. Null uses
+        ///   <see cref="PveHandlerCache.Shared"/>, the same as the public constructor.
         /// </param>
         internal PveHttpClient(
             PveSession session,
             TimeSpan? timeoutOverride,
             TimeSpan? guestLockRetryWindow,
             HttpMessageHandler? handler,
-            Func<TimeSpan, Task>? guestLockRetryDelay = null)
+            Func<TimeSpan, Task>? guestLockRetryDelay = null,
+            PveHandlerCache? handlerCache = null)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
             _baseUrl = session.BaseUrl;
             _guestLockRetryWindow = guestLockRetryWindow ?? GuestLockRetry.DefaultWindow;
             _guestLockRetryDelay = guestLockRetryDelay ?? Task.Delay;
 
-            _httpClient = new HttpClient(handler ?? CreateHandler(session.SkipCertificateCheck));
+            var ownsHandler = handler != null;
+            _handler = handler ?? (handlerCache ?? PveHandlerCache.Shared)
+                .Get(session.Hostname, session.Port, session.SkipCertificateCheck);
+            _httpClient = new HttpClient(_handler, disposeHandler: ownsHandler);
             _httpClient.Timeout = timeoutOverride ?? session.Timeout;
 
             _httpClient.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
-        private static HttpClientHandler CreateHandler(bool skipCertificateCheck)
-        {
-            var handler = new HttpClientHandler();
-            if (skipCertificateCheck)
-            {
-                handler.ServerCertificateCustomValidationCallback =
-                    (HttpRequestMessage _, X509Certificate2 _, X509Chain _, SslPolicyErrors _) => true;
-            }
-            return handler;
-        }
+        /// <summary>The transport handler requests go through.</summary>
+        internal HttpMessageHandler Handler => _handler;
 
         /// <summary>
         /// Creates a bare HTTP client for pre-session use (e.g. initial authentication).
@@ -113,7 +124,8 @@ namespace PSProxmoxVE.Core.Client
             _guestLockRetryWindow = GuestLockRetry.DefaultWindow;
             _guestLockRetryDelay = Task.Delay;
 
-            _httpClient = new HttpClient(CreateHandler(skipCertificateCheck));
+            _handler = PveHandlerCache.Shared.Get(hostname, port, skipCertificateCheck);
+            _httpClient = new HttpClient(_handler, disposeHandler: false);
             if (timeout.HasValue)
                 _httpClient.Timeout = timeout.Value;
 
@@ -506,7 +518,10 @@ namespace PSProxmoxVE.Core.Client
             return sb.ToString();
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Releases this client. A handler taken from the shared cache stays alive for the
+        /// other clients on the same endpoint; only an explicitly supplied handler is disposed.
+        /// </summary>
         public void Dispose()
         {
             if (!_disposed)
