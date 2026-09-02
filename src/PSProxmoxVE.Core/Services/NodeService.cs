@@ -38,8 +38,9 @@ namespace PSProxmoxVE.Core.Services
             return Invoke(session, client =>
             {
                 var response = client.GetAsync("nodes").GetAwaiter().GetResult();
-                var data = JObject.Parse(response)["data"];
-                return data?.ToObject<PveNode[]>() ?? Array.Empty<PveNode>();
+                var data = JObject.Parse(response)["data"]
+                    ?? throw new InvalidOperationException("Response did not contain a 'data' field.");
+                return data.ToObject<PveNode[]>() ?? Array.Empty<PveNode>();
             });
         }
 
@@ -54,8 +55,14 @@ namespace PSProxmoxVE.Core.Services
             return Invoke(session, client =>
             {
                 var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/status").GetAwaiter().GetResult();
-                var data = JObject.Parse(response)["data"];
-                return data?.ToObject<PveNodeStatus>() ?? new PveNodeStatus();
+                var data = JObject.Parse(response)["data"]
+                    ?? throw new InvalidOperationException("Response did not contain a 'data' field.");
+                var status = data.ToObject<PveNodeStatus>()
+                    ?? throw new InvalidOperationException("Failed to deserialize node status.");
+                // The /nodes/{node}/status response does not include the node name.
+                if (string.IsNullOrEmpty(status.Node))
+                    status.Node = node;
+                return status;
             });
         }
 
