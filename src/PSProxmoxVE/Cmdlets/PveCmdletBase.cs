@@ -186,7 +186,7 @@ namespace PSProxmoxVE.Cmdlets
                     var task = issueOperation();
                     return string.IsNullOrEmpty(task.Upid)
                         ? task
-                        : taskService.WaitForTask(session, node, task.Upid, null, null, null);
+                        : taskService.WaitForTask(session, node, task.Upid);
                 },
                 onRetry: ex => WriteVerbose($"Guest is locked, retrying: {ex.Message}"));
         }

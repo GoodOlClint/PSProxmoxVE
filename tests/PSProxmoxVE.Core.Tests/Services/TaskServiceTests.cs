@@ -240,6 +240,103 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
+        public void WaitForTask_AlreadyStopped_ChecksStatusBeforeSleeping()
+        {
+            // Arrange
+            var json = @"{
+                ""data"": {
+                    ""upid"": ""UPID:pve1:000ABC:00000001:5F1234AB:qmstart:100:root@pam:"",
+                    ""status"": ""stopped"",
+                    ""exitstatus"": ""OK"",
+                    ""user"": ""root@pam""
+                }
+            }";
+
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient.Setup(c => c.GetAsync(It.IsAny<string>()))
+                .ReturnsAsync(json);
+
+            var service = new TaskService(mockClient.Object);
+            var session = CreateSession();
+
+            // Act — a long poll interval would dominate the elapsed time if the
+            // implementation slept before its first status check.
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var task = service.WaitForTask(session, TestNode, TestUpid,
+                timeout: TimeSpan.FromSeconds(30),
+                pollInterval: TimeSpan.FromSeconds(10));
+            stopwatch.Stop();
+
+            // Assert
+            Assert.True(task.IsSuccessful);
+            Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5),
+                $"Expected an immediate return for an already-stopped task, took {stopwatch.Elapsed}");
+            mockClient.Verify(c => c.GetAsync(It.IsAny<string>()), Times.Once);
+        }
+
+        [Fact]
+        public void WaitForTask_PollIntervalBelowMinimum_IsClampedToOneSecond()
+        {
+            // Arrange — task reports "running" once, then "stopped".
+            var runningJson = @"{ ""data"": { ""status"": ""running"", ""user"": ""root@pam"" } }";
+            var stoppedJson = @"{
+                ""data"": { ""status"": ""stopped"", ""exitstatus"": ""OK"", ""user"": ""root@pam"" }
+            }";
+
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient.SetupSequence(c => c.GetAsync(It.IsAny<string>()))
+                .ReturnsAsync(runningJson)
+                .ReturnsAsync(stoppedJson);
+
+            var service = new TaskService(mockClient.Object);
+            var session = CreateSession();
+
+            // Act — a zero poll interval must be clamped to the 1-second minimum,
+            // not passed through to Thread.Sleep(0).
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var task = service.WaitForTask(session, TestNode, TestUpid,
+                timeout: TimeSpan.FromSeconds(30),
+                pollInterval: TimeSpan.Zero);
+            stopwatch.Stop();
+
+            // Assert
+            Assert.True(task.IsSuccessful);
+            Assert.True(stopwatch.Elapsed >= TimeSpan.FromMilliseconds(900),
+                $"Expected the clamp to force at least a ~1-second wait, took {stopwatch.Elapsed}");
+            mockClient.Verify(c => c.GetAsync(It.IsAny<string>()), Times.Exactly(2));
+        }
+
+        [Fact]
+        public void WaitForTask_ProgressCallback_InvokedOnEachPoll()
+        {
+            // Arrange — two polls report "running", the third reports "stopped".
+            var runningJson = @"{ ""data"": { ""status"": ""running"", ""user"": ""root@pam"" } }";
+            var stoppedJson = @"{
+                ""data"": { ""status"": ""stopped"", ""exitstatus"": ""OK"", ""user"": ""root@pam"" }
+            }";
+
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient.SetupSequence(c => c.GetAsync(It.IsAny<string>()))
+                .ReturnsAsync(runningJson)
+                .ReturnsAsync(runningJson)
+                .ReturnsAsync(stoppedJson);
+
+            var service = new TaskService(mockClient.Object);
+            var session = CreateSession();
+            var seenStatuses = new List<string?>();
+
+            // Act
+            var task = service.WaitForTask(session, TestNode, TestUpid,
+                timeout: TimeSpan.FromSeconds(30),
+                pollInterval: TimeSpan.FromSeconds(1),
+                progressCallback: t => seenStatuses.Add(t.Status));
+
+            // Assert
+            Assert.True(task.IsSuccessful);
+            Assert.Equal(new List<string?> { "running", "running", "stopped" }, seenStatuses);
+        }
+
+        [Fact]
         public void StopTask_CallsDeleteAsyncWithCorrectPath()
         {
             // Arrange

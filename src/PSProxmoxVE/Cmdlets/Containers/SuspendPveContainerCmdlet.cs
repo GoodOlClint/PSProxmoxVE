@@ -53,7 +53,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
             if (Wait.IsPresent)
             {
                 var taskService = new TaskService();
-                task = taskService.WaitForTask(session, Node, task.Upid, null, null, null);
+                task = taskService.WaitForTask(session, Node, task.Upid);
             }
 
             WriteObject(task);

@@ -1,9 +1,9 @@
 using System;
 using System.Management.Automation;
-using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Exceptions;
 using PSProxmoxVE.Core.Models.Vms;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Tasks
 {
@@ -20,6 +20,13 @@ namespace PSProxmoxVE.Cmdlets.Tasks
     [OutputType(typeof(PveTask))]
     public sealed class WaitPveTaskCmdlet : PveCmdletBase
     {
+        /// <summary>
+        /// TaskService.WaitForTask treats a null timeout as "use its own 10-minute default",
+        /// not "wait forever" — this cmdlet's own contract is the latter, so an omitted
+        /// -Timeout is passed through as this instead of null.
+        /// </summary>
+        private static readonly TimeSpan NoTimeout = TimeSpan.FromDays(36500);
+
         /// <summary>The node on which the task is running.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The PVE node name.")]
         public string Node { get; set; } = string.Empty;
@@ -48,72 +55,40 @@ namespace PSProxmoxVE.Cmdlets.Tasks
         {
             var session = GetSession();
             using var client = new PveHttpClient(session);
+            var taskService = new TaskService(client);
 
-            var poll     = PollInterval ?? TimeSpan.FromSeconds(2);
-            var deadline = Timeout.HasValue ? DateTime.UtcNow + Timeout.Value : DateTime.MaxValue;
-
-            var encodedUpid  = Uri.EscapeDataString(Upid);
-            var statusResource = $"nodes/{Uri.EscapeDataString(Node)}/tasks/{encodedUpid}/status";
-
-            // Derive a short human-readable description from the UPID for progress display
+            var activityId = Math.Abs(Upid.GetHashCode()) % 1000 + 1;
             var taskDesc = Upid.Length > 50 ? Upid.Substring(0, 47) + "..." : Upid;
-
-            var activityId     = Math.Abs(Upid.GetHashCode()) % 1000 + 1;
             var progressRecord = new ProgressRecord(activityId, $"Waiting for task on {Node}", taskDesc)
             {
-                PercentComplete = -1  // indeterminate
+                PercentComplete = -1
             };
+
+            var startedAt = DateTime.UtcNow;
+
+            void ReportProgress(PveTask task)
+            {
+                if (Timeout.HasValue)
+                {
+                    var totalSecs = (int)Timeout.Value.TotalSeconds;
+                    var elapsed = (int)(DateTime.UtcNow - startedAt).TotalSeconds;
+                    progressRecord.PercentComplete = totalSecs > 0
+                        ? Math.Min(99, (elapsed * 100) / totalSecs)
+                        : -1;
+                    progressRecord.SecondsRemaining = Math.Max(0, totalSecs - elapsed);
+                }
+                WriteProgress(progressRecord);
+            }
 
             try
             {
-                while (true)
-                {
-                    if (DateTime.UtcNow >= deadline)
-                        throw new PveTaskTimeoutException(Upid, Timeout!.Value);
+                var task = taskService.WaitForTask(session, Node, Upid, Timeout ?? NoTimeout, PollInterval,
+                    ReportProgress);
 
-                    WriteProgress(progressRecord);
+                progressRecord.RecordType = ProgressRecordType.Completed;
+                WriteProgress(progressRecord);
 
-                    var elapsed = Timeout.HasValue
-                        ? (int)((DateTime.UtcNow - (deadline - Timeout.Value)).TotalSeconds)
-                        : -1;
-                    if (Timeout.HasValue && elapsed >= 0)
-                    {
-                        var totalSecs = (int)Timeout.Value.TotalSeconds;
-                        progressRecord.PercentComplete = totalSecs > 0
-                            ? Math.Min(99, (elapsed * 100) / totalSecs)
-                            : -1;
-                        progressRecord.SecondsRemaining = Math.Max(0, totalSecs - elapsed);
-                    }
-
-                    System.Threading.Thread.Sleep((int)poll.TotalMilliseconds);
-
-                    var statusJson = client.GetAsync(statusResource).GetAwaiter().GetResult();
-                    var statusRoot = JObject.Parse(statusJson);
-                    var data       = statusRoot["data"];
-
-                    var status     = data?["status"]?.ToString();
-                    var exitStatus = data?["exitstatus"]?.ToString();
-
-                    if (status == "stopped")
-                    {
-                        progressRecord.RecordType = ProgressRecordType.Completed;
-                        WriteProgress(progressRecord);
-
-                        var task = new PveTask
-                        {
-                            Upid       = Upid,
-                            Node       = Node,
-                            Status     = status,
-                            ExitStatus = exitStatus
-                        };
-
-                        if (!task.IsSuccessful && !string.IsNullOrEmpty(exitStatus) && exitStatus != "OK")
-                            throw new PveTaskFailedException(Upid, exitStatus!);
-
-                        WriteObject(task);
-                        return;
-                    }
-                }
+                WriteObject(task);
             }
             catch (PveTaskTimeoutException ex)
             {
@@ -124,6 +99,8 @@ namespace PSProxmoxVE.Cmdlets.Tasks
             }
             catch (PveTaskFailedException ex)
             {
+                progressRecord.RecordType = ProgressRecordType.Completed;
+                WriteProgress(progressRecord);
                 ThrowTerminatingError(new ErrorRecord(
                     ex, "PveTaskFailed", ErrorCategory.OperationStopped, Upid));
             }
