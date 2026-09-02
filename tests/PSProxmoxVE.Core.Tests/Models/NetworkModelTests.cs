@@ -109,5 +109,17 @@ namespace PSProxmoxVE.Core.Tests.Models
             Assert.Equal("vmbr1", networks[1].Iface);
             Assert.Equal("10.0.0.1/24", networks[1].Cidr);
         }
+
+        [Fact]
+        public void PveNetwork_Deserialize_Pve9_BridgeVlanAware_MapsAndIsNullWhenAbsent()
+        {
+            var json = TestHelper.LoadFixture("pve9_networks.json");
+            var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
+            var networks = data.ToObject<PveNetwork[]>();
+            Assert.NotNull(networks);
+            Assert.Equal(1, networks[1].BridgeVlanAware);
+            Assert.Null(networks[0].BridgeVlanAware);
+        }
     }
 }

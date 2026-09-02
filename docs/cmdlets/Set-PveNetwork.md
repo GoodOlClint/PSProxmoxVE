@@ -14,7 +14,8 @@ schema: 2.0.0
 
 ```
 Set-PveNetwork [-Node] <String> [-Iface] <String> -Type <String> [-Address <String>] [-Netmask <String>]
- [-Gateway <String>] [-Address6 <String>] [-Netmask6 <Int32>] [-Gateway6 <String>] [-BridgePorts <String>]
+ [-Gateway <String>] [-Address6 <String>] [-Netmask6 <Int32>] [-Gateway6 <String>] [-BridgeVlanAware]
+ [-BridgePorts <String>]
  [-BondSlaves <String>] [-Mtu <Int32>] [-Autostart] [-Comments <String>] [-Session <PveSession>]
  [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
@@ -89,6 +90,24 @@ Aliases:
 Required: False
 Position: Named
 Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -BridgeVlanAware
+
+Enable or disable VLAN-aware bridging (802.1Q) on this bridge. Applies to `bridge` type interfaces
+only. The flag is sent only when the switch is explicitly bound, so an update that omits it leaves
+the current setting untouched; `-BridgeVlanAware:$false` clears it.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: False
 Accept pipeline input: False
 Accept wildcard characters: False
 ```

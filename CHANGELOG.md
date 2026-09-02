@@ -7,6 +7,10 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+### Added
+
+- `New-PveNetwork` and `Set-PveNetwork` gained `-BridgeVlanAware`, so a VLAN-aware Linux bridge can be created and toggled from the module instead of only being read back. The model already surfaced `bridge_vlan_aware` as `BridgeVlanAware`, so this closed a write-path gap. On `Set-PveNetwork` the switch is only sent when explicitly bound, so an update that omits it leaves the flag alone. Clearing it goes through the endpoint's `delete` list rather than `bridge_vlan_aware=0`: PVE merges supplied keys onto the stored stanza and accepts the `0` without acting on it, so the obvious form is a silent no-op — confirmed against a live PVE 9 cluster, where the bridge stayed VLAN-aware. `bridge_vids` is not covered; it is an independent parameter and PVE defaults to 2-4094. (#92)
+
 ### Fixed
 
 - `Restart-PveVm` now uses PVE's native reboot endpoint (`POST {vmid}/status/reboot`) instead of composing a shutdown followed by a start. The two-call form raced Proxmox's own post-stop cleanup: the start won the guest's config lock, `qm cleanup` then held that lock for 30 seconds waiting on the newly started process, and the caller's next operation failed with `can't lock file '/var/lock/qemu-server/lock-<vmid>.conf' - got timeout`. Reproduced in integration runs 183, 185 and 186 as a cascade of 4 failures. `Restart-PveContainer` is unchanged — LXC has no reboot endpoint. See `DECISIONS.md` D016.

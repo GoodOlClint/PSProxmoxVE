@@ -42,6 +42,10 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = false, HelpMessage = "IPv4 gateway address.")]
         public string? Gateway { get; set; }
 
+        /// <summary>Enable VLAN-aware bridging (802.1Q) on this bridge.</summary>
+        [Parameter(Mandatory = false, HelpMessage = "Enable VLAN-aware bridging on this bridge.")]
+        public SwitchParameter BridgeVlanAware { get; set; }
+
         /// <summary>Bridge ports (space-separated interface names, for bridge type).</summary>
         [Parameter(Mandatory = false, HelpMessage = "Bridge ports (space-separated interface names).")]
         public string? BridgePorts { get; set; }
@@ -85,6 +89,7 @@ namespace PSProxmoxVE.Cmdlets.Network
             if (!string.IsNullOrEmpty(Netmask))     data["netmask"]      = Netmask!;
             if (!string.IsNullOrEmpty(Gateway))     data["gateway"]      = Gateway!;
             if (!string.IsNullOrEmpty(BridgePorts)) data["bridge_ports"] = BridgePorts!;
+            if (BridgeVlanAware.IsPresent)          data["bridge_vlan_aware"] = "1";
             if (!string.IsNullOrEmpty(BondSlaves))  data["slaves"]       = BondSlaves!;
             if (VlanId.HasValue)                    data["vlan-id"]      = VlanId.Value.ToString();
             if (Mtu.HasValue)                       data["mtu"]          = Mtu.Value.ToString();

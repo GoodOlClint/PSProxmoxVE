@@ -52,6 +52,10 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = false, HelpMessage = "IPv6 gateway address.")]
         public string? Gateway6 { get; set; }
 
+        /// <summary>Enable or disable VLAN-aware bridging (802.1Q) on this bridge.</summary>
+        [Parameter(Mandatory = false, HelpMessage = "Enable or disable VLAN-aware bridging on this bridge.")]
+        public SwitchParameter BridgeVlanAware { get; set; }
+
         /// <summary>Bridge ports (space-separated interface names).</summary>
         [Parameter(Mandatory = false, HelpMessage = "Bridge ports (space-separated interface names).")]
         public string? BridgePorts { get; set; }
@@ -93,6 +97,13 @@ namespace PSProxmoxVE.Cmdlets.Network
             if (Netmask6.HasValue)                  data["netmask6"]     = Netmask6.Value.ToString();
             if (!string.IsNullOrEmpty(Gateway6))    data["gateway6"]     = Gateway6!;
             if (!string.IsNullOrEmpty(BridgePorts)) data["bridge_ports"] = BridgePorts!;
+            // PVE merges the supplied keys onto the stored stanza, and accepts
+            // bridge_vlan_aware=0 without acting on it.
+            if (MyInvocation.BoundParameters.ContainsKey(nameof(BridgeVlanAware)))
+            {
+                if (BridgeVlanAware.IsPresent) data["bridge_vlan_aware"] = "1";
+                else                           data["delete"]            = "bridge_vlan_aware";
+            }
             if (!string.IsNullOrEmpty(BondSlaves))  data["slaves"]       = BondSlaves!;
             if (Mtu.HasValue)                       data["mtu"]          = Mtu.Value.ToString();
             if (Autostart.IsPresent)                data["autostart"]    = "1";
