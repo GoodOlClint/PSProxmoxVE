@@ -21,7 +21,11 @@ The ref is fully qualified deliberately. `git show "origin/main:<path>"` is an *
 
 **`CLAUDE.md` is materialized too.** The prompt judges convention compliance against the "Key Conventions" list. Read from the PR checkout, a PR could edit that list to permit its own violation, so the reviewer is pointed at the default branch's copy.
 
-**A PR that governs review cannot auto-approve itself.** A step diffs against the default branch for `.github/review-prompt.md`, `.github/workflows/**`, `CLAUDE.md`, `DECISIONS.md` and `docs/decisions/**`. On a match, any `claude[bot]` APPROVED review is dismissed through the API and the check fails.
+**A PR that governs review cannot auto-approve itself.** A step diffs against the default branch for `.github/review-prompt.md`, `.github/workflows/**`, `CLAUDE.md`, `DECISIONS.md` and `docs/decisions/**`. On a match, the review still runs and its findings are still wanted — the only thing withheld is the power to approve.
+
+The expected verdict on such a PR is `COMMENTED`, which the prompt asks for and which does not satisfy branch protection, so merge waits for the operator regardless. The gate **passes** in that case: the reviewer behaved correctly. It fails only when `claude[bot]` actually submitted `APPROVED`, which means either a successful injection or plain non-compliance — that approval is dismissed through the API so it cannot satisfy branch protection, and the red check records that it happened.
+
+Operator ruling 2026-09-02: withhold approval, not review. An earlier draft failed the check unconditionally on these PRs, which threw away a review that was wanted and made red the normal outcome for a whole class of PR — training the merge-past-red habit that the fork-notice change exists to avoid.
 
 `docs/decisions/` is in that list deliberately, and it has a cost: **every ADR now needs operator approval.** That follows from what the ADRs became in [ADR 0023](0023-decisions-live-in-docs-decisions-in-house-adr-format.md) — the reviewer is told to defer to them as recorded precedent, so a PR that adds an ADR and then leans on it is the fabricated-precedent attack. The prompt separately instructs the reviewer to treat an ADR added by the PR under review as a claim rather than settled precedent; the dismissal makes that mechanical instead of advisory. `CHANGES_REQUESTED` and `COMMENTED` are left standing — they do not unblock a merge, and their content is still useful.
 

@@ -73,15 +73,19 @@ the repository, say so plainly in the review body — name what you could not
 confirm and why. An unverifiable claim is worth flagging; do not silently treat
 it as either true or false.
 
-## Defer to the operator
+## Reserved to the operator
 
-Do not approve, and say plainly that the change needs human review, when the PR:
+**Review these normally — read the diff, do the work, report what you find.**
+The findings are wanted. The only thing withheld is approval: submit `--comment`
+instead of `--approve`, and say plainly that the change needs the operator's
+sign-off.
 
 - changes `.github/workflows/claude-code-review.yml`, this file, `CLAUDE.md`,
   `DECISIONS.md`, anything under `docs/decisions/` or `.github/workflows/`, or
   anything else that governs review itself. A workflow step dismisses an
-  automated approval on these and fails the check, so approving one is wasted
-  effort as well as wrong;
+  automated approval on these and reds the check, so approving one is wasted
+  effort as well as wrong — but a substantive `--comment` review is exactly
+  what is wanted, and passes;
 - changes branch protection, publishing, or release tagging;
 - claims live PVE behaviour that CI does not exercise.
 

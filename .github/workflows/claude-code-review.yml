@@ -160,13 +160,20 @@ jobs:
           echo "::error title=Claude review did NOT run::No automated review was performed, so this check cannot pass. Most likely the anti-tamper gate - this PR's copy of .github/workflows/claude-code-review.yml differs from the default branch. Only THIS file trips it; PRs changing other workflows are reviewed normally. This step also fires on any failure before Claude starts (expired token, missing write permission, install failure), so read the 'Run Claude Code Review' step log to tell them apart. Either way this PR requires operator review before merge."
           exit 1
 
-      # The teeth behind the "defer to the operator" prose. If this PR changes
-      # what governs review, any APPROVED verdict from claude[bot] is dismissed
-      # and the check fails — so a single successful prompt injection, or plain
-      # model non-compliance, cannot grant itself persistent control of every
-      # future review. CHANGES_REQUESTED and COMMENTED are left standing; they
-      # do not unblock a merge and their content is still useful.
-      - name: Dismiss automated approval on PRs that govern review
+      # The teeth behind the "defer to the operator" prose.
+      #
+      # The review still RUNS on these PRs and its findings are still wanted —
+      # the only thing withheld is the power to approve. The expected outcome is
+      # a COMMENTED verdict, which review-prompt.md asks for and which does not
+      # satisfy branch protection, so merge waits for the operator either way.
+      # This step therefore passes when the reviewer deferred correctly.
+      #
+      # It fails only when claude[bot] actually APPROVED, which means either a
+      # successful prompt injection or plain non-compliance. The approval is
+      # dismissed so it cannot satisfy branch protection, and the red check
+      # records that it happened. CHANGES_REQUESTED and COMMENTED are left
+      # standing; they do not unblock a merge and their content is useful.
+      - name: Withhold automated approval on PRs that govern review
         if: always() && steps.governs.outputs.governs_review == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -176,13 +183,19 @@ jobs:
           ids="$(gh api "repos/$REPO/pulls/$PR_NUMBER/reviews" \
             --jq '.[] | select(.user.login == "claude[bot]")
                       | select(.state == "APPROVED") | .id')"
+
+          if [ -z "${ids}" ]; then
+            echo "::notice title=Operator approval required::This PR changes files that govern review, so the automated reviewer cannot approve it. It reviewed and deferred, as intended — read its findings, then approve yourself if you agree. This check is green because the reviewer behaved correctly, not because the PR is approved."
+            exit 0
+          fi
+
           for id in ${ids}; do
             echo "Dismissing automated approval ${id}"
             gh api -X PUT "repos/$REPO/pulls/$PR_NUMBER/reviews/${id}/dismissals" \
-              -f message="Automated approval dismissed: this PR changes files that govern how review works. Operator review required." \
+              -f message="Automated approval dismissed: this PR changes files that govern how review works, so approval is reserved to the operator." \
               -f event=DISMISS
           done
-          echo "::error title=PR governs review::This PR changes .github/review-prompt.md, a workflow, or CLAUDE.md. Any automated approval has been dismissed and this check fails by design. Merge only after reading the diff yourself."
+          echo "::error title=Automated approval dismissed::claude[bot] approved a PR that changes .github/review-prompt.md, a workflow, CLAUDE.md, DECISIONS.md or docs/decisions/. It was instructed to defer and did not. The approval has been dismissed; treat the review body with suspicion and read the diff yourself."
           exit 1
 
       - name: Verify formal review was submitted
