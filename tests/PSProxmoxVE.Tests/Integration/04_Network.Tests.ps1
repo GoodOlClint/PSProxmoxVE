@@ -3,6 +3,13 @@
 BeforeAll {
     . $PSScriptRoot/_IntegrationHelper.ps1
     Connect-TestPve
+
+    function Get-PveBridge99 {
+        $bridge = Get-PveNetwork -Node $script:Node |
+            Where-Object { $_.Iface -eq 'vmbr99' }
+        $bridge | Should -Not -BeNullOrEmpty
+        $bridge
+    }
 }
 
 AfterAll {
@@ -42,6 +49,7 @@ Describe 'Network — Integration' -Tag 'Integration' {
                 -Iface   'vmbr99' `
                 -Type    'bridge' `
                 -Autostart `
+                -BridgeVlanAware `
                 -ErrorAction Stop } | Should -Not -Throw
         }
 
@@ -53,6 +61,35 @@ Describe 'Network — Integration' -Tag 'Integration' {
                 Should -Not -BeNullOrEmpty
         }
 
+        It 'Should report the new bridge as VLAN aware' {
+            if (Skip-IfNoTarget) { return }
+
+            $bridge = Get-PveBridge99
+            $bridge.BridgeVlanAware | Should -Be 1
+        }
+
+        It 'Should disable VLAN awareness via Set-PveNetwork' {
+            if (Skip-IfNoTarget) { return }
+
+            (Get-PveBridge99).BridgeVlanAware | Should -Be 1
+
+            Set-PveNetwork -Node $script:Node -Iface 'vmbr99' -Type 'bridge' `
+                -BridgeVlanAware:$false -ErrorAction Stop
+
+            (Get-PveBridge99).BridgeVlanAware | Should -BeIn @($null, 0)
+        }
+
+        It 'Should re-enable VLAN awareness via Set-PveNetwork' {
+            if (Skip-IfNoTarget) { return }
+
+            (Get-PveBridge99).BridgeVlanAware | Should -BeIn @($null, 0)
+
+            Set-PveNetwork -Node $script:Node -Iface 'vmbr99' -Type 'bridge' `
+                -BridgeVlanAware -ErrorAction Stop
+
+            (Get-PveBridge99).BridgeVlanAware | Should -Be 1
+        }
+
         It 'Should update bridge comments' {
             if (Skip-IfNoTarget) { return }
 
@@ -62,6 +99,12 @@ Describe 'Network — Integration' -Tag 'Integration' {
                 -Type    'bridge' `
                 -Comments 'Created by Pester integration test' `
                 -ErrorAction Stop } | Should -Not -Throw
+        }
+
+        It 'Should leave VLAN awareness alone when the switch is not passed' {
+            if (Skip-IfNoTarget) { return }
+
+            (Get-PveBridge99).BridgeVlanAware | Should -Be 1
         }
 
         It 'Should remove the bridge' {

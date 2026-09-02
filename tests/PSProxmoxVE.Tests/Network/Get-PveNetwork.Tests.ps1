@@ -117,6 +117,15 @@ Describe 'New-PveNetwork' {
         }
     }
 
+    Context 'VLAN-aware bridge' {
+        It 'Should expose BridgeVlanAware as a switch' {
+            Skip-IfMissing 'New-PveNetwork'
+            $script:Cmd.Parameters.ContainsKey('BridgeVlanAware') | Should -BeTrue
+            $script:Cmd.Parameters['BridgeVlanAware'].ParameterType |
+                Should -Be ([System.Management.Automation.SwitchParameter])
+        }
+    }
+
     Context 'Required parameters' {
         It 'Node should be Mandatory' {
             Skip-IfMissing 'New-PveNetwork'
@@ -159,6 +168,15 @@ Describe 'Set-PveNetwork' {
         It 'Should support WhatIf' {
             Skip-IfMissing 'Set-PveNetwork'
             $script:Cmd.Parameters.ContainsKey('WhatIf') | Should -BeTrue
+        }
+    }
+
+    Context 'VLAN-aware bridge' {
+        It 'Should expose BridgeVlanAware as a switch' {
+            Skip-IfMissing 'Set-PveNetwork'
+            $script:Cmd.Parameters.ContainsKey('BridgeVlanAware') | Should -BeTrue
+            $script:Cmd.Parameters['BridgeVlanAware'].ParameterType |
+                Should -Be ([System.Management.Automation.SwitchParameter])
         }
     }
 
