@@ -81,16 +81,18 @@ Diff the reference node against the baseline on `ci/package-baseline`. On differ
 
 Two additions beyond the plan:
 
-- **Node-vs-node comparison.** A package mismatch *between* the two nested nodes is the failure that left a node unclustered and cost three CI runs to diagnose (see D017). It is reported even when the set is otherwise unchanged.
+- **Node-vs-node comparison.** A package mismatch *between* the two nested nodes is the failure that left a node unclustered and cost three CI runs to diagnose (see [ADR 0017](decisions/0017-ci-runs-two-lanes-a-pinned-gating-lane-and-a-report-only-currency-lane.md)). It is reported even when the set is otherwise unchanged.
 - **Input validation.** The package files come from a machine that just installed from an upstream repo and their contents reach a GitHub issue body, so anything that is not a dpkg name/version pair fails the run.
 
 ### Commit 4 — `DECISIONS.md`
 
-D017 (two-lane CI: pinned gating lane + report-only currency lane, and why `first-boot.sh` must never upgrade) and D018 (the currency lane reboots after `dist-upgrade` **and proves it rebooted** — the verification was missing from the first draft and is the part easiest to omit).
+[ADR 0017](decisions/0017-ci-runs-two-lanes-a-pinned-gating-lane-and-a-report-only-currency-lane.md) (two-lane CI: pinned gating lane + report-only currency lane, and why `first-boot.sh` must never upgrade) and [ADR 0018](decisions/0018-the-currency-lane-reboots-after-dist-upgrade-and-proves-it-rebooted.md) (the currency lane reboots after `dist-upgrade` **and proves it rebooted** — the verification was missing from the first draft and is the part easiest to omit).
 
 ## 5. Convention conflict, surfaced
 
-The global instruction routes architectural decisions to `docs/decisions/` in house ADR format. This repo has no `docs/decisions/` — it records decisions in `DECISIONS.md` as D001–D016, and its own `CLAUDE.md` names that file as the thing to read before writing code. **Repo convention wins:** Lane 2's decisions go in `DECISIONS.md` as D017/D018, not a new `docs/decisions/` tree. Introducing a parallel decision store in a repo that already has one is exactly the defect the gate warns about.
+~~The global instruction routes architectural decisions to `docs/decisions/` in house ADR format. This repo has no `docs/decisions/` — it records decisions in `DECISIONS.md` as D001–D016, and its own `CLAUDE.md` names that file as the thing to read before writing code. **Repo convention wins:** Lane 2's decisions go in `DECISIONS.md` as D017/D018, not a new `docs/decisions/` tree. Introducing a parallel decision store in a repo that already has one is exactly the defect the gate warns about.~~
+
+**Superseded 2026-09-02 by [ADR 0023](decisions/0023-decisions-live-in-docs-decisions-in-house-adr-format.md).** The ruling above was correct while the CI lane work was in flight — a second decision store mid-change is the defect the gate warns about — and it deferred the migration rather than refusing it. That work has landed, so `DECISIONS.md` D001–D021 became ADR 0001–0021 and `DECISIONS.md` is now a stub with a redirect table. Lane 2's decisions are ADR 0017, 0018 and 0022.
 
 ## 6. Definition of Done
 
