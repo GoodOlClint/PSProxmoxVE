@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Management.Automation;
-using System.Net;
-using PSProxmoxVE.Core.Exceptions;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
 
@@ -82,6 +80,15 @@ namespace PSProxmoxVE.Cmdlets.Vms
         /// </summary>
         [Parameter(Mandatory = false, HelpMessage = "Wait for all tasks to complete before returning.")]
         public SwitchParameter Wait { get; set; }
+
+        /// <summary>
+        /// HTTP timeout for the OVA upload, in seconds. Pass 0 for infinite (no timeout).
+        /// When omitted, defaults to 30 minutes — overriding the session timeout so that
+        /// large OVA uploads do not trip the default 100-second HttpClient timeout.
+        /// </summary>
+        [Parameter(Mandatory = false, HelpMessage = "HTTP timeout in seconds (0 = infinite). Defaults to 1800 (30 min).")]
+        [ValidateRange(0, int.MaxValue)]
+        public int? TimeoutSeconds { get; set; }
 
         protected override void ProcessRecord()
         {
@@ -164,11 +171,24 @@ namespace PSProxmoxVE.Cmdlets.Vms
                 $"Importing OVA to {Node}",
                 $"Uploading {fileName}...");
 
+            TimeSpan uploadTimeout;
+            if (TimeoutSeconds.HasValue)
+            {
+                uploadTimeout = TimeoutSeconds.Value == 0
+                    ? System.Threading.Timeout.InfiniteTimeSpan
+                    : TimeSpan.FromSeconds(TimeoutSeconds.Value);
+            }
+            else
+            {
+                uploadTimeout = TimeSpan.FromMinutes(30);
+            }
+
             long progressBytes = 0;
             var uploadTask = System.Threading.Tasks.Task.Run(() =>
                 vmService.UploadOva(session, Node, Storage, Path,
                     (bytesSent, _) =>
-                        System.Threading.Interlocked.Exchange(ref progressBytes, bytesSent)));
+                        System.Threading.Interlocked.Exchange(ref progressBytes, bytesSent),
+                    uploadTimeout));
 
             // Poll progress on the pipeline thread
             while (!uploadTask.IsCompleted)
@@ -193,7 +213,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
             if (!string.IsNullOrEmpty(uploadResult.Upid))
             {
                 WriteVerbose("Waiting for OVA upload task to complete on PVE...");
-                var completedUpload = taskService.WaitForTask(session, Node, uploadResult.Upid, null, null, null);
+                var completedUpload = taskService.WaitForTask(session, Node, uploadResult.Upid);
                 if (completedUpload.ExitStatus != null && completedUpload.ExitStatus != "OK")
                 {
                     ThrowTerminatingError(new ErrorRecord(
@@ -278,7 +298,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
             if (Wait.IsPresent && !string.IsNullOrEmpty(createTask.Upid))
             {
                 WriteVerbose("Waiting for VM creation + disk import to complete...");
-                var completedCreate = taskService.WaitForTask(session, Node, createTask.Upid, null, null, null);
+                var completedCreate = taskService.WaitForTask(session, Node, createTask.Upid);
                 if (completedCreate.ExitStatus != null && completedCreate.ExitStatus != "OK")
                 {
                     ThrowTerminatingError(new ErrorRecord(
@@ -292,23 +312,23 @@ namespace PSProxmoxVE.Cmdlets.Vms
 
             // Step 8: Output the created VM
             WriteVerbose("Retrieving created VM...");
+            PveVm? vm = null;
             try
             {
-                var vm = vmService.GetVm(session, Node, vmId);
-                WriteObject(vm);
+                vm = vmService.GetVm(session, Node, vmId);
             }
-            catch (PveApiException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+            catch (InvalidOperationException ex)
             {
                 // VM not yet queryable (e.g. disk import still in progress); return basic info
                 WriteVerbose($"VM retrieval failed, returning basic info: {ex.Message}");
-                WriteObject(new PveVm
-                {
-                    VmId = vmId,
-                    Name = vmName,
-                    Node = Node,
-                    Status = "stopped"
-                });
             }
+            WriteObject(vm ?? new PveVm
+            {
+                VmId = vmId,
+                Name = vmName,
+                Node = Node,
+                Status = "stopped"
+            });
         }
     }
 }

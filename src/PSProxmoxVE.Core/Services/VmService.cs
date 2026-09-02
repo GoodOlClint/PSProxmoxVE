@@ -945,12 +945,17 @@ namespace PSProxmoxVE.Core.Services
         /// Optional callback invoked periodically with (bytesSent, totalBytes).
         /// May be called from a background thread.
         /// </param>
+        /// <param name="timeout">
+        /// HTTP timeout override for this upload. Defaults to 30 minutes, overriding the
+        /// session's default 100-second timeout so that large OVA files have time to transfer.
+        /// </param>
         public PveTask UploadOva(
             PveSession session,
             string node,
             string storage,
             string ovaPath,
-            Action<long, long>? progressCallback = null)
+            Action<long, long>? progressCallback = null,
+            TimeSpan? timeout = null)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
@@ -962,7 +967,7 @@ namespace PSProxmoxVE.Core.Services
                 ["content"] = "import"
             };
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
+            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session, timeout ?? TimeSpan.FromMinutes(30));
             try
             {
                 var response = client.UploadFileAsync(

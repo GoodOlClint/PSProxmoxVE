@@ -272,6 +272,25 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Equal("305", captured!["newid"]);
         }
 
+        // -----------------------------------------------------------------
+        // GetVm
+        // -----------------------------------------------------------------
+
+        [Fact]
+        public void GetVm_VmNotInNodeListing_ThrowsInvalidOperationException()
+        {
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient
+                .Setup(c => c.GetAsync($"nodes/{TestNode}/qemu"))
+                .ReturnsAsync("{\"data\":[]}");
+
+            var service = new VmService(mockClient.Object);
+
+            var ex = Assert.Throws<InvalidOperationException>(
+                () => service.GetVm(CreateSession(), TestNode, TestVmId));
+            Assert.Contains(TestVmId.ToString(), ex.Message);
+        }
+
 
         // ---------------------------------------------------------------------
         // GetVms multi-node aggregation: issue #142
