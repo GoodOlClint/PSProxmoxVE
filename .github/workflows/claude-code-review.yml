@@ -205,7 +205,12 @@ jobs:
                       | select(.state == "APPROVED") | .id')"
 
           if [ -z "${ids}" ]; then
-            echo "::notice title=Operator approval required::This PR changes files that govern review, so the automated reviewer cannot approve it. It reviewed and deferred, as intended — read its findings, then approve yourself if you agree. This check is green because the reviewer behaved correctly, not because the PR is approved."
+            # State only what was checked. An empty id list means no automated
+            # APPROVED was found — it does not distinguish a deferral from
+            # CHANGES_REQUESTED, from no verdict, or from no review at all.
+            # That a formal review exists at this head SHA is established
+            # separately, by the verify step below.
+            echo "::notice title=Operator approval required::No automated approval stands on this PR, which is the required outcome: it changes files that govern review or release, so approval is reserved to you. This check being green means no automated approval was found, NOT that the PR is approved or that the review was adequate — read the review body and the diff, then approve yourself if you agree."
             exit 0
           fi
 

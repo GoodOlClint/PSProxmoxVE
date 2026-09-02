@@ -45,7 +45,9 @@ Operator ruling 2026-09-02: withhold approval, not review. An earlier draft fail
 
 ## Consequences
 
-Prompt edits no longer trip the anti-tamper gate, but they do trip the governance gate: a PR changing `review-prompt.md` gets a red check and needs operator review. That is the intended trade — routine work is unblocked, changes to the reviewer are not.
+Prompt edits no longer trip the anti-tamper gate, but they do trip the governance gate: a PR changing `review-prompt.md` is reviewed, cannot be auto-approved, and needs the operator's approval to merge. Its check goes **green** when the reviewer defers correctly — the red is reserved for an automated approval that had to be dismissed. That is the intended trade: routine work is unblocked, changes to the reviewer are not.
+
+One member of the governance set behaves differently, and it is this workflow itself. A PR editing `.github/workflows/claude-code-review.yml` trips `claude-code-action`'s own anti-tamper gate, so no review runs at all and the fail-closed step reds the check. "The review still runs" above is true of every governance path except that one.
 
 **Bootstrap:** the PR introducing this fails its own materialize step, because `review-prompt.md` is not yet on the default branch. It is red regardless, since it also edits the workflow. Confirm the next PR after merge goes green.
 
