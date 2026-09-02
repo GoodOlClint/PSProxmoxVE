@@ -85,7 +85,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
             if (Wait.IsPresent && !string.IsNullOrEmpty(task.Upid))
             {
                 var taskService = new TaskService();
-                task = taskService.WaitForTask(session, Node, task.Upid, null, null, null);
+                task = taskService.WaitForTask(session, Node, task.Upid);
             }
 
             WriteObject(task);

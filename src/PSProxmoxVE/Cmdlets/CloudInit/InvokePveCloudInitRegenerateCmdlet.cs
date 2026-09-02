@@ -46,7 +46,7 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
 
             if (Wait.IsPresent && !string.IsNullOrEmpty(upid))
             {
-                task = new TaskService().WaitForTask(session, Node, upid, null, null, null);
+                task = new TaskService().WaitForTask(session, Node, upid);
             }
 
             WriteObject(task);
