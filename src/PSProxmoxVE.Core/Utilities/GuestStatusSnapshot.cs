@@ -18,8 +18,9 @@ namespace PSProxmoxVE.Core.Utilities
         /// StatusMatched: the guest reports <paramref name="expectedStatus"/>. qmpstatus is
         /// preferred over status when present, because PVE reports status=running with
         /// qmpstatus=paused for a suspended VM.
-        /// Locked: the guest config still carries a lock, so the next API call against it
-        /// would fail to acquire the lock file.
+        /// Locked: the guest config carries a `lock:` property (backup, clone, migrate,
+        /// snapshot). This is not the /var/lock/qemu-server flock, which PVE does not expose
+        /// through status/current or any other endpoint — see DECISIONS.md D015 and D020.
         /// </returns>
         public static (bool StatusMatched, bool Locked) Evaluate(string json, string expectedStatus)
         {

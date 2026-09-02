@@ -81,13 +81,11 @@ namespace PSProxmoxVE.Cmdlets.Vms
 
             WriteVerbose($"Cloning VM {VmId}...");
             var newid = NewVmId ?? 0;
-            var task = vmService.CloneVm(session, SourceNode, VmId, newid, NewName, TargetNode, Full.IsPresent);
+            PveTask Issue() => vmService.CloneVm(session, SourceNode, VmId, newid, NewName, TargetNode, Full.IsPresent);
 
-            if (Wait.IsPresent)
-            {
-                var taskService = new TaskService();
-                task = taskService.WaitForTask(session, SourceNode, task.Upid, null, null, null);
-            }
+            var task = Wait.IsPresent
+                ? InvokeGuestTask(session, SourceNode, Issue)
+                : Issue();
 
             WriteObject(task);
         }

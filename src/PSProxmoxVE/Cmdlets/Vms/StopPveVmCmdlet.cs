@@ -52,12 +52,11 @@ namespace PSProxmoxVE.Cmdlets.Vms
             var vmService = new VmService();
 
             WriteVerbose($"Stopping VM {VmId} on node '{Node}'...");
-            var task = vmService.StopVm(session, Node, VmId);
+            PveTask Issue() => vmService.StopVm(session, Node, VmId);
 
-            if (Wait.IsPresent)
-            {
-                task = WaitForStatusTransition(session, Node, task, VmId, "stopped", Timeout);
-            }
+            var task = Wait.IsPresent
+                ? WaitForStatusTransition(session, Node, Issue, VmId, "stopped", Timeout)
+                : Issue();
 
             WriteObject(task);
         }

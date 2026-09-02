@@ -57,10 +57,11 @@ namespace PSProxmoxVE.Cmdlets.Vms
 
             WriteVerbose($"Restarting VM {VmId} on node '{Node}'...");
 
-            var task = vmService.RebootVm(session, Node, VmId, Timeout);
+            PveTask Issue() => vmService.RebootVm(session, Node, VmId, Timeout);
 
-            if (Wait.IsPresent)
-                task = WaitForStatusTransition(session, Node, task, VmId, "running", Timeout);
+            var task = Wait.IsPresent
+                ? WaitForStatusTransition(session, Node, Issue, VmId, "running", Timeout)
+                : Issue();
 
             WriteObject(task);
         }

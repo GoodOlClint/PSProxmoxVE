@@ -50,12 +50,11 @@ namespace PSProxmoxVE.Cmdlets.Containers
             var containerService = new ContainerService();
 
             WriteVerbose($"Starting container {VmId} on node '{Node}'...");
-            var task = containerService.StartContainer(session, Node, VmId);
+            PveTask Issue() => containerService.StartContainer(session, Node, VmId);
 
-            if (Wait.IsPresent)
-            {
-                task = WaitForStatusTransition(session, Node, task, VmId, "running", Timeout, isContainer: true);
-            }
+            var task = Wait.IsPresent
+                ? WaitForStatusTransition(session, Node, Issue, VmId, "running", Timeout, isContainer: true)
+                : Issue();
 
             WriteObject(task);
         }

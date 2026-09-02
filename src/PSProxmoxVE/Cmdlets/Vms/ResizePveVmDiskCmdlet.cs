@@ -65,13 +65,11 @@ namespace PSProxmoxVE.Cmdlets.Vms
             var vmService = new VmService();
 
             WriteVerbose($"Resizing disk '{Disk}' on VM {VmId}...");
-            var task = vmService.ResizeDisk(session, Node, VmId, Disk, Size);
+            PveTask Issue() => vmService.ResizeDisk(session, Node, VmId, Disk, Size);
 
-            if (Wait.IsPresent)
-            {
-                var taskService = new TaskService();
-                task = taskService.WaitForTask(session, Node, task.Upid, null, null, null);
-            }
+            var task = Wait.IsPresent
+                ? InvokeGuestTask(session, Node, Issue)
+                : Issue();
 
             WriteObject(task);
         }

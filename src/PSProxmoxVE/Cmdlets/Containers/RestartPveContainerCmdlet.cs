@@ -56,17 +56,17 @@ namespace PSProxmoxVE.Cmdlets.Containers
 
             WriteVerbose($"Restarting container {VmId} on node '{Node}'...");
 
-            // Graceful shutdown
-            var shutdownTask = containerService.ShutdownContainer(session, Node, VmId, Timeout);
+            PveTask Shutdown() => containerService.ShutdownContainer(session, Node, VmId, Timeout);
+            PveTask Start() => containerService.StartContainer(session, Node, VmId);
 
             if (Wait.IsPresent)
-                WaitForStatusTransition(session, Node, shutdownTask, VmId, "stopped", Timeout, isContainer: true);
+                WaitForStatusTransition(session, Node, Shutdown, VmId, "stopped", Timeout, isContainer: true);
+            else
+                Shutdown();
 
-            // Start
-            var startTask = containerService.StartContainer(session, Node, VmId);
-
-            if (Wait.IsPresent)
-                startTask = WaitForStatusTransition(session, Node, startTask, VmId, "running", Timeout, isContainer: true);
+            var startTask = Wait.IsPresent
+                ? WaitForStatusTransition(session, Node, Start, VmId, "running", Timeout, isContainer: true)
+                : Start();
 
             WriteObject(startTask);
         }

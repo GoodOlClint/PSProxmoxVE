@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Exceptions;
+using PSProxmoxVE.Core.Utilities;
 
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
@@ -62,7 +63,7 @@ namespace PSProxmoxVE.Core.Client
 
         /// <summary>
         /// Creates a bare HTTP client for pre-session use (e.g. initial authentication).
-        /// No auth headers are added to requests made with this constructor.
+        /// Requests it builds carry no authentication headers.
         /// </summary>
         internal PveHttpClient(string hostname, int port, bool skipCertificateCheck, TimeSpan? timeout = null)
         {
@@ -95,8 +96,8 @@ namespace PSProxmoxVE.Core.Client
         /// <returns>Raw JSON response body</returns>
         public async Task<string> GetAsync(string resource)
         {
-            var request = BuildRequest(HttpMethod.Get, resource);
-            return await SendAsync(request, resource, "GET").ConfigureAwait(false);
+            return await SendAsync(() => BuildRequest(HttpMethod.Get, resource), resource, "GET")
+                .ConfigureAwait(false);
         }
 
         /// <summary>Performs a POST request against the specified API resource path.</summary>
@@ -105,10 +106,13 @@ namespace PSProxmoxVE.Core.Client
         /// <returns>Raw JSON response body</returns>
         public async Task<string> PostAsync(string resource, Dictionary<string, string>? data = null)
         {
-            var request = BuildRequest(HttpMethod.Post, resource, mutating: true);
-            if (data != null)
-                request.Content = BuildFormContent(data);
-            return await SendAsync(request, resource, "POST").ConfigureAwait(false);
+            return await SendAsync(() =>
+            {
+                var request = BuildRequest(HttpMethod.Post, resource, mutating: true);
+                if (data != null)
+                    request.Content = BuildFormContent(data);
+                return request;
+            }, resource, "POST").ConfigureAwait(false);
         }
 
         /// <summary>
@@ -121,9 +125,12 @@ namespace PSProxmoxVE.Core.Client
         public async Task<string> PostAsync(string resource, IEnumerable<KeyValuePair<string, string>> data)
         {
             if (data == null) throw new ArgumentNullException(nameof(data));
-            var request = BuildRequest(HttpMethod.Post, resource, mutating: true);
-            request.Content = BuildFormContent(data);
-            return await SendAsync(request, resource, "POST").ConfigureAwait(false);
+            return await SendAsync(() =>
+            {
+                var request = BuildRequest(HttpMethod.Post, resource, mutating: true);
+                request.Content = BuildFormContent(data);
+                return request;
+            }, resource, "POST").ConfigureAwait(false);
         }
 
         /// <summary>Performs a PUT request against the specified API resource path.</summary>
@@ -132,10 +139,13 @@ namespace PSProxmoxVE.Core.Client
         /// <returns>Raw JSON response body</returns>
         public async Task<string> PutAsync(string resource, Dictionary<string, string>? data = null)
         {
-            var request = BuildRequest(HttpMethod.Put, resource, mutating: true);
-            if (data != null)
-                request.Content = BuildFormContent(data);
-            return await SendAsync(request, resource, "PUT").ConfigureAwait(false);
+            return await SendAsync(() =>
+            {
+                var request = BuildRequest(HttpMethod.Put, resource, mutating: true);
+                if (data != null)
+                    request.Content = BuildFormContent(data);
+                return request;
+            }, resource, "PUT").ConfigureAwait(false);
         }
 
         /// <summary>Performs a DELETE request against the specified API resource path.</summary>
@@ -143,8 +153,8 @@ namespace PSProxmoxVE.Core.Client
         /// <returns>Raw JSON response body</returns>
         public async Task<string> DeleteAsync(string resource)
         {
-            var request = BuildRequest(HttpMethod.Delete, resource, mutating: true);
-            return await SendAsync(request, resource, "DELETE").ConfigureAwait(false);
+            return await SendAsync(() => BuildRequest(HttpMethod.Delete, resource, mutating: true), resource, "DELETE")
+                .ConfigureAwait(false);
         }
 
         // -------------------------------------------------------------------------
@@ -331,7 +341,7 @@ namespace PSProxmoxVE.Core.Client
                 var request = BuildRequest(HttpMethod.Post, resource, mutating: true);
                 request.Content = multipart;
 
-                return await SendAsync(request, resource, "POST").ConfigureAwait(false);
+                return await SendOnceAsync(request, resource, "POST").ConfigureAwait(false);
             }
             finally
             {
@@ -366,7 +376,15 @@ namespace PSProxmoxVE.Core.Client
             return request;
         }
 
-        private async Task<string> SendAsync(HttpRequestMessage request, string resource, string httpMethod)
+        /// <summary>
+        /// Sends a request, rebuilding it from <paramref name="buildRequest"/> for each attempt
+        /// while PVE rejects it for a guest's config flock. An <see cref="HttpRequestMessage"/>
+        /// cannot be resent, which is why this takes a factory rather than a request.
+        /// </summary>
+        private Task<string> SendAsync(Func<HttpRequestMessage> buildRequest, string resource, string httpMethod) =>
+            GuestLockRetry.ExecuteAsync(() => SendOnceAsync(buildRequest(), resource, httpMethod));
+
+        private async Task<string> SendOnceAsync(HttpRequestMessage request, string resource, string httpMethod)
         {
             HttpResponseMessage response;
             try
