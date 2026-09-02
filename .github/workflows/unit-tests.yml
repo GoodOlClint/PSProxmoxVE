@@ -191,7 +191,7 @@ jobs:
         run: bash tests/infrastructure/scripts/preflight-cleanup.test.sh
 
       # The pin lives in two files; split-brain is exactly the unexplained
-      # breakage D017 exists to prevent, so assert they agree.
+      # breakage ADR 0022 exists to prevent, so assert they agree.
       - name: Pester pin agrees across workflow and image
         run: |
           wf=$(sed -n 's/^  PESTER_VERSION: *//p' .github/workflows/unit-tests.yml)
