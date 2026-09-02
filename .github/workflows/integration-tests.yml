@@ -40,12 +40,14 @@ concurrency:
   cancel-in-progress: false
 
 on:
-  push:
-    branches: [ main ]
-  # NOTE: pull_request trigger intentionally removed. Integration tests
-  # run on a self-hosted runner with access to secrets and a live PVE
-  # node. Fork PRs must not execute code on that runner. Integration
-  # tests run automatically on push to main after merge.
+  # Manual only while the 2026-09 remediation waves land (#134-#157): a run
+  # per merge would queue ~45 min of runner time behind every offline-pinned
+  # fix. Dispatch at each wave boundary instead. Restore `push: branches:
+  # [ main ]` when the waves are done.
+  #
+  # pull_request stays off permanently. Integration tests run on a
+  # self-hosted runner with access to secrets and a live PVE node, and fork
+  # PRs must not execute code on that runner.
   workflow_dispatch:
     inputs:
       skip_provision:
