@@ -19,6 +19,7 @@ jobs:
       pull-requests: write
       issues: write
       id-token: write
+      actions: read # read this PR's check runs; pairs with additional_permissions below
 
     steps:
       - name: Checkout repository
@@ -81,7 +82,8 @@ jobs:
         run: |
           changed="$(git diff --name-only \
             "refs/remotes/origin/${DEFAULT_BRANCH}...HEAD" -- \
-            .github/review-prompt.md .github/workflows/ CLAUDE.md)"
+            .github/review-prompt.md .github/workflows/ \
+            CLAUDE.md DECISIONS.md docs/decisions/)"
           if [ -n "${changed}" ]; then
             echo "governs_review=true" >> "$GITHUB_OUTPUT"
             echo "::notice title=PR governs review::This PR changes files that govern how review works, so an automated approval will be dismissed and this check will fail. Operator review required. Files: ${changed}"
@@ -140,7 +142,8 @@ jobs:
       # claude-code-action self-skips (exit 0, step outcome "success") when the
       # PR's copy of THIS workflow file differs from the default branch — its
       # anti-tamper gate, keyed on this one file, so PRs changing ci.yml or
-      # publish.yml are reviewed normally. No review runs, so the verify step
+      # publish.yml still get reviewed (though the governance step above then
+      # dismisses any approval). No review runs, so the verify step
       # below is skipped and the job would otherwise go green unreviewed.
       # `execution_file` is only set once Claude actually ran, so an empty
       # value is the reliable "did not run" signal; `outcome` is not. It is
@@ -188,12 +191,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           # Branch protection requires a formal review state. Plain PR comments
           # don't count, and inline-only comments create empty-body COMMENTED
           # reviews that don't count either.
+          #
+          # Scoped to the head SHA. Without that this counts ANY historical
+          # claude[bot] review, so a re-run after a new push goes green on a
+          # verdict about the previous commit.
           formal_count=$(gh api "repos/$REPO/pulls/$PR_NUMBER/reviews" \
             --jq '[.[] | select(.user.login == "claude[bot]") |
+                   select(.commit_id == env.HEAD_SHA) |
                    select(.state == "APPROVED" or
                           .state == "CHANGES_REQUESTED" or
                           ((.body // "") | length > 0))] | length')
@@ -202,3 +211,14 @@ jobs:
             echo "::error title=No formal review submitted::Claude reviewed the PR but did not call 'gh pr review'. Re-run the workflow or invoke '@claude re-review' on the PR."
             exit 1
           fi
+
+  # A skipped job reports its required check as PASSING, so without this a fork
+  # PR would go green with no review and no trace of why. This job leaves that
+  # trace in the run summary.
+  fork-notice:
+    if: >-
+      ${{ !github.event.pull_request.draft
+          && github.event.pull_request.head.repo.full_name != github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "::notice title=Fork PR::Automated review does not run on fork PRs — a pull_request trigger gives them no secrets. The claude-review check is green because the job was skipped, NOT because anything was reviewed. The operator reviews these directly."

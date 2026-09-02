@@ -57,6 +57,10 @@ A PR body that reports "0 errors, 633 tests passed" is a claim. Check it against
 CI's own result for the same commit — `gh pr checks <PR NUMBER>`, and
 `gh run view` for a specific job — rather than taking the body's word for it.
 
+Those checks may still be queued or running when you look; you race them. If a
+check has not concluded, say so and treat the claim as unverified — do not wait
+for it, and do not report a pending check as a failure.
+
 **You cannot run the build or the test suite, and this is deliberate.**
 `dotnet test` executes test code from the branch under review and `dotnet build`
 runs MSBuild targets that can execute arbitrary commands, while this job holds a
@@ -93,6 +97,10 @@ comments do not count.
 Always pass a non-empty `--body`. If you cannot complete the review for any
 reason, still submit `gh pr review <PR NUMBER> --comment --body "<why you could not review>"`
 rather than staying silent.
+
+`--comment` is also the verdict for the defer-to-operator cases above. Those are
+not "changes required" — the PR may be entirely correct — so do not use
+`--request-changes` to express them. Say what needs a human decision and why.
 
 **The review is the only channel.** Put the whole review in the `--body`, with
 per-line points as inline review comments. Do not post a standalone PR comment,

@@ -21,7 +21,9 @@ The ref is fully qualified deliberately. `git show "origin/main:<path>"` is an *
 
 **`CLAUDE.md` is materialized too.** The prompt judges convention compliance against the "Key Conventions" list. Read from the PR checkout, a PR could edit that list to permit its own violation, so the reviewer is pointed at the default branch's copy.
 
-**A PR that governs review cannot auto-approve itself.** A step diffs against the default branch for `.github/review-prompt.md`, `.github/workflows/**` and `CLAUDE.md`. On a match, any `claude[bot]` APPROVED review is dismissed through the API and the check fails. `CHANGES_REQUESTED` and `COMMENTED` are left standing — they do not unblock a merge, and their content is still useful.
+**A PR that governs review cannot auto-approve itself.** A step diffs against the default branch for `.github/review-prompt.md`, `.github/workflows/**`, `CLAUDE.md`, `DECISIONS.md` and `docs/decisions/**`. On a match, any `claude[bot]` APPROVED review is dismissed through the API and the check fails.
+
+`docs/decisions/` is in that list deliberately, and it has a cost: **every ADR now needs operator approval.** That follows from what the ADRs became in [ADR 0023](0023-decisions-live-in-docs-decisions-in-house-adr-format.md) — the reviewer is told to defer to them as recorded precedent, so a PR that adds an ADR and then leans on it is the fabricated-precedent attack. The prompt separately instructs the reviewer to treat an ADR added by the PR under review as a claim rather than settled precedent; the dismissal makes that mechanical instead of advisory. `CHANGES_REQUESTED` and `COMMENTED` are left standing — they do not unblock a merge, and their content is still useful.
 
 **The sentinel is checked mechanically.** `grep -qx PSPROXMOXVE-REVIEW-V1` runs in the materialize step, before Claude starts, rather than only being asserted by the model the sentinel exists to protect.
 
@@ -45,9 +47,12 @@ Prompt edits no longer trip the anti-tamper gate, but they do trip the governanc
 
 Fork PRs are skipped rather than failed. Previously they would have gone red with a message blaming the anti-tamper gate, and a required check that is always red on outside contributions trains the operator to override red checks — the habit the governance gate depends on not existing.
 
+The trade is that GitHub reports a skipped required check as **passing**, so a fork PR shows green `claude-review` with nothing reviewed. A `fork-notice` job runs in its place and puts that in the run summary, but the green check is real and misleading on its own. Fork PRs are operator-reviewed by policy.
+
 Two limits remain, and are not closed by this decision:
 
 - `Bash(gh api:*)` is broad enough to reach endpoints the narrower `gh pr *` grants exclude, so the tool allowlist is a guardrail for a cooperating agent, not a sandbox for a hijacked one. The real bound is the Claude App installation's permissions.
-- `docs/decisions/` is still read from the PR checkout. The prompt instructs the reviewer to treat an ADR added or edited by the PR under review as a claim, not as settled precedent.
+- `docs/decisions/` is still read from the PR checkout rather than materialized. The prompt instructs the reviewer to treat an ADR added or edited by the PR under review as a claim, not as settled precedent, and the dismissal gate above backs that mechanically.
+- The formal-review check is scoped to the head SHA, so a re-run cannot pass on a verdict about an earlier commit. It had counted any historical `claude[bot]` review; that predates this decision and was fixed alongside it.
 
 The same unqualified-ref defect exists in `~/Source/Athena/.github/workflows/claude-code-review.yml`, which this workflow was adapted from.
