@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using PSProxmoxVE.Core.Authentication;
@@ -17,32 +16,22 @@ namespace PSProxmoxVE.Core.Tests.Client
         private const string LockTimeoutBody =
             "{\"message\":\"can't lock file '/var/lock/qemu-server/lock-100.conf' - got timeout\"}";
 
-        private static void SetInnerHttpClient(PveHttpClient client, HttpClient newInner)
-        {
-            var field = typeof(PveHttpClient).GetField("_httpClient",
-                BindingFlags.Instance | BindingFlags.NonPublic)!;
-            ((HttpClient)field.GetValue(client)!).Dispose();
-            field.SetValue(client, newInner);
-        }
-
-        // The gap between attempts scales with the budget, so a short window keeps these
-        // tests off the 2s production sleep.
-        private static void SetRetryWindow(PveHttpClient client, TimeSpan window)
-        {
-            var field = typeof(PveHttpClient).GetField("_guestLockRetryWindow",
-                BindingFlags.Instance | BindingFlags.NonPublic)!;
-            field.SetValue(client, window);
-        }
+        // A no-op delay removes the retry loop's inter-attempt wait entirely, so these tests
+        // carry no wall-clock dependence: the production 45s window is exhausted only if the
+        // scripted responses themselves never resolve the lock, never by runner speed.
+        private static Task NoDelay(TimeSpan _) => Task.CompletedTask;
 
         private static (PveHttpClient client, ScriptedHandler handler) NewClient(
-            params (HttpStatusCode status, string body)[] responses)
+            params (HttpStatusCode status, string body)[] responses) =>
+            NewClient(window: null, responses);
+
+        private static (PveHttpClient client, ScriptedHandler handler) NewClient(
+            TimeSpan? window, params (HttpStatusCode status, string body)[] responses)
         {
             var session = new PveSession("pve.example.com", 8006, false,
                 "root@pam!token=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
-            var client = new PveHttpClient(session);
             var handler = new ScriptedHandler(responses);
-            SetInnerHttpClient(client, new HttpClient(handler));
-            SetRetryWindow(client, TimeSpan.FromMilliseconds(400));
+            var client = new PveHttpClient(session, timeoutOverride: null, window, handler, NoDelay);
             return (client, handler);
         }
 
@@ -64,6 +53,22 @@ namespace PSProxmoxVE.Core.Tests.Client
             }
 
             Assert.Equal(3, handler.Bodies.Count);
+        }
+
+        [Fact]
+        public async Task PutAsync_DoesNotReissueWhenTheRetryWindowIsAlreadySpent()
+        {
+            var (client, handler) = NewClient(TimeSpan.Zero,
+                (HttpStatusCode.InternalServerError, LockTimeoutBody),
+                (HttpStatusCode.OK, "{\"data\":null}"));
+
+            using (client)
+            {
+                await Assert.ThrowsAsync<PveApiException>(
+                    () => client.PutAsync("nodes/pve9a/qemu/100/config", ConfigBody()));
+            }
+
+            Assert.Single(handler.Bodies);
         }
 
         [Fact]
