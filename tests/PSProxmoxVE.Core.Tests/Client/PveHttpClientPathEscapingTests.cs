@@ -33,7 +33,7 @@ namespace PSProxmoxVE.Core.Tests.Client
         }
 
         [Fact]
-        public async Task DeleteAsync_WithEscapedPathSegment_PreservesPercentEncodingInUri()
+        public async Task DeleteAsync_WithEscapedPathSegment_DoesNotCollapseAcrossTheRealUriParser()
         {
             var maliciousName = "../access/users/root@pam!t";
             var (client, handler) = NewClient(
@@ -47,24 +47,7 @@ namespace PSProxmoxVE.Core.Tests.Client
             Assert.Single(handler.Uris);
             var uri = handler.Uris[0];
             Assert.Contains("storage/..%2Faccess", uri);
-        }
-
-        [Fact]
-        public async Task DeleteAsync_WithoutEscapedPathSegment_CollapsesPathTraversalSequence()
-        {
-            var maliciousName = "../access/users/x";
-            var (client, handler) = NewClient(
-                (HttpStatusCode.OK, "{\"data\":null}"));
-
-            using (client)
-            {
-                await client.DeleteAsync($"storage/{maliciousName}");
-            }
-
-            Assert.Single(handler.Uris);
-            var uri = handler.Uris[0];
-            Assert.Contains("access/users/x", uri);
-            Assert.DoesNotContain("storage/", uri.Substring(uri.IndexOf("access")));
+            Assert.DoesNotContain("storage/../", uri);
         }
 
         private sealed class ScriptedHandler : HttpMessageHandler

@@ -1,6 +1,5 @@
-using System;
 using System.Management.Automation;
-using PSProxmoxVE.Core.Client;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Network
 {
@@ -17,6 +16,7 @@ namespace PSProxmoxVE.Cmdlets.Network
     {
         /// <summary>The zone identifier to remove.</summary>
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The SDN zone name.")]
+        [ValidatePattern(@"\A[A-Za-z0-9][A-Za-z0-9._-]*\z")]
         public string Zone { get; set; } = string.Empty;
 
         protected override void ProcessRecord()
@@ -26,10 +26,10 @@ namespace PSProxmoxVE.Cmdlets.Network
 
             var session = GetSession();
             RequireVersion(session, "SDN", 6, 2, 8, 0);
-            using var client = new PveHttpClient(session);
+            var service = new NetworkService();
 
             WriteVerbose($"Removing SDN zone '{Zone}'...");
-            client.DeleteAsync($"cluster/sdn/zones/{Uri.EscapeDataString(Zone)}").GetAwaiter().GetResult();
+            service.RemoveSdnZone(session, Zone);
         }
     }
 }
