@@ -67,7 +67,7 @@ This inverts the design. With the setting enabled, GitHub enforces the property,
 
 **Enabled 2026-09-02**, together with required-pull-request, required-approving-review and dismiss-stale-reviews-on-push. Enabling it also closed a gap nobody had noticed: direct pushes to `main` were still permitted until that moment, despite `CLAUDE.md` having claimed otherwise since March.
 
-So the workflow gate is now **defence-in-depth rather than the load-bearing control**. GitHub enforces the property directly, and a `claude[bot]` approval cannot satisfy a code-owner requirement however it was obtained — including through `.github/workflows/claude.yml`, the ungated second path described below, which the dismissal step cannot see. The gate still matters if the setting is ever turned off, and it still catches an automated approval early with a clear message rather than leaving it sitting on the PR.
+So the workflow gate is now **defence-in-depth rather than the load-bearing control**, and the `claude.yml` limit described below is closed in practice by the same move. The gate still earns its place: it applies if the setting is ever turned off, and it catches an automated approval early with a clear message rather than leaving one sitting on the pull request.
 
 Admin bypass is deliberately left **available**. GitHub does not permit an author to approve their own pull request, so without bypass an operator-authored change to a governance path would deadlock with no eligible reviewer. It does not weaken the threat model: App installations do not receive admin bypass, so it is unavailable to a compromised or prompt-injected bot, which is the adversary this decision is about.
 
