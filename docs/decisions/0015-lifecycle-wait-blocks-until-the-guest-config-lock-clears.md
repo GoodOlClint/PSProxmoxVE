@@ -22,7 +22,7 @@ The original observation still stands as motivation. Integration run 183 failed 
 
 `lock` is read from the `status/current` response the poll already fetches. It is present on both `qemu` and `lxc` and has been since PVE 5.4, well below this module's 7.0 floor, so this costs no extra request.
 
-If the guest still reports the expected status on the final poll but the lock outlasts `-Timeout`, the cmdlet returns success rather than throwing: the waited-for operation did complete, and only the settling ran long. That fallback tests the **most recent** observation, not "matched at some point during the wait" — a guest that reached the expected status and then drifted away has not satisfied the wait and still raises `PveTaskTimeoutException`. A poll that fails outright leaves the previous observation standing, so a single API blip is not read as divergence.
+If the guest still reports the expected status on the final poll but the lock outlasts `-Timeout`, the cmdlet returns success rather than throwing: the waited-for operation did complete, and only the settling ran long. This keeps a call that succeeded before the change from becoming an exception after it. That fallback tests the **most recent** observation, not "matched at some point during the wait" — a guest that reached the expected status and then drifted away has not satisfied the wait and still raises `PveTaskTimeoutException`. A poll that fails outright leaves the previous observation standing, so a single API blip is not read as divergence.
 
 ```csharp
 var snapshot = GuestStatusSnapshot.Evaluate(json, expectedStatus);

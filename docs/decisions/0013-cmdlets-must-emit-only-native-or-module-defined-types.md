@@ -44,4 +44,4 @@ The restriction is on the **public** surface. `JObject`, `JArray` and `JToken` a
 
 Conversion has to happen somewhere: models that deserialise a nested structure need a converter (`NativeListConverter`, `JsonHelper.ToNative`) rather than the default binding. A `[JsonExtensionData]` catch-all must land in a private field and be exposed as a native dictionary, or it reintroduces `JToken` through the back door.
 
-This is the rule most at risk on a large nested response. `GET /nodes/{node}/ceph/status` returns raw `ceph status` output and is the most likely place in the module to leak a `JObject` into public view.
+The rule is most at risk on a large nested response, where a typed model is most work and passing the parsed object through is most tempting. If Ceph coverage is added ([ADR 0021](0021-integration-tests-prove-server-semantics-payloads-are-proven-offline.md)), `GET /nodes/{node}/ceph/status` returns raw `ceph status` output and is the shape most likely to leak one; the module has no Ceph surface today.

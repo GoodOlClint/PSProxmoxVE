@@ -13,7 +13,7 @@ On 2026-09-01 that was examined and deliberately kept. `docs/lane2-change-plan.m
 
 That work is complete, so the reason for the deferral is spent.
 
-A survey of the wider ADR corpus settled the one open format question. Across 22 repositories there are 287 house-format ADRs; 15 contain a fenced code block at all, and none uses a contrastive wrong-form/right-form pair. The `Anti-pattern` / `Correct pattern` sections are specific to this repository's genre — per-call-site coding idioms — not a gap in the house template.
+A survey of the wider ADR corpus settled the one open format question. Across 22 repositories there are roughly 290 house-format ADRs (independent counts landed between 285 and 294, depending on whether index files are included); fewer than 20 contain a fenced code block at all, and — the load-bearing part, which two independent passes confirmed — **none** uses a contrastive wrong-form/right-form pair. The `Anti-pattern` / `Correct pattern` sections are specific to this repository's genre — per-call-site coding idioms — not a gap in the house template.
 
 The same survey found that repositories which keep a never-reintroduce checklist keep it in `CLAUDE.md` or `CONTRIBUTING.md` and cite ADRs for rationale, rather than treating the ADR as the checklist. This repository already did half of that: `CLAUDE.md` § "Key Conventions" carried ten of the thirteen convention rules as one-line bullets.
 
@@ -23,11 +23,11 @@ Architectural decisions live in `docs/decisions/` in the house ADR format, gener
 
 D001–D021 map one-to-one onto ADR 0001–0021. The `Anti-pattern` block becomes `## Rejected alternatives`; the `Correct pattern` block folds into `## Decision`. D017's "Amendment 2026-09-01" was a second decision in one entry and is split into [ADR 0022](0022-the-gating-lane-pins-its-own-test-tooling-by-exact-version.md).
 
-The convention checklist lives in `CLAUDE.md` § "Key Conventions", completed to cover every convention rule. The ADRs carry rationale.
+The convention checklist lives in `CLAUDE.md` § "Key Conventions", completed to cover every per-call-site convention rule. ADR 0009 (framework targeting) has no bullet, because it constrains project files rather than code a cmdlet author writes. The ADRs carry rationale.
 
 ## Rejected alternatives
 
-**Adding `## Anti-pattern` and `## Correct pattern` to the global house template.** It would mark 287 existing ADRs nonconforming to serve fewer than ten of that genre, and the generator does flat token substitution with no conditionals, so an "optional" section is two headings the author deletes by hand in most cases.
+**Adding `## Anti-pattern` and `## Correct pattern` to the global house template.** It would mark every existing ADR in the corpus nonconforming to serve fewer than ten of that genre, and the generator does flat token substitution with no conditionals, so an "optional" section is two headings the author deletes by hand in most cases.
 
 **Keeping the extra headings in this repository only.** Directly contradicts the ADR skill's instruction that the template is the single source of the format.
 

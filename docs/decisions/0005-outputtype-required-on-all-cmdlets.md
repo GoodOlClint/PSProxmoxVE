@@ -7,7 +7,7 @@
 
 ## Context
 
-Around 54 cmdlets had no `[OutputType]` attribute. PowerShell uses it for IntelliSense, for pipeline type inference, and to answer `Get-Command -OutputType`; without it, tooling cannot tell what a cmdlet emits until it runs.
+Around 54 of the module's 169 cmdlets had no `[OutputType]` attribute. PowerShell uses it for IntelliSense, for pipeline type inference, and to answer `Get-Command -OutputType`; without it, tooling cannot tell what a cmdlet emits until it runs.
 
 ## Decision
 
@@ -21,7 +21,7 @@ public sealed class GetPveVmCmdlet : PveCmdletBase
 
 ## Rejected alternatives
 
-None recorded. This was adopted as a convention during review scan 2026-03-22 rather than chosen between competing options.
+None recorded. This was adopted as a convention during review scan 2026-03-22 rather than chosen between competing options. All 169 cmdlets carry the attribute.
 
 ## Consequences
 

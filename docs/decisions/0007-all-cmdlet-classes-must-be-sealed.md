@@ -7,7 +7,7 @@
 
 ## Context
 
-Around 95 cmdlet classes were not `sealed`. Cmdlets in this module are leaves — they derive from `PveCmdletBase` and nothing derives from them — but the code did not say so.
+Around 95 of the module's 169 cmdlet classes were not `sealed`. Cmdlets in this module are leaves — they derive from `PveCmdletBase` and nothing derives from them — but the code did not say so.
 
 ## Decision
 
@@ -19,7 +19,7 @@ public sealed class GetPveVmCmdlet : PveCmdletBase
 
 ## Rejected alternatives
 
-None recorded. Adopted as a convention during review scan 2026-03-22.
+None recorded. Adopted as a convention during review scan 2026-03-22. Beyond making the design intent explicit, sealing enables potential JIT devirtualisation. All 169 cmdlets are now sealed.
 
 ## Consequences
 

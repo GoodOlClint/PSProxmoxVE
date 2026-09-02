@@ -49,6 +49,6 @@ Putting the reboot in `first-boot.sh`. That runs `ordering = "fully-up"` while t
 
 ## Consequences
 
-The lane costs one reboot and up to five minutes of waiting per node, paid on every currency run. That is the price of the package set it records being the one it actually tested.
+The lane costs one reboot per node on every currency run, plus three bounded waits: up to 300 s proving the boot id changed (60 polls at 5 s), then `wait-for-api.sh` at 600 s, then up to 150 s for pmxcfs. The worst case is therefore near 17 minutes per node, though a healthy node clears it in a fraction of that. That is the price of the recorded package set being the one actually tested.
 
 This is the general shape of the [ADR 0017](0017-ci-runs-two-lanes-a-pinned-gating-lane-and-a-report-only-currency-lane.md) machinery rule: a failure of the lane's own plumbing fails the job, even though test failures in that lane do not.

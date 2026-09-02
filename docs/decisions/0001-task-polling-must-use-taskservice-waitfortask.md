@@ -34,6 +34,4 @@ while (true)
 
 ## Consequences
 
-Five cmdlets — three container snapshot, two storage — still carried the inline form at scan 2026-03-22 (F058). They adopt `WaitForTask` as they are next touched.
-
-`WaitForTask` is also where re-authentication on a 401 belongs, rather than in each caller.
+Five cmdlets — three container snapshot, two storage — still carried the inline form at scan 2026-03-22, and were converted on 2026-03-23 (F058, resolved).

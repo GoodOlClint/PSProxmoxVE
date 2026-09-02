@@ -26,4 +26,4 @@ None recorded. The rule states which verbs qualify rather than choosing between 
 
 The container counterparts `Restart-PveContainer` and `Suspend-PveContainer` remained inconsistent with their VM equivalents at scan 2026-03-22 (F062, F063).
 
-A cmdlet whose danger is not obvious from its verb needs the same treatment — HA `disarm-ha` releases every watchdog in the cluster and should be harder to invoke than the raw API is.
+A cmdlet whose danger is not obvious from its verb needs the same treatment. The module has no cmdlet for HA `disarm-ha` yet; when one is added it will be a `Disable-`/`Invoke-` verb that this rule's verb list does not cover, while releasing every watchdog in the cluster.

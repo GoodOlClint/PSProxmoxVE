@@ -7,7 +7,7 @@
 
 ## Context
 
-`Set-PveVmGuestPassword` accepted a plain `string` password parameter, leaving the credential in managed memory indefinitely and in PowerShell's command history.
+`Set-PveVmGuestPassword` accepted a plain `string` password parameter, leaving the credential in managed memory indefinitely.
 
 `Connect-PveServer` already took a `PSCredential`, so the module was inconsistent with itself about how sensitive input arrives.
 

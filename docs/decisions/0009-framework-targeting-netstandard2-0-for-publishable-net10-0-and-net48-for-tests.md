@@ -22,6 +22,6 @@ Multi-targeting the publishable projects as `netstandard2.0;net10.0;net48`. It w
 
 ## Consequences
 
-The net9.0 → net10.0 move on the test projects was still outstanding when this was recorded (F064).
+The net9.0 → net10.0 move on the test projects was still outstanding when this was recorded, alongside two related dependency pins the same decision governs: the `System.Management.Automation` pin (F064) and the workflow SDK versions (F073, F079). All are now resolved.
 
 Anything the module needs that `netstandard2.0` lacks has to be polyfilled or avoided; that constraint does not apply to test code, which is why the split exists.
