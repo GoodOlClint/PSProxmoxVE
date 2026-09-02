@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Management.Automation;
 using System.Net;
-using Newtonsoft.Json.Linq;
-using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Exceptions;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
@@ -151,10 +149,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
             }
             else
             {
-                using var allocClient = new PveHttpClient(session);
-                var nextIdJson = allocClient.GetAsync("cluster/nextid").GetAwaiter().GetResult();
-                var nextIdData = JObject.Parse(nextIdJson)["data"];
-                vmId = int.Parse(nextIdData!.ToString());
+                vmId = new ClusterConfigService().GetNextId(session);
                 WriteVerbose($"Auto-assigned VM ID: {vmId}");
             }
 

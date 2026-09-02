@@ -72,6 +72,13 @@ namespace PSProxmoxVE.Cmdlets.Vms
 
         protected override void ProcessRecord()
         {
+            if (!string.IsNullOrEmpty(Storage) && !Full.IsPresent)
+                ThrowTerminatingError(new ErrorRecord(
+                    new PSArgumentException("-Storage is only valid together with -Full; PVE rejects a target storage on a linked clone.", nameof(Storage)),
+                    "StorageRequiresFullClone",
+                    ErrorCategory.InvalidArgument,
+                    Storage));
+
             var target = TargetNode ?? SourceNode;
             if (!ShouldProcess($"VM {VmId} on node '{SourceNode}' to new VM on node '{target}'", "Copy-PveVm"))
                 return;
@@ -80,8 +87,10 @@ namespace PSProxmoxVE.Cmdlets.Vms
             var vmService = new VmService();
 
             WriteVerbose($"Cloning VM {VmId}...");
-            var newid = NewVmId ?? 0;
-            PveTask Issue() => vmService.CloneVm(session, SourceNode, VmId, newid, NewName, TargetNode, Full.IsPresent);
+            var newid = NewVmId ?? new ClusterConfigService().GetNextId(session);
+            if (!NewVmId.HasValue)
+                WriteVerbose($"Auto-assigned VM ID: {newid}");
+            PveTask Issue() => vmService.CloneVm(session, SourceNode, VmId, newid, NewName, TargetNode, Full.IsPresent, Storage);
 
             var task = Wait.IsPresent
                 ? InvokeGuestTask(session, SourceNode, Issue)
