@@ -47,13 +47,20 @@ PR's checkout.
    for valid values per PVE version. A value the schema accepts is not
    necessarily a value PVE acts on; where a PR claims server behaviour, ask
    whether it was observed, documented, or inferred. Documented means the PR
-   cites a permalink into https://github.com/goodolclint/proxmox_api (the
-   endpoint's JSON, or its CHANGELOG entry for return-field history). Fetch
-   that permalink with `gh api` and read it; a claim the spec supports counts as
-   verified, and your review names the permalink you checked so a later live
-   failure can be traced to the spec and the server disagreeing. A cited
-   permalink that does not support the claim, or that you cannot fetch, leaves
-   the claim inferred.
+   cites a commit-anchored permalink into https://github.com/GoodOlClint/Proxmox_API
+   (`.../blob/<sha>/pve/...`, never a branch reference) to the endpoint's JSON,
+   or to the CHANGELOG entry for return-field history. Fetch it with
+
+       gh api -H "Accept: application/vnd.github.raw+json" \
+         "repos/GoodOlClint/Proxmox_API/contents/<path>?ref=<sha>"
+
+   and read it. A claim the spec supports counts as verified; name the permalink
+   you checked in the review. The spec is the published contract, not the
+   server: it can lag or differ, and the wave-end integration run is what
+   catches that. Naming the permalink is what lets a later live failure be
+   traced to the spec and the server disagreeing, rather than to a guess. A
+   cited link that is not commit-anchored, does not support the claim, or
+   cannot be fetched leaves the claim inferred. See ADR 0026.
 
 4. **Tests.** New cmdlets should have xUnit service tests and Pester
    parameter-validation tests. When you criticise a test, say what behaviour it
@@ -110,7 +117,8 @@ sign-off.
 - changes branch protection, publishing, or release tagging;
 - claims live PVE behaviour that CI does not exercise and the PR does not
   document against the spec (see API correctness above). A spec-verified claim
-  does not need the operator; an inferred one does.
+  does not need the operator; an inferred one does. This is the trade-off
+  ADR 0026 records.
 
 ## Verdict
 
