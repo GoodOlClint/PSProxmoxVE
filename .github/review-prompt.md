@@ -46,7 +46,14 @@ PR's checkout.
    OpenAPI spec — see `tests/PSProxmoxVE.Core.Tests/Fixtures/pve-api-enums.pve*.json`
    for valid values per PVE version. A value the schema accepts is not
    necessarily a value PVE acts on; where a PR claims server behaviour, ask
-   whether it was observed or inferred.
+   whether it was observed, documented, or inferred. Documented means the PR
+   cites a permalink into https://github.com/goodolclint/proxmox_api (the
+   endpoint's JSON, or its CHANGELOG entry for return-field history). Fetch
+   that permalink with `gh api` and read it; a claim the spec supports counts as
+   verified, and your review names the permalink you checked so a later live
+   failure can be traced to the spec and the server disagreeing. A cited
+   permalink that does not support the claim, or that you cannot fetch, leaves
+   the claim inferred.
 
 4. **Tests.** New cmdlets should have xUnit service tests and Pester
    parameter-validation tests. When you criticise a test, say what behaviour it
@@ -101,7 +108,9 @@ sign-off.
   values — a PR that edits them can make a wrong value look spec-compliant to
   you;
 - changes branch protection, publishing, or release tagging;
-- claims live PVE behaviour that CI does not exercise.
+- claims live PVE behaviour that CI does not exercise and the PR does not
+  document against the spec (see API correctness above). A spec-verified claim
+  does not need the operator; an inferred one does.
 
 ## Verdict
 
