@@ -109,6 +109,7 @@ Describe 'Disconnect-PveServer' {
             Disconnect-PveServer -Session $mismatchedSession -Confirm:$false -WarningVariable w -WarningAction SilentlyContinue
 
             $w[0] | Should -Match 'not the module-level session'
+            $w[0] | Should -Match 'Remove-PveApiToken'
             [object]::ReferenceEquals($script:ActiveSessionProperty.GetValue($null), $activeSession) | Should -BeTrue
         }
 

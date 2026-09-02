@@ -1,4 +1,5 @@
 using System.Management.Automation;
+using PSProxmoxVE.Core.Authentication;
 
 namespace PSProxmoxVE.Cmdlets.Connection
 {
@@ -28,7 +29,10 @@ namespace PSProxmoxVE.Cmdlets.Connection
 
             if (!ReferenceEquals(sessionToDisconnect, ModuleState.ActiveSession))
             {
-                WriteWarning($"The supplied session for {sessionToDisconnect.Hostname}:{sessionToDisconnect.Port} is not the module-level session; nothing was changed. Discard the variable — PVE tickets cannot be revoked and expire on their own.");
+                var lifecycle = sessionToDisconnect.AuthMode == PveAuthMode.ApiToken
+                    ? "API tokens do not expire; revoke it with Remove-PveApiToken if it is no longer needed."
+                    : "PVE tickets cannot be revoked and expire on their own.";
+                WriteWarning($"The supplied session for {sessionToDisconnect.Hostname}:{sessionToDisconnect.Port} is not the module-level session; nothing was changed. Discard the variable. {lifecycle}");
                 return;
             }
 
