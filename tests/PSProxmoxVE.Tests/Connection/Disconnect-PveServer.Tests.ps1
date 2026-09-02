@@ -38,6 +38,10 @@ Describe 'Disconnect-PveServer' {
             # attribute is present by confirming ShouldProcess support is enabled.
             $script:Cmd.Parameters.ContainsKey('WhatIf') | Should -BeTrue
         }
+
+        It 'Should expose -Session parameter' {
+            $script:Cmd.Parameters.ContainsKey('Session') | Should -BeTrue
+        }
     }
 
     Context 'Behaviour when no session is active' {
@@ -51,6 +55,14 @@ Describe 'Disconnect-PveServer' {
     Context 'WhatIf support' {
         It 'Should accept -WhatIf without throwing' {
             { Disconnect-PveServer -WhatIf -ErrorAction Stop } | Should -Not -Throw
+        }
+    }
+
+    Context 'Active session lifecycle' {
+        It 'Should clear active session when disconnected without explicit -Session' {
+            Disconnect-PveServer -Confirm:$false -ErrorAction SilentlyContinue
+            $Module = Get-Module PSProxmoxVE
+            $Module.PrivateData.ModuleState.ActiveSession | Should -BeNullOrEmpty
         }
     }
 }
