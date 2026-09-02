@@ -51,12 +51,11 @@ namespace PSProxmoxVE.Cmdlets.Vms
             var vmService = new VmService();
 
             WriteVerbose($"Suspending VM {VmId} on node '{Node}'...");
-            var task = vmService.SuspendVm(session, Node, VmId);
+            PveTask Issue() => vmService.SuspendVm(session, Node, VmId);
 
-            if (Wait.IsPresent)
-            {
-                task = WaitForStatusTransition(session, Node, task, VmId, "paused", Timeout);
-            }
+            var task = Wait.IsPresent
+                ? WaitForStatusTransition(session, Node, Issue, VmId, "paused", Timeout)
+                : Issue();
 
             WriteObject(task);
         }

@@ -15,6 +15,13 @@ namespace PSProxmoxVE.Core.Exceptions
         /// <summary>The HTTP method used for the request (GET, POST, PUT, DELETE).</summary>
         public string HttpMethod { get; }
 
+        /// <summary>
+        /// The error text PVE returned, without the status/resource prefix that
+        /// <see cref="Exception.Message"/> carries. Callers that match on what PVE said —
+        /// rather than on how this exception renders it — must read this.
+        /// </summary>
+        public string ApiMessage { get; }
+
         /// <summary>Initializes a new instance for a failed PVE API request.</summary>
         /// <param name="statusCode">The HTTP status code returned.</param>
         /// <param name="message">The error message from the API.</param>
@@ -26,6 +33,7 @@ namespace PSProxmoxVE.Core.Exceptions
             StatusCode = statusCode;
             Resource = resource;
             HttpMethod = httpMethod;
+            ApiMessage = message;
         }
 
         /// <summary>Initializes a new instance for a failed PVE API request, with an inner exception.</summary>
@@ -40,6 +48,7 @@ namespace PSProxmoxVE.Core.Exceptions
             StatusCode = statusCode;
             Resource = resource;
             HttpMethod = httpMethod;
+            ApiMessage = message;
         }
     }
 }

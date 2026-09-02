@@ -466,19 +466,20 @@ Add-PveClusterMember ...
 
 ## D015 — Lifecycle -Wait blocks until the guest config lock clears
 
-**Status**: Superseded by D016 (2026-09-01) — the mechanism below is wrong
-**Finding refs**: (none — found via integration runs 183/184, 2026-09-01)
+**Status**: Active, rescoped 2026-09-01 — it guards the config lock only, never the flock
+**Finding refs**: (none — found via integration runs 183/184, 2026-09-01; rescoped for #113)
 **Resolved in scan**: n/a
 
-> **This entry misdiagnosed the failure it was written for.** Two different things in PVE are
+> **This entry was written for a failure it does not prevent.** Two different things in PVE are
 > called "lock": the **config lock** (the `lock:` property — `migrate`, `backup`, `clone`,
 > `snapshot` — a persisted config field, exposed as `lock` in `status/current`) and the
 > **flock** on `/var/lock/qemu-server/lock-<vmid>.conf` taken by `PVE::QemuConfig->lock_config`,
 > which is not exposed through the API at all. The integration failures were the flock; this
 > entry guards the config lock, which an ordinary start/stop never sets. Run 186 confirmed the
-> check never fired — `Restart-PveVm` took 4.11 s, unchanged. The real cause and fix are in
-> **D016**. The waiting behaviour described below is harmless and still applies when a genuine
-> config lock is present, so the code stays.
+> check never fired — `Restart-PveVm` took 4.11 s, unchanged. The flock is handled by **D016**
+> (serialise server-side where an endpoint exists) and **D020** (retry where none does). The
+> guard below is correct for the config lock and stays, but must never be described as covering
+> the flock.
 
 ### Decision
 `WaitForStatusTransition` returns only when the guest reports the expected status **and**
@@ -579,16 +580,19 @@ not exist, so `Restart-PveContainer` necessarily keeps shutdown + start.
 ### Anti-pattern (do not reintroduce)
 ```csharp
 // NEVER compose a VM restart from two client calls — it races qmeventd's cleanup
-var shutdownTask = vmService.ShutdownVm(session, node, vmid, timeout);
-WaitForStatusTransition(session, node, shutdownTask, vmid, "stopped", timeout);
-var startTask = vmService.StartVm(session, node, vmid);
+WaitForStatusTransition(session, node, () => vmService.ShutdownVm(session, node, vmid, timeout),
+    vmid, "stopped", timeout);
+WaitForStatusTransition(session, node, () => vmService.StartVm(session, node, vmid),
+    vmid, "running", timeout);
 ```
 
 ### Correct pattern
 ```csharp
-var task = vmService.RebootVm(session, node, vmid, timeout);
-if (Wait.IsPresent)
-    task = WaitForStatusTransition(session, node, task, vmid, "running", timeout);
+PveTask Issue() => vmService.RebootVm(session, node, vmid, timeout);
+
+var task = Wait.IsPresent
+    ? WaitForStatusTransition(session, node, Issue, vmid, "running", timeout)
+    : Issue();
 ```
 
 ---
@@ -778,3 +782,98 @@ removes real friction. This one removed none.
 A `dev.ps1`, `Makefile` target, or shell function that re-implements provisioning steps,
 module installation, or test invocation. If a local flow is awkward, fix it in
 `run-integration.sh` so CI gets the fix too.
+
+---
+
+## D020 — The qemu-server flock is retried, never predicted
+
+**Status**: Active
+**Finding refs**: (none — issue #113, reproduced 2026-09-01 on a Rosetta-emulated client)
+**Resolved in scan**: n/a
+
+### Decision
+An operation PVE rejects with `can't lock file '<guest lock path>' - got timeout` is reissued
+for a bounded window (`GuestLockRetry.DefaultWindow`, 45 s). Nothing in the module may attempt
+to *detect* that the flock is held before acting.
+
+Two seams implement it, and both are required:
+
+- **`PveHttpClient.SendAsync`** — retries the request itself. This covers every operation PVE
+  serialises inside the API handler, where the failure arrives as a 500: `Set-PveVmConfig`,
+  `Resize-PveVmDisk`'s config writes, and every future call that goes through the client.
+  The private send takes a `Func<HttpRequestMessage>` rather than a request because an
+  `HttpRequestMessage` cannot be sent twice.
+- **`PveCmdletBase.InvokeGuestTask`** — reissues the API call *and* re-waits its task. PVE takes
+  the flock inside the forked worker for most guest operations (`qmreset`, `qmclone`), so the
+  POST returns 200 with a UPID and the failure only appears in the task's exit status. The HTTP
+  layer cannot see it and cannot retry it. `WaitForStatusTransition` routes through this helper,
+  which is why it takes a `Func<PveTask>` instead of an already-issued `PveTask`.
+
+Reissuing is safe **only** for a failure to *enter* `lock_config`, which PVE raises before the
+operation does any work. `GuestLockRetry.IsLockTimeout` must keep both properties that establish
+this, and no failure may be added to it without them:
+
+- **Path-specific.** `PVE::Tools::lock_file` emits the identical wording for storage, LVM, HA,
+  backup and firewall locks. Those are taken mid-worker and carry no such guarantee, so the match
+  names the two guest config paths (`/var/lock/qemu-server/lock-<vmid>.conf`,
+  `/run/lock/lxc/pve-config-<vmid>.lock`) rather than the generic phrasing.
+- **Anchored at the start of what PVE said.** `qmclone` is the operation that makes this matter:
+  its worker creates and locks the target config, allocates disks, then re-locks. A timeout at one
+  of those later points reads the same as one at entry, and reissuing it would hit
+  `check_vmid_unused` — "VM <newid> already exists" — leaving an orphaned guest behind. PVE
+  prefixes the late form with its own context (`clone failed: ...`), so anchoring rejects it.
+  `Resize-PveVmDisk -Size '+1G'` is the case where getting this wrong is irreversible rather than
+  merely messy.
+
+The anchor only works against the raw text, so the predicate reads
+`PveTaskFailedException.ExitStatus` and `PveApiException.ApiMessage` — never `Exception.Message`,
+which both types prefix with their own context. `ApiMessage` exists for this.
+
+### Rationale
+D015 tried to predict the lock and guarded the wrong one (see its note). D016 removed the race
+for `Restart-PveVm` by handing the ordering to PVE, but that only works where a server-side
+serialised endpoint exists. `Set-PveVmConfig`, `Resize-PveVmDisk` and clone have none, so for
+them the choice is retry or nothing.
+
+The window is 45 s because `qm cleanup` holds the flock while polling `vm_running_locally` for
+up to 30 s, and each rejected attempt first burns PVE's own 10 s `lock_config` timeout. It bounds
+when a *new* attempt may start, not total wall clock: an attempt beginning just inside the window
+still runs to its own conclusion, so the real ceiling is roughly one attempt longer.
+
+Two consequences are deliberate, and both are load-bearing enough to state rather than discover:
+
+- **`-Timeout` does not bound the retry.** It is documented as the budget for the status
+  transition, and `WaitForStatusTransition` starts counting it only after the operation's task
+  completes. Binding the retry to it would defeat the fix at exactly the values that need it —
+  `Reset-PveVm -Wait -Timeout 30` needed ~31 s of retrying in the run that verified this change.
+- **The two seams nest.** A cmdlet operation rejected synchronously burns the HTTP layer's window
+  inside `InvokeGuestTask`'s. The overlap costs a longer wait before the same failure, never a
+  different outcome, so it is not worth threading a shared budget through both layers.
+
+CI never showed this. Runs 189–200 were green because the CI client is fast enough to win the
+race. It reproduces on a client roughly 40% slower — the CI container image run under Docker
+Desktop's Rosetta emulation on Apple Silicon — which failed `Should hard-reset a running VM`,
+`Should clone a VM` and `Should resize a VM disk (Resize-PveVmDisk)` on the same commit CI
+passed. **A green CI run is not evidence about this class of bug.**
+
+### Not yet adopted
+`InvokeGuestTask` is the correct seam for every cmdlet that issues a guest operation and waits
+on its task. `Remove-PveVm`, `Move-PveVm`, the snapshot and template cmdlets, and the container
+equivalents still call `TaskService.WaitForTask` directly and remain exposed to the same race.
+They adopt the helper as they are next touched.
+
+### Anti-pattern (do not reintroduce)
+```csharp
+// NEVER try to observe the flock — PVE does not expose it in status/current or anywhere else
+if (!snapshot.Locked)
+    return task;   // reads the config `lock:` property; says nothing about the flock
+```
+
+### Correct pattern
+```csharp
+PveTask Issue() => vmService.CloneVm(session, sourceNode, vmid, newid, name, targetNode, full);
+
+var task = Wait.IsPresent
+    ? InvokeGuestTask(session, sourceNode, Issue)
+    : Issue();
+```

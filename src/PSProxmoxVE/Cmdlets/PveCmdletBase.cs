@@ -99,7 +99,10 @@ namespace PSProxmoxVE.Cmdlets
         /// </summary>
         /// <param name="session">The authenticated PVE session.</param>
         /// <param name="node">The cluster node name.</param>
-        /// <param name="task">The task returned by the lifecycle API call.</param>
+        /// <param name="issueOperation">
+        ///   Issues the lifecycle API call. Invoked again on each retry, so it must be safe to
+        ///   repeat — see <see cref="InvokeGuestTask"/>.
+        /// </param>
         /// <param name="vmid">The VM or container ID to poll.</param>
         /// <param name="expectedStatus">The expected status string (e.g. "running", "stopped", "paused").</param>
         /// <param name="timeoutSeconds">Maximum seconds to wait for the status transition. Default 60.</param>
@@ -108,19 +111,13 @@ namespace PSProxmoxVE.Cmdlets
         protected PveTask WaitForStatusTransition(
             PveSession session,
             string node,
-            PveTask task,
+            Func<PveTask> issueOperation,
             int vmid,
             string expectedStatus,
             int timeoutSeconds = 60,
             bool isContainer = false)
         {
-            var taskService = new TaskService();
-
-            // First wait for the PVE task to complete
-            if (!string.IsNullOrEmpty(task.Upid))
-            {
-                task = taskService.WaitForTask(session, node, task.Upid, null, null, null);
-            }
+            var task = InvokeGuestTask(session, node, issueOperation);
 
             // Then poll status/current until VM/container reaches the expected status.
             // We query the status/current endpoint directly instead of the list endpoint
@@ -141,15 +138,11 @@ namespace PSProxmoxVE.Cmdlets
                     var snapshot = GuestStatusSnapshot.Evaluate(json, expectedStatus);
                     lastMatched = snapshot.StatusMatched;
 
-                    if (snapshot.StatusMatched)
-                    {
-                        // PVE reports the target status before the operation releases the
-                        // config lock. A caller that issues its next request inside that
-                        // window gets "can't lock file '/var/lock/qemu-server/lock-<vmid>.conf'
-                        // - got timeout" from its own API call.
-                        if (!snapshot.Locked)
-                            return task;
-                    }
+                    // snapshot.Locked is the config `lock:` property (backup, clone, migrate,
+                    // snapshot) — not the /var/lock/qemu-server flock, which PVE does not
+                    // expose. The flock race is handled by retrying, not by waiting.
+                    if (snapshot.StatusMatched && !snapshot.Locked)
+                        return task;
                 }
                 catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
                 {
@@ -167,6 +160,35 @@ namespace PSProxmoxVE.Cmdlets
             throw new PveTaskTimeoutException(
                 task.Upid ?? "unknown",
                 TimeSpan.FromSeconds(timeoutSeconds));
+        }
+
+        /// <summary>
+        /// Issues a guest operation and waits for the task it returns, reissuing the pair while
+        /// PVE rejects it for the guest's config flock.
+        ///
+        /// PVE takes that flock inside the worker for most guest operations, so the failure
+        /// surfaces as a failed task rather than a failed request and cannot be retried at the
+        /// HTTP layer. <c>lock_config</c> raises it before doing any work, so a reissue repeats
+        /// nothing.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The node the task runs on.</param>
+        /// <param name="issueOperation">Issues the API call; invoked again on each retry.</param>
+        /// <returns>The completed task, or the issued task when the call returned no UPID.</returns>
+        protected PveTask InvokeGuestTask(PveSession session, string node, Func<PveTask> issueOperation)
+        {
+            if (issueOperation == null) throw new ArgumentNullException(nameof(issueOperation));
+
+            var taskService = new TaskService();
+            return GuestLockRetry.Execute(
+                () =>
+                {
+                    var task = issueOperation();
+                    return string.IsNullOrEmpty(task.Upid)
+                        ? task
+                        : taskService.WaitForTask(session, node, task.Upid, null, null, null);
+                },
+                onRetry: ex => WriteVerbose($"Guest is locked, retrying: {ex.Message}"));
         }
 
         /// <summary>

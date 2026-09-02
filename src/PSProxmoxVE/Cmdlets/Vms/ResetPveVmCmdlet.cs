@@ -52,12 +52,11 @@ namespace PSProxmoxVE.Cmdlets.Vms
             var vmService = new VmService();
 
             WriteVerbose($"Resetting VM {VmId} on node '{Node}'...");
-            var task = vmService.ResetVm(session, Node, VmId);
+            PveTask Issue() => vmService.ResetVm(session, Node, VmId);
 
-            if (Wait.IsPresent)
-            {
-                task = WaitForStatusTransition(session, Node, task, VmId, "running", Timeout);
-            }
+            var task = Wait.IsPresent
+                ? WaitForStatusTransition(session, Node, Issue, VmId, "running", Timeout)
+                : Issue();
 
             WriteObject(task);
         }
