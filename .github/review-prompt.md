@@ -83,9 +83,7 @@ it as either true or false.
 **Review these normally — read the diff, do the work, report what you find.**
 The findings are wanted. The only thing withheld is approval: submit `--comment`
 instead of `--approve`, and say plainly that the change needs the operator's
-sign-off. Open the review body with `@goodolclint` and one sentence naming the
-decision the operator has to make. The mention is what sends the email; a
-`COMMENTED` review without it is easy to miss.
+sign-off.
 
 - changes anything that governs review or release. The detector covers
   `.github/review-prompt.md`, `.github/workflows/`, `.claude/`, `.mcp.json`,
