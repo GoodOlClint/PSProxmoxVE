@@ -59,7 +59,8 @@ namespace PSProxmoxVE.Cmdlets.Containers
             WriteVerbose("Getting containers...");
             var service = new ContainerService();
 
-            IEnumerable<PveContainer> containers = service.GetContainers(session, Node);
+            IEnumerable<PveContainer> containers = service.GetContainers(session, Node,
+                onNodeSkipped: (nodeName, ex) => WriteWarning($"Skipping node '{nodeName}': {ex.Message}"));
 
             if (VmId.HasValue)
                 containers = containers.Where(c => c.VmId == VmId.Value);
