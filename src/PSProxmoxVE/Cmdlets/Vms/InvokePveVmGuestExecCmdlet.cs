@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Management.Automation;
 using PSProxmoxVE.Core.Services;
+using PSProxmoxVE.Core.Utilities;
 
 namespace PSProxmoxVE.Cmdlets.Vms
 {
@@ -60,7 +61,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
                 if (sw.Elapsed >= deadline)
                     throw new TimeoutException($"Guest command did not complete within {Timeout} seconds.");
                 result = service.GetGuestExecStatus(session, Node, VmId, pid);
-            } while (!result.TryGetValue("exited", out var exited) || !Equals(exited, 1L));
+            } while (!result.TryGetValue("exited", out var exited) || !ApiValueHelper.IsExited(exited));
 
             var output = new PSObject();
             output.Properties.Add(new PSNoteProperty("ExitCode", result.TryGetValue("exitcode", out var ec) && ec is long ecl ? (int)ecl : -1));
