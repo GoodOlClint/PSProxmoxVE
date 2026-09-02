@@ -894,8 +894,11 @@ offline against the mock `IPveHttpClient` harness.
 Concretely:
 - New cmdlets route through a `*Service` that accepts `IPveHttpClient`, so their payload is
   reachable from `PSProxmoxVE.Core.Tests` without a cluster.
-- The 38 cmdlets that construct `PveHttpClient` directly are converted to that seam before the
-  next large coverage push, and opportunistically when otherwise touched.
+- The 37 cmdlets that construct `PveHttpClient` directly are converted to that seam before the
+  next large coverage push, and opportunistically when otherwise touched. Measured against 194
+  concrete cmdlet files (`src/PSProxmoxVE/Cmdlets/**/*.cs` less the `PveCmdletBase` base class):
+  155 reach the API only through a `*Service`, 25 only through their own client, 12 do both, and
+  2 do neither. The service and direct-client sets overlap, so they do not sum to 194.
 - The integration suite is tiered: a PR exercises smoke plus the areas its diff touches
   (`run-integration.sh test <ver> <Area>` already supports this); the full suite runs on merge
   to `main`.
@@ -930,6 +933,9 @@ client.PutAsync($"nodes/{node}/network/{iface}", data).GetAwaiter().GetResult();
 ```
 
 ### Correct pattern
+This is the target shape, not a form the tree already takes. `Set-PveNetwork` is one of the 37,
+and `NetworkService.SetNetwork` has no callers anywhere in the repository.
+
 ```csharp
 // Service takes IPveHttpClient, so PSProxmoxVE.Core.Tests can assert the emitted form
 // without a cluster; the integration test then covers only what PVE alone can tell us.
