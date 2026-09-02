@@ -72,13 +72,6 @@ namespace PSProxmoxVE.Cmdlets.Containers
 
         protected override void ProcessRecord()
         {
-            if (!string.IsNullOrEmpty(Storage) && !Full.IsPresent)
-                ThrowTerminatingError(new ErrorRecord(
-                    new PSArgumentException("-Storage is only valid together with -Full; PVE rejects a target storage on a linked clone.", nameof(Storage)),
-                    "StorageRequiresFullClone",
-                    ErrorCategory.InvalidArgument,
-                    Storage));
-
             var target = TargetNode ?? SourceNode;
             if (!ShouldProcess($"Container {VmId} on node '{SourceNode}' to new container on node '{target}'", "Copy-PveContainer"))
                 return;
@@ -103,7 +96,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
             if (Wait.IsPresent)
             {
                 var taskService = new TaskService();
-                task = taskService.WaitForTask(session, task.Node ?? SourceNode, task.Upid!, null, null, null);
+                task = taskService.WaitForTask(session, task.Node ?? SourceNode, task.Upid!);
             }
 
             WriteObject(task);

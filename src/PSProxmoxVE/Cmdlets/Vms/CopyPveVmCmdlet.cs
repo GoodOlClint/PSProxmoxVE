@@ -72,13 +72,6 @@ namespace PSProxmoxVE.Cmdlets.Vms
 
         protected override void ProcessRecord()
         {
-            if (!string.IsNullOrEmpty(Storage) && !Full.IsPresent)
-                ThrowTerminatingError(new ErrorRecord(
-                    new PSArgumentException("-Storage is only valid together with -Full; PVE rejects a target storage on a linked clone.", nameof(Storage)),
-                    "StorageRequiresFullClone",
-                    ErrorCategory.InvalidArgument,
-                    Storage));
-
             var target = TargetNode ?? SourceNode;
             if (!ShouldProcess($"VM {VmId} on node '{SourceNode}' to new VM on node '{target}'", "Copy-PveVm"))
                 return;
