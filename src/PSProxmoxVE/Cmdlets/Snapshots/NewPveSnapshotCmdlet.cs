@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Management.Automation;
-using Newtonsoft.Json.Linq;
-using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
 
@@ -50,26 +46,15 @@ namespace PSProxmoxVE.Cmdlets.Snapshots
                 return;
 
             var session = GetSession();
-            using var client = new PveHttpClient(session);
 
             WriteVerbose($"Creating snapshot '{Name}' for VM {VmId}...");
-            var data = new Dictionary<string, string>
-            {
-                ["snapname"] = Name
-            };
-            if (!string.IsNullOrEmpty(Description)) data["description"] = Description!;
-            if (IncludeVmState.IsPresent)            data["vmstate"]     = "1";
+            var service = new SnapshotService();
+            var task = service.CreateSnapshot(session, Node, VmId, Name, Description, IncludeVmState.IsPresent);
 
-            var json = client.PostAsync($"nodes/{Uri.EscapeDataString(Node)}/qemu/{VmId}/snapshot", data).GetAwaiter().GetResult();
-            var root = JObject.Parse(json);
-            var upid = root["data"]?.ToString() ?? string.Empty;
-
-            var task = new PveTask { Upid = upid, Node = Node, Status = "running" };
-
-            if (Wait.IsPresent && !string.IsNullOrEmpty(upid))
+            if (Wait.IsPresent && !string.IsNullOrEmpty(task.Upid))
             {
                 var taskService = new TaskService();
-                task = taskService.WaitForTask(session, Node, upid);
+                task = taskService.WaitForTask(session, Node, task.Upid);
             }
 
             WriteObject(task);
