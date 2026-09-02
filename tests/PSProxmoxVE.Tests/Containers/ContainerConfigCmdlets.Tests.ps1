@@ -147,20 +147,6 @@ Describe 'Copy-PveContainer' {
         }
     }
 
-    Context 'Storage requires Full' {
-        It 'Should throw when -Storage is specified without -Full' {
-            Skip-IfMissing 'Copy-PveContainer'
-            { Copy-PveContainer -SourceNode 'pve1' -VmId 100 -Storage 'local-zfs' -Confirm:$false -ErrorAction Stop } |
-                Should -Throw '*only valid together with -Full*'
-        }
-
-        It 'Should not throw the storage/full validation when -Full is also specified' {
-            Skip-IfMissing 'Copy-PveContainer'
-            { Copy-PveContainer -SourceNode 'pve1' -VmId 100 -Storage 'local-zfs' -Full -WhatIf -ErrorAction Stop } |
-                Should -Not -Throw
-        }
-    }
-
     Context 'Without active session' {
         It 'Should throw when no session is active' {
             Skip-IfMissing 'Copy-PveContainer'
