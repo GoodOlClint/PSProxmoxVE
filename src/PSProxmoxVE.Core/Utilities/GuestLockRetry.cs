@@ -24,7 +24,15 @@ namespace PSProxmoxVE.Core.Utilities
         /// </summary>
         public static readonly TimeSpan DefaultWindow = TimeSpan.FromSeconds(45);
 
-        private static readonly TimeSpan RetryInterval = TimeSpan.FromSeconds(2);
+        private static readonly TimeSpan MaxRetryInterval = TimeSpan.FromSeconds(2);
+
+        // The gap must never eat a meaningful share of a short budget: a caller passing a
+        // small window wants a fast answer, not one long sleep.
+        private static TimeSpan RetryInterval(TimeSpan budget)
+        {
+            var quarter = TimeSpan.FromMilliseconds(budget.TotalMilliseconds / 4);
+            return quarter < MaxRetryInterval ? quarter : MaxRetryInterval;
+        }
 
         // Anchored, and specific to the two guest lock paths. `PVE::Tools::lock_file` emits this
         // same wording for storage, LVM, HA and firewall locks, none of which carry the
@@ -59,7 +67,11 @@ namespace PSProxmoxVE.Core.Utilities
         /// </summary>
         /// <param name="operation">The operation to run.</param>
         /// <param name="window">Retry budget. Defaults to <see cref="DefaultWindow"/>.</param>
-        public static T Execute<T>(Func<T> operation, TimeSpan? window = null)
+        /// <param name="onRetry">
+        ///   Invoked with the rejection before each reissue. A caller with somewhere to report
+        ///   progress should pass one — a wait this long is otherwise indistinguishable from a hang.
+        /// </param>
+        public static T Execute<T>(Func<T> operation, TimeSpan? window = null, Action<Exception>? onRetry = null)
         {
             if (operation == null) throw new ArgumentNullException(nameof(operation));
 
@@ -73,7 +85,8 @@ namespace PSProxmoxVE.Core.Utilities
                 }
                 catch (Exception ex) when (IsLockTimeout(ex) && elapsed.Elapsed < budget)
                 {
-                    Thread.Sleep(RetryInterval);
+                    onRetry?.Invoke(ex);
+                    Thread.Sleep(RetryInterval(budget));
                 }
             }
         }
@@ -95,7 +108,7 @@ namespace PSProxmoxVE.Core.Utilities
                 }
                 catch (Exception ex) when (IsLockTimeout(ex) && elapsed.Elapsed < budget)
                 {
-                    await Task.Delay(RetryInterval).ConfigureAwait(false);
+                    await Task.Delay(RetryInterval(budget)).ConfigureAwait(false);
                 }
             }
         }

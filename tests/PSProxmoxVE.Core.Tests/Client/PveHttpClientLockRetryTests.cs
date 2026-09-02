@@ -25,6 +25,15 @@ namespace PSProxmoxVE.Core.Tests.Client
             field.SetValue(client, newInner);
         }
 
+        // The gap between attempts scales with the budget, so a short window keeps these
+        // tests off the 2s production sleep.
+        private static void SetRetryWindow(PveHttpClient client, TimeSpan window)
+        {
+            var field = typeof(PveHttpClient).GetField("_guestLockRetryWindow",
+                BindingFlags.Instance | BindingFlags.NonPublic)!;
+            field.SetValue(client, window);
+        }
+
         private static (PveHttpClient client, ScriptedHandler handler) NewClient(
             params (HttpStatusCode status, string body)[] responses)
         {
@@ -33,6 +42,7 @@ namespace PSProxmoxVE.Core.Tests.Client
             var client = new PveHttpClient(session);
             var handler = new ScriptedHandler(responses);
             SetInnerHttpClient(client, new HttpClient(handler));
+            SetRetryWindow(client, TimeSpan.FromMilliseconds(400));
             return (client, handler);
         }
 

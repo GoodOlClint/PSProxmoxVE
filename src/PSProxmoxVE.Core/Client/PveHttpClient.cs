@@ -30,6 +30,8 @@ namespace PSProxmoxVE.Core.Client
         private readonly HttpClient _httpClient;
         private bool _disposed;
 
+        private TimeSpan _guestLockRetryWindow = GuestLockRetry.DefaultWindow;
+
         private const string ApiTokenPrefix = "PVEAPIToken=";
         private const string AuthCookieName = "PVEAuthCookie=";
         private const string CsrfHeaderName = "CSRFPreventionToken";
@@ -382,7 +384,8 @@ namespace PSProxmoxVE.Core.Client
         /// cannot be resent, which is why this takes a factory rather than a request.
         /// </summary>
         private Task<string> SendAsync(Func<HttpRequestMessage> buildRequest, string resource, string httpMethod) =>
-            GuestLockRetry.ExecuteAsync(() => SendOnceAsync(buildRequest(), resource, httpMethod));
+            GuestLockRetry.ExecuteAsync(
+                () => SendOnceAsync(buildRequest(), resource, httpMethod), _guestLockRetryWindow);
 
         private async Task<string> SendOnceAsync(HttpRequestMessage request, string resource, string httpMethod)
         {

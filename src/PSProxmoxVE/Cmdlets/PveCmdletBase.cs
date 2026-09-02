@@ -180,13 +180,15 @@ namespace PSProxmoxVE.Cmdlets
             if (issueOperation == null) throw new ArgumentNullException(nameof(issueOperation));
 
             var taskService = new TaskService();
-            return GuestLockRetry.Execute(() =>
-            {
-                var task = issueOperation();
-                return string.IsNullOrEmpty(task.Upid)
-                    ? task
-                    : taskService.WaitForTask(session, node, task.Upid, null, null, null);
-            });
+            return GuestLockRetry.Execute(
+                () =>
+                {
+                    var task = issueOperation();
+                    return string.IsNullOrEmpty(task.Upid)
+                        ? task
+                        : taskService.WaitForTask(session, node, task.Upid, null, null, null);
+                },
+                onRetry: ex => WriteVerbose($"Guest is locked, retrying: {ex.Message}"));
         }
 
         /// <summary>

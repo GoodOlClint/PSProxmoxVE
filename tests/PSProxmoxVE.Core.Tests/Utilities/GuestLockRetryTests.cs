@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using PSProxmoxVE.Core.Exceptions;
@@ -14,6 +15,10 @@ namespace PSProxmoxVE.Core.Tests.Utilities
 
         private const string LxcLockError =
             "can't lock file '/run/lock/lxc/pve-config-100.lock' - got timeout";
+
+        // The gap between attempts scales with the budget, so a short window keeps the
+        // retrying tests off a 2s production sleep.
+        private static readonly TimeSpan ShortWindow = TimeSpan.FromMilliseconds(400);
 
         private static PveApiException ApiError(string message) =>
             new PveApiException(HttpStatusCode.InternalServerError, message, "nodes/pve9a/qemu/100/config", "PUT");
@@ -74,6 +79,23 @@ namespace PSProxmoxVE.Core.Tests.Utilities
         }
 
         [Fact]
+        public void Execute_ReportsEachReissueToTheOnRetryHook()
+        {
+            var attempts = 0;
+            var reported = new List<Exception>();
+
+            GuestLockRetry.Execute(() =>
+            {
+                attempts++;
+                if (attempts < 3) throw TaskError(VmLockError);
+                return 0;
+            }, ShortWindow, onRetry: reported.Add);
+
+            Assert.Equal(2, reported.Count);
+            Assert.All(reported, e => Assert.IsType<PveTaskFailedException>(e));
+        }
+
+        [Fact]
         public void Execute_ReturnsWithoutRetryingWhenTheOperationSucceeds()
         {
             var attempts = 0;
@@ -94,7 +116,7 @@ namespace PSProxmoxVE.Core.Tests.Utilities
                 attempts++;
                 if (attempts < 2) throw TaskError(VmLockError);
                 return "cloned";
-            });
+            }, ShortWindow);
 
             Assert.Equal("cloned", result);
             Assert.Equal(2, attempts);
@@ -124,7 +146,7 @@ namespace PSProxmoxVE.Core.Tests.Utilities
                 attempts++;
                 if (attempts < 2) throw ApiError(VmLockError);
                 return Task.FromResult("written");
-            });
+            }, ShortWindow);
 
             Assert.Equal("written", result);
             Assert.Equal(2, attempts);
