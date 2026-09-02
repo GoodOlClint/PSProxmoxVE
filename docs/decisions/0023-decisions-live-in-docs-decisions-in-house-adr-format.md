@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-09-02
 - **Deciders:** operator + agent
-- **Context source:** reverses the ruling in `docs/lane2-change-plan.md`, made 2026-09-01
+- **Context source:** reverses the ruling in `docs/lane2-change-plan.md`, made 2026-09-01. That file was deleted the same day by [ADR 0024](0024-the-findings-ledger-is-retired-open-work-lives-in-github-issues.md); it is in git history.
 
 ## Context
 
@@ -37,9 +37,9 @@ The convention checklist lives in `CLAUDE.md` § "Key Conventions", completed to
 
 ## Consequences
 
-`docs/lane2-change-plan.md` is amended to point here, so the repository does not carry two contradictory rulings.
+`docs/lane2-change-plan.md` was amended to point here so the repository would not carry two contradictory rulings, and was then deleted outright by [ADR 0024](0024-the-findings-ledger-is-retired-open-work-lives-in-github-issues.md) along with the rest of the superseded planning documents.
 
-The D-numbers are retired as identifiers. `docs/review/findings.json` `decisions_ref` values were rewritten to ADR numbers so the repository carries one scheme; the redirect table in the `DECISIONS.md` stub covers historical review reports and released changelog entries, which are not rewritten.
+The D-numbers are retired as identifiers. `docs/review/findings.json` `decisions_ref` values were rewritten to ADR numbers so the repository would carry one scheme — 14 of them had to be repointed by topic, because they were already off by one under the old scheme and a literal substitution preserved that. The ledger was then retired entirely by [ADR 0024](0024-the-findings-ledger-is-retired-open-work-lives-in-github-issues.md). The redirect table in the `DECISIONS.md` stub covers released changelog entries and older issue bodies, which are not rewritten.
 
 `.github/workflows/claude-code-review.yml` no longer names a hardcoded decision range. It had drifted to "D001-D016" while the file held D021 — a document-as-checklist referenced by number goes stale on every addition, which is part of why the checklist now lives in `CLAUDE.md`.
 
