@@ -136,8 +136,9 @@ namespace PSProxmoxVE.Core.Tests.Services
         public async Task UploadOva_NoTimeoutGiven_UsesThirtyMinuteDefaultNotSessionTimeout()
         {
             using var cert = CreateSelfSignedServerCert();
-            var (listener, port) = StartSilentTlsServer(cert, TimeSpan.FromSeconds(10));
+            var (listener, port) = StartSilentTlsServer(cert, TimeSpan.FromSeconds(4));
             var tempFile = Path.GetTempFileName();
+            Task? uploadTask = null;
             try
             {
                 // Session default is deliberately shorter than the wait window below. If
@@ -146,7 +147,7 @@ namespace PSProxmoxVE.Core.Tests.Services
                 var session = NewSessionWithTimeout(port, TimeSpan.FromMilliseconds(300));
                 var service = new VmService();
 
-                var uploadTask = Task.Run(() => service.UploadOva(session, "pve1", "local", tempFile));
+                uploadTask = Task.Run(() => service.UploadOva(session, "pve1", "local", tempFile));
                 var completedFirst = await Task.WhenAny(uploadTask, Task.Delay(TimeSpan.FromSeconds(3)))
                     .ConfigureAwait(false);
 
@@ -155,6 +156,13 @@ namespace PSProxmoxVE.Core.Tests.Services
             finally
             {
                 listener.Stop();
+                // The upload still holds tempFile open until the server drops the connection;
+                // Windows refuses to delete an open file, so wait for the task to end first.
+                if (uploadTask != null)
+                {
+                    try { await uploadTask.ConfigureAwait(false); }
+                    catch (Exception) { }
+                }
                 File.Delete(tempFile);
             }
         }
@@ -163,14 +171,15 @@ namespace PSProxmoxVE.Core.Tests.Services
         public async Task UploadIso_NoTimeoutGiven_UsesThirtyMinuteDefaultNotSessionTimeout()
         {
             using var cert = CreateSelfSignedServerCert();
-            var (listener, port) = StartSilentTlsServer(cert, TimeSpan.FromSeconds(10));
+            var (listener, port) = StartSilentTlsServer(cert, TimeSpan.FromSeconds(4));
             var tempFile = Path.GetTempFileName();
+            Task? uploadTask = null;
             try
             {
                 var session = NewSessionWithTimeout(port, TimeSpan.FromMilliseconds(300));
                 var service = new StorageService();
 
-                var uploadTask = Task.Run(() => service.UploadIso(session, "pve1", "local", tempFile));
+                uploadTask = Task.Run(() => service.UploadIso(session, "pve1", "local", tempFile));
                 var completedFirst = await Task.WhenAny(uploadTask, Task.Delay(TimeSpan.FromSeconds(3)))
                     .ConfigureAwait(false);
 
@@ -179,6 +188,13 @@ namespace PSProxmoxVE.Core.Tests.Services
             finally
             {
                 listener.Stop();
+                // The upload still holds tempFile open until the server drops the connection;
+                // Windows refuses to delete an open file, so wait for the task to end first.
+                if (uploadTask != null)
+                {
+                    try { await uploadTask.ConfigureAwait(false); }
+                    catch (Exception) { }
+                }
                 File.Delete(tempFile);
             }
         }
