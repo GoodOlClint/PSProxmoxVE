@@ -217,7 +217,7 @@ namespace PSProxmoxVE.Core.Services
         /// <param name="session">The authenticated PVE session.</param>
         /// <param name="hostname">The hostname or IP of an existing cluster node.</param>
         /// <param name="fingerprint">The TLS certificate fingerprint of the cluster node.</param>
-        /// <param name="password">The root password for the cluster node (plain string; cmdlet layer handles SecureString conversion per D002).</param>
+        /// <param name="password">The root password for the cluster node (plain string; cmdlet layer handles SecureString conversion per ADR 0002).</param>
         /// <param name="links">Optional Corosync link addresses.</param>
         /// <param name="nodeid">Optional node ID for this node.</param>
         /// <param name="votes">Optional number of quorum votes.</param>

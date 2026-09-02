@@ -20,7 +20,7 @@ namespace PSProxmoxVE.Core.Utilities
         /// qmpstatus=paused for a suspended VM.
         /// Locked: the guest config carries a `lock:` property (backup, clone, migrate,
         /// snapshot). This is not the /var/lock/qemu-server flock, which PVE does not expose
-        /// through status/current or any other endpoint — see DECISIONS.md D015 and D020.
+        /// through status/current or any other endpoint — see docs/decisions/ ADR 0015 and 0020.
         /// </returns>
         public static (bool StatusMatched, bool Locked) Evaluate(string json, string expectedStatus)
         {

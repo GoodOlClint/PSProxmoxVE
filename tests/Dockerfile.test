@@ -39,7 +39,7 @@ RUN if [ "$(dpkg --print-architecture)" = "amd64" ]; then \
 # Install Pester and prepare module directory.
 # Pinned, not floored: this image is rebuilt on every CI run, so a version range
 # lets a new Pester major reach the gating lane with no commit to this repo.
-# Bump deliberately, the way D017 treats the nested PVE package set.
+# Bump deliberately, the way ADR 0017 treats the nested PVE package set.
 ARG PESTER_VERSION=6.1.0
 RUN pwsh -NoProfile -Command \
        "Set-PSRepository -Name PSGallery -InstallationPolicy Trusted; \

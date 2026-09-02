@@ -209,7 +209,7 @@ namespace PSProxmoxVE.Core.Tests.Models
             Assert.Equal(2, config!.Cores); // typed property still works
             Assert.True(config.AdditionalProperties.ContainsKey("hostpci0"));
             Assert.Equal("0000:01:00.0,pcie=1", config.AdditionalProperties["hostpci0"]);
-            // Value must be a native type (string), never a Newtonsoft JToken (D013).
+            // Value must be a native type (string), never a Newtonsoft JToken (ADR 0013).
             Assert.IsType<string>(config.AdditionalProperties["hostpci0"]);
             Assert.DoesNotContain("Newtonsoft", config.AdditionalProperties["hostpci0"]!.GetType().FullName);
         }

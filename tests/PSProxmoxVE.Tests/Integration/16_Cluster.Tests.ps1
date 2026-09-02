@@ -112,7 +112,7 @@ Describe 'Cluster Config & HA Lifecycle — Integration' -Tag 'Integration' {
             $result | Should -Not -BeNullOrEmpty
             $script:ClusterCreated = $true
 
-            # New-PveCluster -Wait returns only once the cluster is quorate (D014),
+            # New-PveCluster -Wait returns only once the cluster is quorate (ADR 0014),
             # which is what makes the join below safe without a sleep.
             $cluster = @(Get-PveClusterStatus -ErrorAction Stop) |
                 Where-Object { $_.Type -eq 'cluster' } | Select-Object -First 1
