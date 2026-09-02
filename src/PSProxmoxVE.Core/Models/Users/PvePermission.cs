@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace PSProxmoxVE.Core.Models.Users;
@@ -32,6 +33,16 @@ public class PvePermission
     /// </summary>
     [JsonProperty("ugid")]
     public string? UserId { get; set; }
+
+    /// <summary>
+    /// The privileges granted on <see cref="Path"/>, keyed by privilege name (e.g. "VM.Audit").
+    /// A key's presence means the privilege is granted; its value is whether that grant
+    /// propagates to sub-paths, per the PVE /access/permissions contract ("propagate boolean").
+    /// Populated only when this entry comes from the path-keyed /access/permissions response
+    /// with a privilege map for the path; null for entries from the flat /access/acl array,
+    /// or when PVE returned no privilege map for the path.
+    /// </summary>
+    public IReadOnlyDictionary<string, bool>? Privileges { get; set; }
 
     /// <inheritdoc />
     public override string ToString()

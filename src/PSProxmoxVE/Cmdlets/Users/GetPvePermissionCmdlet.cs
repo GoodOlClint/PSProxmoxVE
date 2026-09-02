@@ -8,7 +8,8 @@ namespace PSProxmoxVE.Cmdlets.Users
     /// <summary>
     /// <para type="synopsis">Lists ACL entries (permissions) in Proxmox VE.</para>
     /// <para type="description">
-    /// Returns Access Control List entries from the Proxmox VE access management system.
+    /// Returns Access Control List entries from the Proxmox VE access management system,
+    /// each carrying the privileges granted on its path in the Privileges property.
     /// Optionally filter by path or user/group ID.
     /// </para>
     /// </summary>
