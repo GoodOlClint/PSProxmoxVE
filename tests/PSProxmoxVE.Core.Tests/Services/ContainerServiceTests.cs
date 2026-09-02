@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
-using System.Reflection;
 using Moq;
 using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Client;
@@ -123,20 +122,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         // GetContainers multi-node aggregation: issue #142
         // ---------------------------------------------------------------------
 
-        /// <summary>
-        /// Points the private NodeService field a ContainerService constructs at a mock
-        /// client, so the "list all nodes" call the multi-node overload issues is reachable
-        /// without a real HTTP connection. ContainerService(client) only injects the client
-        /// used for the per-node lxc calls; NodeService is never constructor-injectable from
-        /// ContainerService, so this is the only offline path to the aggregation loop.
-        /// </summary>
-        private static void InjectNodeServiceClient(ContainerService service, IPveHttpClient client)
-        {
-            var field = typeof(ContainerService).GetField("_nodeService", BindingFlags.NonPublic | BindingFlags.Instance)
-                ?? throw new InvalidOperationException("ContainerService._nodeService field not found.");
-            field.SetValue(service, new NodeService(client));
-        }
-
         private static Mock<IPveHttpClient> SetupTwoNodeCluster()
         {
             var mockClient = new Mock<IPveHttpClient>();
@@ -158,7 +143,6 @@ namespace PSProxmoxVE.Core.Tests.Services
                 .ThrowsAsync(new PveApiException(HttpStatusCode.InternalServerError, "internal error", "nodes/pve2/lxc", "GET"));
 
             var service = new ContainerService(mockClient.Object);
-            InjectNodeServiceClient(service, mockClient.Object);
 
             var skipped = new List<string>();
             var containers = service.GetContainers(CreateSession(), onNodeSkipped: (node, ex) => skipped.Add(node));
@@ -180,7 +164,6 @@ namespace PSProxmoxVE.Core.Tests.Services
                 .ThrowsAsync(new PveApiException(HttpStatusCode.Forbidden, "permission denied", "nodes/pve2/lxc", "GET"));
 
             var service = new ContainerService(mockClient.Object);
-            InjectNodeServiceClient(service, mockClient.Object);
 
             var ex = Assert.Throws<PveApiException>(() => service.GetContainers(CreateSession()));
             Assert.Equal(HttpStatusCode.Forbidden, ex.StatusCode);
@@ -203,7 +186,6 @@ namespace PSProxmoxVE.Core.Tests.Services
                     "nodes/pve2/lxc", "GET", new HttpRequestException("connection refused")));
 
             var service = new ContainerService(mockClient.Object);
-            InjectNodeServiceClient(service, mockClient.Object);
 
             var skipped = new List<string>();
             var containers = service.GetContainers(CreateSession(), onNodeSkipped: (node, ex) => skipped.Add(node));
@@ -230,7 +212,6 @@ namespace PSProxmoxVE.Core.Tests.Services
                     "nodes/pve2/lxc", "GET"));
 
             var service = new ContainerService(mockClient.Object);
-            InjectNodeServiceClient(service, mockClient.Object);
 
             var skipped = new List<string>();
             var containers = service.GetContainers(CreateSession(), onNodeSkipped: (node, ex) => skipped.Add(node));

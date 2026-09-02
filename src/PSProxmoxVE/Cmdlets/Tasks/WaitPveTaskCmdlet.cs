@@ -45,7 +45,8 @@ namespace PSProxmoxVE.Cmdlets.Tasks
         public TimeSpan? Timeout { get; set; }
 
         /// <summary>
-        /// How frequently to poll the task status. Defaults to 2 seconds.
+        /// Fixed interval between status polls, minimum 1 second. When omitted, polling
+        /// starts at 1 second and backs off to a 10 second cap.
         /// Example: -PollInterval (New-TimeSpan -Seconds 5)
         /// </summary>
         [Parameter(Mandatory = false, HelpMessage = "How often to poll task status.")]

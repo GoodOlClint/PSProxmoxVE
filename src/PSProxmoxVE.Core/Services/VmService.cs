@@ -13,19 +13,21 @@ namespace PSProxmoxVE.Core.Services
     /// <summary>
     /// Service for Proxmox VE QEMU/KVM virtual machine API operations.
     /// </summary>
-    public class VmService
+    public class VmService : PveServiceBase
     {
-        private readonly IPveHttpClient? _injectedClient;
-        private readonly NodeService _nodeService = new NodeService();
+        private readonly NodeService _nodeService;
 
         /// <summary>Initializes a new instance that creates its own HTTP clients.</summary>
-        public VmService() { }
+        public VmService()
+        {
+            _nodeService = new NodeService();
+        }
 
         /// <summary>Initializes a new instance that uses the supplied HTTP client for all requests.</summary>
         /// <param name="client">The HTTP client to use. The caller owns its lifetime.</param>
-        public VmService(IPveHttpClient client)
+        public VmService(IPveHttpClient client) : base(client)
         {
-            _injectedClient = client ?? throw new ArgumentNullException(nameof(client));
+            _nodeService = new NodeService(client);
         }
 
         // -------------------------------------------------------------------------
@@ -90,17 +92,12 @@ namespace PSProxmoxVE.Core.Services
 
         private PveVm[] GetVmsOnNode(PveSession session, string node)
         {
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/qemu").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveVm[]>() ?? Array.Empty<PveVm>();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -135,8 +132,7 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
             if (vm == null) throw new ArgumentNullException(nameof(vm));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vm.VmId}/status/current")
                     .GetAwaiter().GetResult();
@@ -150,11 +146,7 @@ namespace PSProxmoxVE.Core.Services
                 vm.CpuCount = data["cpus"]?.ToObject<int?>() ?? vm.CpuCount;
                 vm.MaxMem = data["maxmem"]?.ToObject<long?>() ?? vm.MaxMem;
                 vm.MaxDisk = data["maxdisk"]?.ToObject<long?>() ?? vm.MaxDisk;
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -168,18 +160,13 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/config")
                     .GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveVmConfig>() ?? new PveVmConfig();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         // -------------------------------------------------------------------------
@@ -199,19 +186,14 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
             if (config == null) throw new ArgumentNullException(nameof(config));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 var formData = config.ToDictionary(
                     kvp => kvp.Key,
                     kvp => kvp.Value?.ToString() ?? string.Empty);
                 client.PutAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/config", formData)
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         // -------------------------------------------------------------------------
@@ -262,18 +244,13 @@ namespace PSProxmoxVE.Core.Services
                 [disk] = diskValue
             };
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 // POST (not PUT) because import-from triggers a background task
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/config", formData)
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         // -------------------------------------------------------------------------
@@ -292,8 +269,7 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
             if (config == null) throw new ArgumentNullException(nameof(config));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var formData = config.ToDictionary(
                     kvp => kvp.Key,
@@ -301,11 +277,7 @@ namespace PSProxmoxVE.Core.Services
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu", formData)
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>Starts a VM. Returns the task UPID.</summary>
@@ -336,17 +308,12 @@ namespace PSProxmoxVE.Core.Services
             if (timeoutSeconds.HasValue)
                 formData["timeout"] = timeoutSeconds.Value.ToString();
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/status/shutdown", formData)
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -372,17 +339,12 @@ namespace PSProxmoxVE.Core.Services
             if (timeoutSeconds.HasValue)
                 formData["timeout"] = timeoutSeconds.Value.ToString();
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/status/reboot", formData)
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>Resets a VM (hard reset). Returns the task UPID.</summary>
@@ -429,17 +391,12 @@ namespace PSProxmoxVE.Core.Services
                 queryParams.Add("skiplock=1");
             var queryString = "?" + string.Join("&", queryParams);
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.DeleteAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}{queryString}")
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -474,17 +431,12 @@ namespace PSProxmoxVE.Core.Services
             if (!string.IsNullOrEmpty(targetNode)) formData["target"] = targetNode!;
             if (!string.IsNullOrEmpty(storage)) formData["storage"] = storage!;
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/clone", formData)
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -512,17 +464,12 @@ namespace PSProxmoxVE.Core.Services
                 ["online"] = online ? "1" : "0"
             };
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/migrate", formData)
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -553,17 +500,12 @@ namespace PSProxmoxVE.Core.Services
                 ["size"] = size
             };
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.PutAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/resize", formData)
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         // -------------------------------------------------------------------------
@@ -575,17 +517,12 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/status/{action}")
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         private static PveTask ParseTask(string response, string node)
@@ -612,21 +549,19 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
-                client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/agent/ping").GetAwaiter().GetResult();
-                return true;
-            }
-            catch (PSProxmoxVE.Core.Exceptions.PveApiException)
-            {
-                // Treat API-level failures for this endpoint as "guest agent not responding".
-                return false;
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+                try
+                {
+                    client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/agent/ping").GetAwaiter().GetResult();
+                    return true;
+                }
+                catch (PSProxmoxVE.Core.Exceptions.PveApiException)
+                {
+                    // Treat API-level failures for this endpoint as "guest agent not responding".
+                    return false;
+                }
+            });
         }
 
         /// <summary>
@@ -637,19 +572,14 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/agent/network-get-interfaces")
                     .GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 var result = data?["result"];
                 return result?.ToObject<PveGuestNetworkInterface[]>() ?? Array.Empty<PveGuestNetworkInterface>();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -663,8 +593,7 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
             if (string.IsNullOrWhiteSpace(command)) throw new ArgumentNullException(nameof(command));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 // PVE's agent/exec "command" is an array: element 0 is the executable and
                 // each subsequent element is one argv entry. It is sent as repeated form
@@ -688,11 +617,7 @@ namespace PSProxmoxVE.Core.Services
                     .GetAwaiter().GetResult();
                 var pid = JObject.Parse(response)["data"]?["pid"]?.ToObject<int>() ?? 0;
                 return pid;
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -703,18 +628,13 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/agent/exec-status?pid={pid}")
                     .GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return JsonHelper.ToDictionary(data as JObject);
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         // -------------------------------------------------------------------------
@@ -740,17 +660,12 @@ namespace PSProxmoxVE.Core.Services
             if (!string.IsNullOrEmpty(format))
                 formData["format"] = format!;
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/move_disk", formData)
                     .GetAwaiter().GetResult();
                 return ParseTask(response, node);
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -769,16 +684,11 @@ namespace PSProxmoxVE.Core.Services
             if (force)
                 formData["force"] = "1";
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.PutAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/unlink", formData)
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         // -------------------------------------------------------------------------
@@ -793,19 +703,14 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/agent/get-osinfo")
                     .GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 var result = data?["result"];
                 return result?.ToObject<PveGuestOsInfo>();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -816,19 +721,14 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/agent/get-fsinfo")
                     .GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 var result = data?["result"];
                 return result?.ToObject<PveGuestFsInfo[]>() ?? Array.Empty<PveGuestFsInfo>();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -840,18 +740,13 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
             if (string.IsNullOrWhiteSpace(file)) throw new ArgumentNullException(nameof(file));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/agent/file-read?file={Uri.EscapeDataString(file)}")
                     .GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?["content"]?.ToString() ?? string.Empty;
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -869,16 +764,11 @@ namespace PSProxmoxVE.Core.Services
                 ["content"] = content
             };
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/agent/file-write", formData)
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -898,16 +788,11 @@ namespace PSProxmoxVE.Core.Services
             if (crypted)
                 formData["crypted"] = "1";
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/agent/set-user-password", formData)
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -918,16 +803,11 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/agent/fstrim")
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         // -------------------------------------------------------------------------
@@ -967,8 +847,7 @@ namespace PSProxmoxVE.Core.Services
                 ["content"] = "import"
             };
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session, timeout ?? TimeSpan.FromMinutes(30));
-            try
+            return Invoke(session, timeout ?? TimeSpan.FromMinutes(30), client =>
             {
                 var response = client.UploadFileAsync(
                         $"nodes/{Uri.EscapeDataString(node)}/storage/{Uri.EscapeDataString(storage)}/upload",
@@ -980,11 +859,7 @@ namespace PSProxmoxVE.Core.Services
                 var root = JObject.Parse(response);
                 var upid = root["data"]?.ToString() ?? string.Empty;
                 return new PveTask { Upid = upid, Node = node, Status = "running" };
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
     }
 }

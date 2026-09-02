@@ -336,6 +336,129 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Equal(new List<string?> { "running", "running", "stopped" }, seenStatuses);
         }
 
+        private const string RunningJson = @"{ ""data"": { ""status"": ""running"", ""user"": ""root@pam"" } }";
+        private const string StoppedJson = @"{ ""data"": { ""status"": ""stopped"", ""exitstatus"": ""OK"", ""user"": ""root@pam"" } }";
+
+        private static (TaskService service, Mock<IPveHttpClient> client, List<TimeSpan> delays) ServiceWithRecordedDelays(int runningPolls)
+        {
+            var mockClient = new Mock<IPveHttpClient>();
+            var sequence = mockClient.SetupSequence(c => c.GetAsync(It.IsAny<string>()));
+            for (var i = 0; i < runningPolls; i++)
+                sequence = sequence.ReturnsAsync(RunningJson);
+            sequence.ReturnsAsync(StoppedJson);
+
+            var delays = new List<TimeSpan>();
+            var service = new TaskService(mockClient.Object, d => { delays.Add(d); return Task.CompletedTask; });
+            return (service, mockClient, delays);
+        }
+
+        [Fact]
+        public void WaitForTask_WithNoPollInterval_BacksOffFromOneSecondToATenSecondCap()
+        {
+            var (service, mockClient, delays) = ServiceWithRecordedDelays(runningPolls: 12);
+
+            var task = service.WaitForTask(CreateSession(), TestNode, TestUpid, timeout: TimeSpan.FromMinutes(5));
+
+            Assert.True(task.IsSuccessful);
+            mockClient.Verify(c => c.GetAsync(It.IsAny<string>()), Times.Exactly(13));
+            Assert.Equal(12, delays.Count);
+            Assert.Equal(TimeSpan.FromSeconds(1), delays[0]);
+            Assert.Equal(TimeSpan.FromSeconds(2), delays[1]);
+            for (var i = 1; i < delays.Count; i++)
+                Assert.True(delays[i] >= delays[i - 1], $"delay {i} ({delays[i]}) shrank from {delays[i - 1]}");
+            Assert.All(delays, d => Assert.True(d <= TimeSpan.FromSeconds(10), $"delay {d} exceeds the cap"));
+            Assert.Equal(TimeSpan.FromSeconds(10), delays[delays.Count - 1]);
+            Assert.Contains(delays, d => d > TimeSpan.FromSeconds(1) && d < TimeSpan.FromSeconds(10));
+        }
+
+        [Fact]
+        public void WaitForTask_NeverSleepsPastTheDeadline()
+        {
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient.Setup(c => c.GetAsync(It.IsAny<string>())).ReturnsAsync(RunningJson);
+            var delays = new List<TimeSpan>();
+            var service = new TaskService(mockClient.Object, d => { delays.Add(d); return Task.CompletedTask; });
+            var timeout = TimeSpan.FromMilliseconds(300);
+
+            Assert.Throws<PveTaskTimeoutException>(() =>
+                service.WaitForTask(CreateSession(), TestNode, TestUpid, timeout: timeout));
+
+            Assert.NotEmpty(delays);
+            Assert.All(delays, d => Assert.True(d <= timeout, $"slept {d} against a {timeout} timeout"));
+        }
+
+        [Fact]
+        public void WaitForTask_WithAnExplicitPollInterval_EveryDelayEqualsIt()
+        {
+            var (service, mockClient, delays) = ServiceWithRecordedDelays(runningPolls: 5);
+
+            service.WaitForTask(CreateSession(), TestNode, TestUpid,
+                timeout: TimeSpan.FromMinutes(5), pollInterval: TimeSpan.FromSeconds(3));
+
+            mockClient.Verify(c => c.GetAsync(It.IsAny<string>()), Times.Exactly(6));
+            Assert.Equal(5, delays.Count);
+            Assert.All(delays, d => Assert.Equal(TimeSpan.FromSeconds(3), d));
+        }
+
+        [Fact]
+        public void WaitForTask_WithAnExplicitPollIntervalBelowTheMinimum_EveryDelayIsOneSecond()
+        {
+            var (service, _, delays) = ServiceWithRecordedDelays(runningPolls: 3);
+
+            service.WaitForTask(CreateSession(), TestNode, TestUpid,
+                timeout: TimeSpan.FromMinutes(5), pollInterval: TimeSpan.FromMilliseconds(50));
+
+            Assert.Equal(3, delays.Count);
+            Assert.All(delays, d => Assert.Equal(TimeSpan.FromSeconds(1), d));
+        }
+
+        [Fact]
+        public void WaitForTask_PollsTheStatusEndpointOncePerPollThroughTheInjectedClient()
+        {
+            var (service, mockClient, _) = ServiceWithRecordedDelays(runningPolls: 2);
+
+            service.WaitForTask(CreateSession(), TestNode, TestUpid, timeout: TimeSpan.FromMinutes(5));
+
+            var expected = $"nodes/{TestNode}/tasks/{Uri.EscapeDataString(TestUpid)}/status";
+            mockClient.Verify(c => c.GetAsync(expected), Times.Exactly(3));
+            mockClient.Verify(c => c.Dispose(), Times.Never);
+        }
+
+        private sealed class ClientCountingTaskService : TaskService
+        {
+            public readonly List<Mock<IPveHttpClient>> Built = new List<Mock<IPveHttpClient>>();
+            private readonly int _runningPolls;
+
+            public ClientCountingTaskService(int runningPolls) : base(_ => Task.CompletedTask)
+            {
+                _runningPolls = runningPolls;
+            }
+
+            internal override IPveHttpClient CreateClient(PveSession session, TimeSpan? timeoutOverride)
+            {
+                var mock = new Mock<IPveHttpClient>();
+                var sequence = mock.SetupSequence(c => c.GetAsync(It.IsAny<string>()));
+                for (var i = 0; i < _runningPolls; i++)
+                    sequence = sequence.ReturnsAsync(RunningJson);
+                sequence.ReturnsAsync(StoppedJson);
+                Built.Add(mock);
+                return mock.Object;
+            }
+        }
+
+        [Fact]
+        public void WaitForTask_WithNoInjectedClient_OpensOneClientForTheWholeWaitAndDisposesItAfter()
+        {
+            var service = new ClientCountingTaskService(runningPolls: 4);
+
+            var task = service.WaitForTask(CreateSession(), TestNode, TestUpid, timeout: TimeSpan.FromMinutes(5));
+
+            Assert.True(task.IsSuccessful);
+            var client = Assert.Single(service.Built);
+            client.Verify(c => c.GetAsync(It.IsAny<string>()), Times.Exactly(5));
+            client.Verify(c => c.Dispose(), Times.Once);
+        }
+
         [Fact]
         public void StopTask_CallsDeleteAsyncWithCorrectPath()
         {

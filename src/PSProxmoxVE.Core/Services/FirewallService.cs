@@ -11,19 +11,14 @@ namespace PSProxmoxVE.Core.Services
     /// Service for Proxmox VE Firewall API operations.
     /// Supports firewall management at cluster, node, VM, and container levels.
     /// </summary>
-    public class FirewallService
+    public class FirewallService : PveServiceBase
     {
-        private readonly IPveHttpClient? _injectedClient;
-
         /// <summary>Initializes a new instance that creates its own HTTP clients.</summary>
         public FirewallService() { }
 
         /// <summary>Initializes a new instance that uses the supplied HTTP client for all requests.</summary>
         /// <param name="client">The HTTP client to use. The caller owns its lifetime.</param>
-        public FirewallService(IPveHttpClient client)
-        {
-            _injectedClient = client ?? throw new ArgumentNullException(nameof(client));
-        }
+        public FirewallService(IPveHttpClient client) : base(client) { }
 
         // -------------------------------------------------------------------------
         // Rules
@@ -37,17 +32,12 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             var basePath = BuildBasePath(level, node, vmid);
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync($"{basePath}/rules").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveFirewallRule[]>() ?? Array.Empty<PveFirewallRule>();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -60,15 +50,10 @@ namespace PSProxmoxVE.Core.Services
             if (config == null) throw new ArgumentNullException(nameof(config));
             var basePath = BuildBasePath(level, node, vmid);
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.PostAsync($"{basePath}/rules", config).GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -81,15 +66,10 @@ namespace PSProxmoxVE.Core.Services
             if (config == null) throw new ArgumentNullException(nameof(config));
             var basePath = BuildBasePath(level, node, vmid);
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.PutAsync($"{basePath}/rules/{pos}", config).GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -101,15 +81,10 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             var basePath = BuildBasePath(level, node, vmid);
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.DeleteAsync($"{basePath}/rules/{pos}").GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         // -------------------------------------------------------------------------
@@ -123,17 +98,12 @@ namespace PSProxmoxVE.Core.Services
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync("cluster/firewall/groups").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveFirewallGroup[]>() ?? Array.Empty<PveFirewallGroup>();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -148,15 +118,10 @@ namespace PSProxmoxVE.Core.Services
             if (!string.IsNullOrEmpty(comment))
                 formData["comment"] = comment!;
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.PostAsync("cluster/firewall/groups", formData).GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -167,16 +132,11 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentNullException(nameof(name));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.DeleteAsync($"cluster/firewall/groups/{Uri.EscapeDataString(name)}")
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -187,18 +147,13 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(group)) throw new ArgumentNullException(nameof(group));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync($"cluster/firewall/groups/{Uri.EscapeDataString(group)}")
                     .GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveFirewallRule[]>() ?? Array.Empty<PveFirewallRule>();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -210,16 +165,11 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(group)) throw new ArgumentNullException(nameof(group));
             if (config == null) throw new ArgumentNullException(nameof(config));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.PostAsync($"cluster/firewall/groups/{Uri.EscapeDataString(group)}", config)
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -231,16 +181,11 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(group)) throw new ArgumentNullException(nameof(group));
             if (config == null) throw new ArgumentNullException(nameof(config));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.PutAsync($"cluster/firewall/groups/{Uri.EscapeDataString(group)}/{pos}", config)
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -251,16 +196,11 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(group)) throw new ArgumentNullException(nameof(group));
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.DeleteAsync($"cluster/firewall/groups/{Uri.EscapeDataString(group)}/{pos}")
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         // -------------------------------------------------------------------------
@@ -275,17 +215,12 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             var basePath = BuildBasePath(level, node, vmid);
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync($"{basePath}/aliases").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveFirewallAlias[]>() ?? Array.Empty<PveFirewallAlias>();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -307,15 +242,10 @@ namespace PSProxmoxVE.Core.Services
             if (!string.IsNullOrEmpty(comment))
                 formData["comment"] = comment!;
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.PostAsync($"{basePath}/aliases", formData).GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -334,16 +264,11 @@ namespace PSProxmoxVE.Core.Services
             if (!string.IsNullOrEmpty(comment))
                 formData["comment"] = comment!;
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.PutAsync($"{basePath}/aliases/{Uri.EscapeDataString(name)}", formData)
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -356,16 +281,11 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentNullException(nameof(name));
             var basePath = BuildBasePath(level, node, vmid);
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.DeleteAsync($"{basePath}/aliases/{Uri.EscapeDataString(name)}")
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         // -------------------------------------------------------------------------
@@ -380,17 +300,12 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             var basePath = BuildBasePath(level, node, vmid);
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync($"{basePath}/ipset").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveFirewallIpSet[]>() ?? Array.Empty<PveFirewallIpSet>();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -407,15 +322,10 @@ namespace PSProxmoxVE.Core.Services
             if (!string.IsNullOrEmpty(comment))
                 formData["comment"] = comment!;
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.PostAsync($"{basePath}/ipset", formData).GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -428,16 +338,11 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentNullException(nameof(name));
             var basePath = BuildBasePath(level, node, vmid);
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.DeleteAsync($"{basePath}/ipset/{Uri.EscapeDataString(name)}")
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         // -------------------------------------------------------------------------
@@ -454,18 +359,13 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentNullException(nameof(name));
             var basePath = BuildBasePath(level, node, vmid);
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync($"{basePath}/ipset/{Uri.EscapeDataString(name)}")
                     .GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveFirewallIpSetEntry[]>() ?? Array.Empty<PveFirewallIpSetEntry>();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -485,16 +385,11 @@ namespace PSProxmoxVE.Core.Services
             if (!string.IsNullOrEmpty(comment))
                 formData["comment"] = comment!;
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.PostAsync($"{basePath}/ipset/{Uri.EscapeDataString(name)}", formData)
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -514,17 +409,12 @@ namespace PSProxmoxVE.Core.Services
             if (!string.IsNullOrEmpty(comment))
                 formData["comment"] = comment!;
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.PutAsync(
                     $"{basePath}/ipset/{Uri.EscapeDataString(name)}/{Uri.EscapeDataString(cidr)}",
                     formData).GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -538,17 +428,12 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(cidr)) throw new ArgumentNullException(nameof(cidr));
             var basePath = BuildBasePath(level, node, vmid);
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.DeleteAsync(
                     $"{basePath}/ipset/{Uri.EscapeDataString(name)}/{Uri.EscapeDataString(cidr)}")
                     .GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         // -------------------------------------------------------------------------
@@ -564,17 +449,12 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             var basePath = BuildBasePath(level, node, vmid);
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync($"{basePath}/options").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveFirewallOptions>() ?? new PveFirewallOptions();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         /// <summary>
@@ -587,15 +467,10 @@ namespace PSProxmoxVE.Core.Services
             if (config == null) throw new ArgumentNullException(nameof(config));
             var basePath = BuildBasePath(level, node, vmid);
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            Invoke(session, client =>
             {
                 client.PutAsync($"{basePath}/options", config).GetAwaiter().GetResult();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         // -------------------------------------------------------------------------
@@ -615,17 +490,12 @@ namespace PSProxmoxVE.Core.Services
             if (!string.IsNullOrEmpty(type))
                 resource += $"?type={Uri.EscapeDataString(type!)}";
 
-            IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);
-            try
+            return Invoke(session, client =>
             {
                 var response = client.GetAsync(resource).GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
                 return data?.ToObject<PveFirewallRef[]>() ?? Array.Empty<PveFirewallRef>();
-            }
-            finally
-            {
-                if (_injectedClient == null) client.Dispose();
-            }
+            });
         }
 
         // -------------------------------------------------------------------------
