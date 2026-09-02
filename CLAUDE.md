@@ -21,8 +21,7 @@ Protection on `main`, as configured 2026-09-02:
   automated review re-runs on `synchronize`
 - **review from Code Owners required**
 - "require branches to be up to date before merging" is **off** (operator, 2026-09-02). A merge to
-  `main` does not invalidate sibling PRs, so one sweep merges everything that is green. It was on
-  during wave 1 of the 2026-09 remediation and cost roughly 20 branch-update cycles.
+  `main` does not invalidate sibling PRs, so one sweep merges everything that is green.
 
 `CODEOWNERS` is deliberately narrow. It names only the paths that govern review or publishing —
 workflows, `.claude/`, `.mcp.json`, any `CLAUDE.md`/`AGENTS.md`, `DECISIONS.md`,
