@@ -247,6 +247,20 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
+        public void RemoveStorage_EscapesPathTraversalInName()
+        {
+            // Arrange
+            _mockClient.Setup(c => c.DeleteAsync("storage/..%2Faccess%2Fusers%2Fx"))
+                .ReturnsAsync(@"{""data"":null}");
+
+            // Act
+            _service.RemoveStorage(_session, "../access/users/x");
+
+            // Assert
+            _mockClient.Verify(c => c.DeleteAsync("storage/..%2Faccess%2Fusers%2Fx"), Times.Once);
+        }
+
+        [Fact]
         public void RemoveStorage_NullSession_ThrowsArgumentNullException()
         {
             Assert.Throws<ArgumentNullException>(() => _service.RemoveStorage(null!, "local"));
