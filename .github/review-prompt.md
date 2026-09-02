@@ -48,8 +48,10 @@ PR's checkout.
    necessarily a value PVE acts on; where a PR claims server behaviour, ask
    whether it was observed, documented, or inferred. Documented means the PR
    cites a commit-anchored permalink into https://github.com/GoodOlClint/Proxmox_API
-   (`.../blob/<sha>/pve/...`, never a branch reference) to the endpoint's JSON,
-   or to the CHANGELOG entry for return-field history. Fetch it with
+   (`.../blob/<sha>/pve/...`, never a branch reference) to the OpenAPI spec file
+   for the PVE version (`pve/openapi/pve-openapi.pve<N>.json`, one file per
+   version; a `#L` range points at the endpoint), or to the `pve/CHANGELOG.md`
+   entry for return-field history. Fetch it with
 
        gh api -H "Accept: application/vnd.github.raw+json" \
          "repos/GoodOlClint/Proxmox_API/contents/<path>?ref=<sha>"
