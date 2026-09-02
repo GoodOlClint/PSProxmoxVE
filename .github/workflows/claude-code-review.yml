@@ -256,6 +256,33 @@ jobs:
             exit 1
           fi
 
+      # A deferral is a COMMENTED verdict, which sends no notification and sits
+      # unseen. Requesting the operator's review puts it in their queue and
+      # sends the email. CHANGES_REQUESTED is the author's to act on, not the
+      # operator's, so it is left alone.
+      - name: Request operator review on a deferred verdict
+        if: always() && steps.claude-review.outputs.execution_file != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          OPERATOR: ${{ github.repository_owner }}
+        run: |
+          verdict=$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/reviews" \
+            --jq '[.[] | select(.user.login == "claude[bot]") |
+                   select(.commit_id == env.HEAD_SHA) |
+                   select(.state == "APPROVED" or
+                          .state == "CHANGES_REQUESTED" or
+                          ((.body // "") | length > 0))] | last | .state // ""')
+          echo "Verdict at $HEAD_SHA: ${verdict:-none}"
+          if [ "$verdict" != "COMMENTED" ]; then
+            exit 0
+          fi
+          gh api -X POST "repos/$REPO/pulls/$PR_NUMBER/requested_reviewers" \
+            -f "reviewers[]=$OPERATOR" >/dev/null
+          echo "::notice title=Operator review requested::The automated reviewer deferred this PR to the operator. A review request has been sent to @$OPERATOR."
+
   # A skipped job reports its required check as PASSING, so without this a fork
   # PR would go green with no review and no trace of why. This job leaves that
   # trace in the run summary.
