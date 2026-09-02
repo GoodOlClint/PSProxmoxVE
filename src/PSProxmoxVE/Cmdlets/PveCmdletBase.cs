@@ -144,9 +144,16 @@ namespace PSProxmoxVE.Cmdlets
                     if (snapshot.StatusMatched && !snapshot.Locked)
                         return task;
                 }
-                catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+                catch (PSProxmoxVE.Core.Exceptions.PveApiException ex) when (
+                    ex.StatusCode != System.Net.HttpStatusCode.Unauthorized
+                    && ex.StatusCode != System.Net.HttpStatusCode.Forbidden
+                    && ex.StatusCode != System.Net.HttpStatusCode.NotFound)
                 {
-                    // Ignore transient errors during polling
+                    WriteVerbose($"Status poll failed, retrying: {ex.Message}");
+                }
+                catch (System.Net.Http.HttpRequestException ex)
+                {
+                    WriteVerbose($"Status poll failed, retrying: {ex.Message}");
                 }
 
                 System.Threading.Thread.Sleep(2000);
