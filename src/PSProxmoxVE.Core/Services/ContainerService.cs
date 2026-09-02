@@ -34,7 +34,13 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Returns containers. If <paramref name="node"/> is null, queries every cluster node.
         /// </summary>
-        public PveContainer[] GetContainers(PveSession session, string? node = null)
+        /// <param name="onNodeSkipped">
+        /// Optional callback invoked with the node name and the exception when a node is
+        /// skipped because it is unreachable (connectivity failure or a 5xx from that node).
+        /// A 401/403/404 or any other non-5xx <see cref="PSProxmoxVE.Core.Exceptions.PveApiException"/>
+        /// propagates instead of being swallowed.
+        /// </param>
+        public PveContainer[] GetContainers(PveSession session, string? node = null, Action<string, Exception>? onNodeSkipped = null)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
 
@@ -52,13 +58,30 @@ namespace PSProxmoxVE.Core.Services
                         ct.Node ??= n.Name;
                     all.AddRange(containers);
                 }
-                catch (Exception ex) when (ex is PSProxmoxVE.Core.Exceptions.PveApiException or System.Net.Http.HttpRequestException)
+                catch (Exception ex) when (IsNodeUnreachable(ex))
                 {
-                    // Skip offline/inaccessible nodes
+                    onNodeSkipped?.Invoke(n.Name, ex);
                 }
             }
             return all.ToArray();
         }
+
+        /// <summary>
+        /// True for a connectivity failure or a 5xx PVE API response — the cases where the
+        /// node itself is unreachable rather than the request being rejected. A 401/403/404
+        /// (or any other non-5xx status) means the request was understood and refused, which
+        /// is not something a per-node listing loop should hide.
+        /// </summary>
+        private static bool IsNodeUnreachable(Exception ex) => ex switch
+        {
+            System.Net.Http.HttpRequestException => true,
+            // PveHttpClient wraps a connection failure as 503 and a client-side timeout as
+            // 408 (Client/PveHttpClient.cs SendOnceAsync) — both mean the node did not answer,
+            // not that it rejected the request.
+            PSProxmoxVE.Core.Exceptions.PveApiException apiEx =>
+                apiEx.StatusCode == System.Net.HttpStatusCode.RequestTimeout || (int)apiEx.StatusCode >= 500,
+            _ => false
+        };
 
         private PveContainer[] GetContainersOnNode(PveSession session, string node)
         {
