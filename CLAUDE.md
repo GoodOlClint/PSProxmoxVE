@@ -20,12 +20,23 @@ Protection on `main`, as configured 2026-09-02:
 - stale reviews dismissed on push — a new commit invalidates the existing approval, and the
   automated review re-runs on `synchronize`
 - **review from Code Owners required**
+- "require branches to be up to date before merging" is **off** (operator, 2026-09-02). A merge to
+  `main` does not invalidate sibling PRs, so one sweep merges everything that is green. It was on
+  during wave 1 of the 2026-09 remediation and cost roughly 20 branch-update cycles.
 
 `CODEOWNERS` is deliberately narrow. It names only the paths that govern review or publishing —
 workflows, `.claude/`, `.mcp.json`, any `CLAUDE.md`/`AGENTS.md`, `DECISIONS.md`,
 `docs/decisions/`, the test fixtures, the module manifest and `CHANGELOG.md`. A PR touching any
 of those needs the operator's approval and cannot be merged on an automated one. Everything else
 has no code owner, so the automated review still merges it.
+
+**Changelog entries are batched, not per PR.** Because `CHANGELOG.md` is code-owned, a fix PR does
+not edit it; that would put an otherwise automatable PR onto the operator's approval path for one
+line. Instead the PR body carries the entry under a `## Changelog` heading (past tense,
+user-facing, names the cmdlet, ends with the issue number), and one operator-approved PR per
+batch lifts every merged entry into `[Unreleased]` (for example #168, #183). A reviewer should
+read a missing `CHANGELOG.md` diff on a fix PR as this convention, not as a gap. Release PRs,
+which cut `[Unreleased]` into a version, are operator PRs regardless.
 
 Admin bypass is **available** to the operator, deliberately. GitHub does not let an author
 approve their own pull request, so without it an operator-authored change to a governance path
