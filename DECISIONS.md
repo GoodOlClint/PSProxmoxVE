@@ -8,7 +8,7 @@ The convention checklist — the rules to follow when writing a cmdlet — is `C
 
 ## D-number redirects
 
-The old `DNNN` identifiers are retired. They appear in released `CHANGELOG.md` entries, in `docs/review/REVIEW_REPORT.md`, and in GitHub issues written before 2026-09-02, none of which are rewritten. This table maps them.
+The old `DNNN` identifiers are retired. They appear in released `CHANGELOG.md` entries and in GitHub issues written before 2026-09-02, neither of which is rewritten. This table maps them.
 
 | Old | ADR |
 |---|---|

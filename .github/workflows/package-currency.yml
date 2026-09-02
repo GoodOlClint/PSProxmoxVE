@@ -1,6 +1,6 @@
 name: PVE Package Currency
 
-# Lane 2 of the two-lane CI split (see docs/lane2-change-plan.md).
+# Lane 2 of the two-lane CI split (see docs/decisions/0017-ci-runs-two-lanes-a-pinned-gating-lane-and-a-report-only-currency-lane.md).
 #
 # Lane 1 (integration-tests.yml) pins the nested nodes to what the ISO ships
 # and never upgrades — that pin is what makes it a stable merge gate.

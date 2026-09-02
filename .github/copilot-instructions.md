@@ -79,5 +79,4 @@ pve force-cleanup
 Before writing new code, read these files to understand established patterns and open issues:
 
 - [`docs/decisions/`](../docs/decisions/) — architectural decision records, one per file: what was chosen, what was rejected, and why. The rules themselves are the "Key Conventions" list in [`CLAUDE.md`](../CLAUDE.md).
-- [`docs/review/findings.json`](../docs/review/findings.json) — stable findings database (IDs F001… are permanent; resolved findings are marked, never deleted).
-- [`docs/review/REVIEW_REPORT.md`](../docs/review/REVIEW_REPORT.md) — latest full review report.
+- The repository's open GitHub issues — all outstanding work is tracked there.

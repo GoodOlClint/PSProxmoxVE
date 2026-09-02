@@ -185,23 +185,23 @@ headroom guard.
 This list is the checklist. `docs/decisions/` carries the rationale behind each rule, and is
 where a decision goes when one is made — see [ADR 0023](docs/decisions/0023-decisions-live-in-docs-decisions-in-house-adr-format.md).
 
-## Review System
+## Decisions and open work
 
-This repo uses a structured review system to track findings and prevent regressions.
-
-### Key files
-- `docs/review/findings.json` — stable findings database. IDs are permanent (F001, F002...).
-  Never renumber. Read this before any coding session to understand open issues.
-- `docs/review/REVIEW_REPORT.md` — latest full review report (scan-9, 2026-03-26, F001–F085)
-- `docs/decisions/` — architectural decision records, one decision per file, in house ADR
+- **`docs/decisions/`** — architectural decision records, one decision per file, in house ADR
   format. Each records what was chosen, what was rejected and why. `DECISIONS.md` is a stub
   with a D-number redirect table for references written before 2026-09-02.
+- **GitHub issues** — all open work. There is no findings file; the ledger that used to live
+  in `docs/review/` was retired on 2026-09-02, see
+  [ADR 0024](docs/decisions/0024-the-findings-ledger-is-retired-open-work-lives-in-github-issues.md).
+- **`CLAUDE.md` § "Key Conventions"** — the rules themselves.
+
+A planning document that needs to be public is an issue, not a file in `docs/`.
 
 ### Before starting a coding session
 1. Read the "Key Conventions" list above — it is the complete set of rules for new code
 2. Read the ADRs in `docs/decisions/` covering the area you're working in, for the reasoning
    behind those rules and for the alternatives already rejected
-3. Check `docs/review/findings.json` for open findings relevant to that area
+3. Check the open issues for the area you're working in
 
 ### Recording a decision
 Generate the file — do not hand-write the skeleton:
@@ -212,11 +212,6 @@ Generate the file — do not hand-write the skeleton:
 
 One decision per file. A decision that supersedes an earlier ADR links to it and edits that
 ADR's **Status** line in the same commit.
-
-### Finding ID stability
-Finding IDs (F001, F002...) are permanent. A resolved finding is never deleted from
-findings.json — it is marked `resolved` with evidence of the fix. If a finding reappears,
-it is marked `regressed` and retains its original ID.
 
 ## Releasing to PSGallery
 
