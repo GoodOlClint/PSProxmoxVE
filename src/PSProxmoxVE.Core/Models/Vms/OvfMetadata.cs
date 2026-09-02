@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml;
 
 namespace PSProxmoxVE.Core.Models.Vms
@@ -61,6 +62,11 @@ namespace PSProxmoxVE.Core.Models.Vms
         private const string RasdNs = "http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_ResourceAllocationSettingData";
         private const string VssdNs = "http://schemas.dmtf.org/wbem/wscim/1/cim-schema/2/CIM_VirtualSystemSettingData";
 
+        // ovf:href is used as a path segment in a PVE property string (import-from=storage:import/ova/href);
+        // PVE property strings are comma-separated, so ',' and any path separator must be rejected.
+        // \A/\z (not ^/$) so a trailing newline cannot sneak past the anchor under .NET's default regex options.
+        private static readonly Regex ValidHrefPattern = new Regex(@"\A[A-Za-z0-9._-]+\z", RegexOptions.Compiled);
+
         /// <summary>
         /// Parses an OVA file (TAR archive) and extracts OVF metadata.
         /// </summary>
@@ -106,10 +112,19 @@ namespace PSProxmoxVE.Core.Models.Vms
         /// <summary>
         /// Parses OVF XML and extracts VM metadata.
         /// </summary>
-        private static OvfMetadata ParseOvfXml(string xml)
+        internal static OvfMetadata ParseOvfXml(string xml)
         {
             var doc = new XmlDocument();
-            doc.LoadXml(xml);
+            var readerSettings = new XmlReaderSettings
+            {
+                DtdProcessing = DtdProcessing.Prohibit,
+                XmlResolver = null
+            };
+            using (var stringReader = new StringReader(xml))
+            using (var xmlReader = XmlReader.Create(stringReader, readerSettings))
+            {
+                doc.Load(xmlReader);
+            }
 
             var nsm = new XmlNamespaceManager(doc.NameTable);
             nsm.AddNamespace("ovf", OvfNs);
@@ -158,6 +173,8 @@ namespace PSProxmoxVE.Core.Models.Vms
                     var href = fileNode.Attributes?["ovf:href"]?.Value;
                     if (id != null && href != null)
                     {
+                        if (!ValidHrefPattern.IsMatch(href) || href == "." || href == "..")
+                            throw new InvalidDataException($"OVF descriptor references a disallowed file name: '{href}'.");
                         fileRefs[id] = href;
                     }
                 }
@@ -209,9 +226,9 @@ namespace PSProxmoxVE.Core.Models.Vms
                             }
                             break;
 
-                        case 6:  // Parallel SCSI HBA (sometimes used as SATA controller)
                         case 5:  // IDE Controller
-                        case 20: // SCSI/SAS controller (storage)
+                        case 6:  // Parallel SCSI HBA
+                        case 20: // Other storage device (VMware's SATA AHCI controller)
                             // Controllers themselves don't produce disk entries; skip.
                             break;
 
@@ -296,8 +313,8 @@ namespace PSProxmoxVE.Core.Models.Vms
                     switch (rt)
                     {
                         case 5:  return "ide";
-                        case 6:  return "sata";
-                        case 20: return "scsi";
+                        case 6:  return "scsi";
+                        case 20: return "sata";
                     }
                 }
                 break;
