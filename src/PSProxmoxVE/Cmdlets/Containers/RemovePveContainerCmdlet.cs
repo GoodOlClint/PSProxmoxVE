@@ -42,10 +42,10 @@ namespace PSProxmoxVE.Cmdlets.Containers
 
         /// <summary>
         /// <para type="description">
-        /// When specified, bypasses locks and forces removal even if a lock is set on the container.
+        /// When specified, sends skiplock=1 to PVE, which bypasses locks. PVE honours this for root@pam only.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = false, HelpMessage = "Force the operation without additional checks.")]
+        [Parameter(Mandatory = false, HelpMessage = "Bypass locks (root@pam only); sends skiplock=1 to PVE.")]
         public SwitchParameter Force { get; set; }
 
         /// <summary>
@@ -63,7 +63,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
             var containerService = new ContainerService();
 
             WriteVerbose($"Removing container {VmId} from node '{Node}'...");
-            var task = containerService.RemoveContainer(session, Node, VmId, Purge.IsPresent);
+            var task = containerService.RemoveContainer(session, Node, VmId, Purge.IsPresent, Force.IsPresent);
 
             if (Wait.IsPresent)
             {
