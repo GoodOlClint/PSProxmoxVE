@@ -56,7 +56,7 @@ namespace PSProxmoxVE.Core.Tests.Services
                 "powershell.exe", new[] { "-NoProfile", "-Command", "echo hi" });
 
             Assert.NotNull(captured);
-            // Args are argv, not STDIN — "input-data" must never be emitted.
+            // Args are argv, not STDIN - "input-data" must never be emitted.
             Assert.DoesNotContain(captured!, kvp => kvp.Key == "input-data");
         }
 

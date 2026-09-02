@@ -8,7 +8,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
     /// <para type="synopsis">Removes an LXC container from a Proxmox VE node.</para>
     /// <para type="description">
     /// Deletes an LXC container and, optionally, all associated storage.
-    /// This operation is destructive and requires confirmation unless -Force is specified.
+    /// This operation is destructive and requires confirmation.
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Remove, "PveContainer",
@@ -42,10 +42,10 @@ namespace PSProxmoxVE.Cmdlets.Containers
 
         /// <summary>
         /// <para type="description">
-        /// When specified, sends skiplock=1 to PVE, which bypasses locks. PVE honours this for root@pam only.
+        /// When specified, sends force=1 to PVE, allowing removal of running containers.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = false, HelpMessage = "Bypass locks (root@pam only); sends skiplock=1 to PVE.")]
+        [Parameter(Mandatory = false, HelpMessage = "Force destroy, even if running.")]
         public SwitchParameter Force { get; set; }
 
         /// <summary>

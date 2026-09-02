@@ -208,9 +208,9 @@ namespace PSProxmoxVE.Core.Services
         /// <param name="importFrom">
         /// The import source in PVE format. Examples:
         /// <list type="bullet">
-        /// <item>"local:iso/image.img" — import from a file already on storage</item>
-        /// <item>"local:import/myvm.ova/disk.vmdk" — import a disk from within an OVA</item>
-        /// <item>"/var/lib/vz/images/disk.qcow2" — import from an absolute path on the node</item>
+        /// <item>"local:iso/image.img" - import from a file already on storage</item>
+        /// <item>"local:import/myvm.ova/disk.vmdk" - import a disk from within an OVA</item>
+        /// <item>"/var/lib/vz/images/disk.qcow2" - import from an absolute path on the node</item>
         /// </list>
         /// </param>
         /// <param name="format">Optional target format (e.g. "qcow2", "raw"). Defaults to storage default.</param>
@@ -334,7 +334,7 @@ namespace PSProxmoxVE.Core.Services
         /// its own post-stop cleanup, so nothing can interleave between the two halves. Composing
         /// a reboot client-side as shutdown + start instead races that cleanup: the start wins the
         /// lock, cleanup then holds it for 30 s waiting on the newly started process, and the next
-        /// call fails with "can't lock file '/var/lock/qemu-server/lock-&lt;vmid&gt;.conf' - got timeout".
+        /// call fails with "can't lock file '/var/lock/qemu-server/lock-<vmid>.conf' - got timeout".
         /// </remarks>
         /// <param name="session">The authenticated PVE session.</param>
         /// <param name="node">The cluster node name.</param>
@@ -644,7 +644,7 @@ namespace PSProxmoxVE.Core.Services
                 // PVE's agent/exec "command" is an array: element 0 is the executable and
                 // each subsequent element is one argv entry. It is sent as repeated form
                 // keys (command=<exe>&command=<arg1>&...). Do NOT use "input-data" for
-                // arguments — that is the process's STDIN, not argv.
+                // arguments - that is the process's STDIN, not argv.
                 var data = new List<KeyValuePair<string, string>>
                 {
                     new KeyValuePair<string, string>("command", command)
@@ -757,7 +757,7 @@ namespace PSProxmoxVE.Core.Services
         }
 
         // -------------------------------------------------------------------------
-        // Guest agent — extended operations
+        // Guest agent - extended operations
         // -------------------------------------------------------------------------
 
         /// <summary>

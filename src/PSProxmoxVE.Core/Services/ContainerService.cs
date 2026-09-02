@@ -330,15 +330,15 @@ namespace PSProxmoxVE.Core.Services
             string node,
             int vmid,
             bool purge = false,
-            bool skipLock = false)
+            bool force = false)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
             var queryParams = new List<string>();
             queryParams.Add(purge ? "purge=1" : "purge=0");
-            if (skipLock)
-                queryParams.Add("skiplock=1");
+            if (force)
+                queryParams.Add("force=1");
             var queryString = "?" + string.Join("&", queryParams);
 
             IPveHttpClient client = _injectedClient ?? new PveHttpClient(session);

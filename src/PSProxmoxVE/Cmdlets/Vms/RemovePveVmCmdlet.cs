@@ -8,7 +8,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
     /// <para type="synopsis">Removes a QEMU/KVM virtual machine from a Proxmox VE node.</para>
     /// <para type="description">
     /// Deletes a virtual machine and, optionally, all associated disk images.
-    /// This operation is destructive and requires confirmation unless -Force is specified.
+    /// This operation is destructive and requires confirmation.
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Remove, "PveVm",
@@ -42,10 +42,10 @@ namespace PSProxmoxVE.Cmdlets.Vms
 
         /// <summary>
         /// <para type="description">
-        /// When specified, sends skiplock=1 to PVE, which bypasses locks. PVE honours this for root@pam only.
+        /// When specified, sends skiplock=1 to PVE to bypass locks. PVE honours this parameter for root@pam only; non-root callers will receive a 403 permission error.
         /// </para>
         /// </summary>
-        [Parameter(Mandatory = false, HelpMessage = "Bypass locks (root@pam only); sends skiplock=1 to PVE.")]
+        [Parameter(Mandatory = false, HelpMessage = "Bypass locks via skiplock=1 (root@pam only).")]
         public SwitchParameter Force { get; set; }
 
         /// <summary>
