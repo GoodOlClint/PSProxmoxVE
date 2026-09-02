@@ -183,6 +183,18 @@ Describe 'Copy-PveVm' {
         }
     }
 
+    Context 'Storage requires Full' {
+        It 'Should throw when -Storage is specified without -Full' {
+            { Copy-PveVm -SourceNode 'pve-node1' -VmId 100 -Storage 'local-zfs' -ErrorAction Stop } |
+                Should -Throw '*only valid together with -Full*'
+        }
+
+        It 'Should not throw the storage/full validation when -Full is also specified' {
+            { Copy-PveVm -SourceNode 'pve-node1' -VmId 100 -Storage 'local-zfs' -Full -WhatIf -ErrorAction Stop } |
+                Should -Not -Throw
+        }
+    }
+
     Context 'Without active session' {
         It 'Should throw when no session is active (without -WhatIf)' {
             { Copy-PveVm -SourceNode 'pve-node1' -VmId 100 -ErrorAction Stop } |
