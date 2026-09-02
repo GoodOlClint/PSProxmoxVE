@@ -217,5 +217,56 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Contains("skiplock=1", resource!);
         }
 
+        [Fact]
+        public void CloneVm_WithStorage_IncludesStorageInFormBody()
+        {
+            Dictionary<string, string>? captured = null;
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient
+                .Setup(c => c.PostAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+                .Callback<string, Dictionary<string, string>>((_, data) => captured = data)
+                .ReturnsAsync("{\"data\":\"UPID:pve1:00001234:00005678:6A970AAB:qmclone:100:root@pam:\"}");
+
+            var service = new VmService(mockClient.Object);
+            service.CloneVm(CreateSession(), TestNode, TestVmId, 200, storage: "local-zfs");
+
+            Assert.NotNull(captured);
+            Assert.Equal("local-zfs", captured!["storage"]);
+        }
+
+        [Fact]
+        public void CloneVm_WithoutStorage_OmitsStorageFromFormBody()
+        {
+            Dictionary<string, string>? captured = null;
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient
+                .Setup(c => c.PostAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+                .Callback<string, Dictionary<string, string>>((_, data) => captured = data)
+                .ReturnsAsync("{\"data\":\"UPID:pve1:00001234:00005678:6A970AAB:qmclone:100:root@pam:\"}");
+
+            var service = new VmService(mockClient.Object);
+            service.CloneVm(CreateSession(), TestNode, TestVmId, 200);
+
+            Assert.NotNull(captured);
+            Assert.False(captured!.ContainsKey("storage"));
+        }
+
+        [Fact]
+        public void CloneVm_SendsAllocatedNewidNeverZero()
+        {
+            Dictionary<string, string>? captured = null;
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient
+                .Setup(c => c.PostAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+                .Callback<string, Dictionary<string, string>>((_, data) => captured = data)
+                .ReturnsAsync("{\"data\":\"UPID:pve1:00001234:00005678:6A970AAB:qmclone:100:root@pam:\"}");
+
+            var service = new VmService(mockClient.Object);
+            service.CloneVm(CreateSession(), TestNode, TestVmId, 305);
+
+            Assert.NotNull(captured);
+            Assert.Equal("305", captured!["newid"]);
+        }
+
     }
 }
