@@ -2,12 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <LangVersion>10.0</LangVersion>
-    <Nullable>enable</Nullable>
     <RootNamespace>PSProxmoxVE.Core</RootNamespace>
     <AssemblyName>PSProxmoxVE.Core</AssemblyName>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn)</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,8 +14,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="SharpCompress" Version="0.50.4" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="SharpCompress" />
   </ItemGroup>
 
 </Project>
