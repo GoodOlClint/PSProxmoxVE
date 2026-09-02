@@ -20,8 +20,9 @@ PKG_OUT="${4:-}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
-SSH_CMD="sshpass -p ${ROOT_PASS} ssh ${SSH_OPTS} root@${NESTED_IP}"
-SCP_CMD="sshpass -p ${ROOT_PASS} scp ${SSH_OPTS}"
+export SSHPASS="${ROOT_PASS}"
+SSH_CMD="sshpass -e ssh ${SSH_OPTS} root@${NESTED_IP}"
+SCP_CMD="sshpass -e scp ${SSH_OPTS}"
 
 echo "=== Preparing test environment on ${NESTED_IP} ==="
 

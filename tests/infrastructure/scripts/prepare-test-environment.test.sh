@@ -24,7 +24,7 @@ mkdir -p "$TMP/bin"
 # never rebooted.
 cat > "$TMP/bin/sshpass" <<'STUB'
 #!/usr/bin/env bash
-echo "$*" >> "$STUB_LOG"
+echo "SSHPASS_ENV=${SSHPASS:-<unset>} ARGS=$*" >> "$STUB_LOG"
 case "$*" in
     *boot_id*)
         if [[ "${BOOT_ID_STUCK:-0}" == "1" ]]; then
@@ -93,6 +93,9 @@ check "no reboot issued"            "$STUB_LOG" "systemctl reboot" no
 check "no package set recorded"     "$STUB_LOG" "dpkg-query"      no
 check "no boot_id probe"            "$STUB_LOG" "boot_id"         no
 check "storage still configured"    "$STUB_LOG" "pvesm set local" yes
+check "password not passed as -p arg" "$STUB_LOG" "ARGS=-p"       no
+check "sshpass invoked with -e"     "$STUB_LOG" "ARGS=-e"          yes
+check "password reaches sshpass via SSHPASS env" "$STUB_LOG" "SSHPASS_ENV=secret" yes
 
 echo "case 2: dist-upgrade requested"
 export STUB_LOG="$TMP/log2"
