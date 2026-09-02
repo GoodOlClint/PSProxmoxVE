@@ -17,7 +17,8 @@ namespace PSProxmoxVE.Cmdlets.Connection
     {
         protected override void ProcessRecord()
         {
-            var sessionToDisconnect = Session ?? ModuleState.ActiveSession;
+            bool explicitSessionSupplied = MyInvocation.BoundParameters.ContainsKey(nameof(Session));
+            var sessionToDisconnect = explicitSessionSupplied ? Session : ModuleState.ActiveSession;
 
             if (sessionToDisconnect is null)
             {
@@ -28,11 +29,13 @@ namespace PSProxmoxVE.Cmdlets.Connection
             if (!ShouldProcess($"{sessionToDisconnect.Hostname}:{sessionToDisconnect.Port}", "Disconnect"))
                 return;
 
-            if (Session is null || sessionToDisconnect == ModuleState.ActiveSession)
+            if (!ReferenceEquals(sessionToDisconnect, ModuleState.ActiveSession))
             {
-                ModuleState.ActiveSession = null;
+                WriteWarning($"The supplied session for {sessionToDisconnect.Hostname}:{sessionToDisconnect.Port} is not the module-level session; nothing was changed. Discard the variable — PVE tickets cannot be revoked and expire on their own.");
+                return;
             }
 
+            ModuleState.ActiveSession = null;
             WriteVerbose($"Disconnected from {sessionToDisconnect.Hostname}:{sessionToDisconnect.Port}.");
         }
     }
