@@ -274,7 +274,7 @@
         "evidence": "Now uses VerbsCommon.Reset constant",
         "verified_by": "scan"
       },
-      "decisions_ref": "D012"
+      "decisions_ref": "ADR 0012"
     },
     {
       "id": "F010",
@@ -335,7 +335,7 @@
         "evidence": "ConfirmImpact.High added to both Stop-PveVm and Reset-PveVm",
         "verified_by": "scan"
       },
-      "decisions_ref": "D007"
+      "decisions_ref": "ADR 0007"
     },
     {
       "id": "F012",
@@ -365,7 +365,7 @@
         "evidence": "ValidateRange(100, 999999999) added to all VmId parameters",
         "verified_by": "scan"
       },
-      "decisions_ref": "D011"
+      "decisions_ref": "ADR 0011"
     },
     {
       "id": "F013",
@@ -1006,7 +1006,7 @@
         "evidence": "All four cmdlets now use TaskService.WaitForTask with timeout enforcement, failure detection, and WriteProgress support",
         "verified_by": "self-reported"
       },
-      "decisions_ref": "D001"
+      "decisions_ref": "ADR 0001"
     },
     {
       "id": "F033",
@@ -1036,7 +1036,7 @@
         "evidence": "Added Timeout parameter with Stopwatch + TimeoutException",
         "verified_by": "self-reported"
       },
-      "decisions_ref": "D001"
+      "decisions_ref": "ADR 0001"
     },
     {
       "id": "F034",
@@ -1066,7 +1066,7 @@
         "evidence": "ConfirmImpact = ConfirmImpact.High added",
         "verified_by": "self-reported"
       },
-      "decisions_ref": "D007"
+      "decisions_ref": "ADR 0007"
     },
     {
       "id": "F035",
@@ -1125,7 +1125,7 @@
         "evidence": "All cmdlets now use TaskService.WaitForTask",
         "verified_by": "self-reported"
       },
-      "decisions_ref": "D001"
+      "decisions_ref": "ADR 0001"
     },
     {
       "id": "F037",
@@ -1155,7 +1155,7 @@
         "evidence": "All 169 cmdlets now have [OutputType] attributes",
         "verified_by": "self-reported"
       },
-      "decisions_ref": "D006"
+      "decisions_ref": "ADR 0006"
     },
     {
       "id": "F038",
@@ -1185,7 +1185,7 @@
         "evidence": "VmId changed to nullable int pattern",
         "verified_by": "self-reported"
       },
-      "decisions_ref": "D011"
+      "decisions_ref": "ADR 0011"
     },
     {
       "id": "F039",
@@ -1230,10 +1230,10 @@
       "regression_history": [
         {
           "regressed_in_scan": "2026-03-24",
-          "description": "Bare catch blocks reintroduced in VmService.PingGuestAgent (line 553) and ImportPveOvaCmdlet VM retrieval fallback (line 277). Both should use filtered catch per D004."
+          "description": "Bare catch blocks reintroduced in VmService.PingGuestAgent (line 553) and ImportPveOvaCmdlet VM retrieval fallback (line 277). Both should use filtered catch per ADR 0004."
         }
       ],
-      "decisions_ref": "D004"
+      "decisions_ref": "ADR 0004"
     },
     {
       "id": "F040",
@@ -1300,7 +1300,7 @@
         "evidence": "All 169 cmdlets are now sealed",
         "verified_by": "self-reported"
       },
-      "decisions_ref": "D008"
+      "decisions_ref": "ADR 0008"
     },
     {
       "id": "F042",
@@ -1330,7 +1330,7 @@
         "evidence": "ConfirmImpact.High added to SuspendPveVmCmdlet",
         "verified_by": "self-reported"
       },
-      "decisions_ref": "D007"
+      "decisions_ref": "ADR 0007"
     },
     {
       "id": "F043",
@@ -1360,7 +1360,7 @@
         "evidence": "ConfirmImpact.High added to RestartPveVmCmdlet",
         "verified_by": "self-reported"
       },
-      "decisions_ref": "D007"
+      "decisions_ref": "ADR 0007"
     },
     {
       "id": "F044",
@@ -1390,7 +1390,7 @@
         "evidence": "[JsonPropertyName] attributes removed, only [JsonProperty] (Newtonsoft) remains",
         "verified_by": "self-reported"
       },
-      "decisions_ref": "D009"
+      "decisions_ref": "ADR 0009"
     },
     {
       "id": "F045",
@@ -1482,7 +1482,7 @@
         "src/PSProxmoxVE/PSProxmoxVE.csproj",
         "src/PSProxmoxVE.Core/PSProxmoxVE.Core.csproj"
       ],
-      "description": "Both publishable projects (PSProxmoxVE.csproj, PSProxmoxVE.Core.csproj) target netstandard2.0;net10.0;net48 but D009 requires publishable projects to target only netstandard2.0. Multi-targeting inflates the published module and may ship framework-specific assemblies unnecessarily.",
+      "description": "Both publishable projects (PSProxmoxVE.csproj, PSProxmoxVE.Core.csproj) target netstandard2.0;net10.0;net48 but ADR 0009 requires publishable projects to target only netstandard2.0. Multi-targeting inflates the published module and may ship framework-specific assemblies unnecessarily.",
       "scan_history": [
         {
           "scan_date": "2026-03-21",
@@ -1505,7 +1505,7 @@
           "status": "resolved"
         }
       ],
-      "decisions_ref": "D010",
+      "decisions_ref": "ADR 0010",
       "resolution": {
         "scan_date": "2026-03-23",
         "report_id": "remediation-1",
@@ -1576,7 +1576,7 @@
         "evidence": "Extracted to const string ApiTokenPrefix and CsrfHeaderName fields",
         "verified_by": "self-reported"
       },
-      "decisions_ref": "D012"
+      "decisions_ref": "ADR 0012"
     },
     {
       "id": "F050",
@@ -1621,7 +1621,7 @@
         "verified_by": "scan",
         "evidence": "Uri.EscapeDataString() added to all 20 instances across NodeService (7), NetworkService (7), CloudInitService (3), TaskService (2), TemplateService (1). Verified via grep: no unescaped {node}/{iface}/{zone}/{vnet} remain in any service file URL paths."
       },
-      "decisions_ref": "D003",
+      "decisions_ref": "ADR 0003",
       "notes": "Previously resolved in scan-4 (2026-03-22) with evidence \"Uri.EscapeDataString() now used consistently across all services\". Regression found in scan-7: 5 of 14 services still lack encoding on node/iface/zone/vnet params.",
       "regression_history": [
         {
@@ -1659,7 +1659,7 @@
         "evidence": "Now uses SecureString with Marshal.SecureStringToGlobalAllocUnicode + ZeroFreeGlobalAllocUnicode in try/finally",
         "verified_by": "self-reported"
       },
-      "decisions_ref": "D002"
+      "decisions_ref": "ADR 0002"
     },
     {
       "id": "F052",
@@ -1892,7 +1892,7 @@
           "status": "fixed"
         }
       ],
-      "decisions_ref": "D001",
+      "decisions_ref": "ADR 0001",
       "resolution": {
         "scan_date": "2026-03-23",
         "report_id": "scan-5",
@@ -2040,7 +2040,7 @@
           "status": "fixed"
         }
       ],
-      "decisions_ref": "D007",
+      "decisions_ref": "ADR 0007",
       "resolution": {
         "scan_date": "2026-03-23",
         "report_id": "scan-5",
@@ -2071,7 +2071,7 @@
           "status": "fixed"
         }
       ],
-      "decisions_ref": "D007",
+      "decisions_ref": "ADR 0007",
       "resolution": {
         "scan_date": "2026-03-23",
         "report_id": "scan-5",
@@ -2107,7 +2107,7 @@
           "status": "resolved"
         }
       ],
-      "decisions_ref": "D010",
+      "decisions_ref": "ADR 0010",
       "resolution": {
         "scan_date": "2026-03-23",
         "report_id": "remediation-1",
@@ -2339,7 +2339,7 @@
           "status": "resolved"
         }
       ],
-      "decisions_ref": "D003",
+      "decisions_ref": "ADR 0003",
       "notes": "Reduced from ~15 files to 1 in scan-5. All network, snapshot, container snapshot, storage, and CloudInit cmdlets now use EscapeDataString.",
       "resolution": {
         "scan_date": "2026-03-23",
@@ -2358,7 +2358,7 @@
       "files": [
         "src/PSProxmoxVE.Core/PSProxmoxVE.Core.csproj"
       ],
-      "description": "System.Text.Json 8.0.5 referenced for netstandard2.0/net48 targets despite D008 Newtonsoft-only policy. No [JsonPropertyName] attributes or System.Text.Json namespaces in source. Dependency appears unused and adds to assembly surface area.",
+      "description": "System.Text.Json 8.0.5 referenced for netstandard2.0/net48 targets despite ADR 0008 Newtonsoft-only policy. No [JsonPropertyName] attributes or System.Text.Json namespaces in source. Dependency appears unused and adds to assembly surface area.",
       "scan_history": [
         {
           "scan_date": "2026-03-22",
@@ -2371,7 +2371,7 @@
           "status": "fixed"
         }
       ],
-      "decisions_ref": "D008",
+      "decisions_ref": "ADR 0008",
       "resolution": {
         "scan_date": "2026-03-23",
         "report_id": "scan-5",
@@ -2403,7 +2403,7 @@
           "status": "fixed"
         }
       ],
-      "decisions_ref": "D009",
+      "decisions_ref": "ADR 0009",
       "resolution": {
         "scan_date": "2026-03-23",
         "report_id": "scan-5",
@@ -2516,7 +2516,7 @@
       "files": [
         "src/PSProxmoxVE/Cmdlets/Tasks/GetPveTaskListCmdlet.cs"
       ],
-      "description": "Optional VmId parameter (int?, line 29) lacks [ValidateRange(100, 999999999)] attribute. Per D010, all VmId parameters must have ValidateRange regardless of whether mandatory or optional.",
+      "description": "Optional VmId parameter (int?, line 29) lacks [ValidateRange(100, 999999999)] attribute. Per ADR 0010, all VmId parameters must have ValidateRange regardless of whether mandatory or optional.",
       "scan_history": [
         {
           "scan_date": "2026-03-23",
@@ -2529,12 +2529,12 @@
           "status": "resolved"
         }
       ],
-      "decisions_ref": "D010",
+      "decisions_ref": "ADR 0010",
       "resolution": {
         "scan_date": "2026-03-23",
         "report_id": "remediation-1",
         "verified_by": "code_change",
-        "evidence": "GetPveTaskListCmdlet.cs:29 now has [ValidateRange(100, 999999999)] on the VmId parameter, matching D010 convention."
+        "evidence": "GetPveTaskListCmdlet.cs:29 now has [ValidateRange(100, 999999999)] on the VmId parameter, matching ADR 0010 convention."
       }
     },
     {
@@ -2590,7 +2590,7 @@
           "status": "resolved"
         }
       ],
-      "decisions_ref": "D009",
+      "decisions_ref": "ADR 0009",
       "resolution": {
         "scan_date": "2026-03-23",
         "report_id": "remediation-1",
@@ -2787,7 +2787,7 @@
       "severity": "high",
       "status": "resolved",
       "first_detected": "2026-03-25",
-      "decisions_ref": "D013",
+      "decisions_ref": "ADR 0013",
       "files": [
         "src/PSProxmoxVE.Core/Models/Cluster/PveClusterJoinInfo.cs",
         "src/PSProxmoxVE/Cmdlets/Cluster/GetPveClusterJoinInfoCmdlet.cs"
@@ -2796,12 +2796,12 @@
       "scan_history": [
         {
           "scan_date": "2026-03-25",
-          "local_id": "D013-scan-1",
+          "local_id": "ADR 0013-scan-1",
           "status": "new"
         },
         {
           "scan_date": "2026-03-25",
-          "local_id": "D013-scan-2",
+          "local_id": "ADR 0013-scan-2",
           "status": "confirmed_open"
         },
         {
@@ -2968,7 +2968,7 @@
       ],
       "resolution": {
         "scan_date": "2026-05-22",
-        "evidence": "Added typed scsihw/efidisk0/tpmstate0 properties plus a private [JsonExtensionData] landing field exposed as AdditionalProperties (Dictionary<string, object?> via JsonHelper.ToNative, so values are native .NET types per D013 — no JToken leakage). Typed keys do not duplicate into the catch-all.",
+        "evidence": "Added typed scsihw/efidisk0/tpmstate0 properties plus a private [JsonExtensionData] landing field exposed as AdditionalProperties (Dictionary<string, object?> via JsonHelper.ToNative, so values are native .NET types per ADR 0013 — no JToken leakage). Typed keys do not duplicate into the catch-all.",
         "verified_by": "dotnet build + dotnet test (586 passed, new VmModelTests for scsihw/efidisk/tpm, native-typed AdditionalProperties, and no typed-key leakage)"
       }
     },
