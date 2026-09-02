@@ -94,7 +94,7 @@ jobs:
             .claude/ .mcp.json AGENTS.md \
             ':(glob)**/CLAUDE.md' ':(glob)**/AGENTS.md' \
             tests/PSProxmoxVE.Core.Tests/Fixtures/ \
-            src/PSProxmoxVE/PSProxmoxVE.psd1 CHANGELOG.md)"
+            src/PSProxmoxVE/PSProxmoxVE.psd1 CHANGELOG.md CODEOWNERS)"
           if [ -n "${changed}" ]; then
             echo "governs_review=true" >> "$GITHUB_OUTPUT"
             echo "::notice title=PR governs review::This PR changes files that govern how review works. The reviewer will still review it, but cannot approve it — an automated approval would be dismissed. A deferral is the expected outcome and passes this check. Files: ${changed}"

@@ -53,9 +53,21 @@ Fork PRs are skipped rather than failed. Previously they would have gone red wit
 
 The trade is that GitHub reports a skipped required check as **passing**, so a fork PR shows green `claude-review` with nothing reviewed. A `fork-notice` job runs in its place and puts that in the run summary, but the green check is real and misleading on its own. Fork PRs are operator-reviewed by policy.
 
-**The premise this all rests on: code-owner review is not enforced.** `CODEOWNERS` is `* @goodolclint`, and branch protection's "Require review from Code Owners" is **off** — verified on PR #100, where `mergeable_state` reached `clean` on `claude[bot]`'s approval alone with the operator's review still pending. Turning it on would make every bypass in this area inert, because `claude[bot]` is not a code owner and its approval could never satisfy protection.
+**`CODEOWNERS` is narrowed so that code-owner review becomes usable.**
 
-It is deliberately left off. Enabling it would end the verdict-gated merge loop entirely — every PR would need the operator, not just the governance-path ones — which is a different project from this one. The consequence is that the dismissal gate is load-bearing rather than defence-in-depth, and it should be read that way: it is the only thing standing between an automated approval and a merge on a governance PR.
+The security review observed that branch protection's "Require review from Code Owners" would make every bypass in this area inert, because `claude[bot]` is not a code owner and its approval could never satisfy protection. It also observed that the setting is **off** — verified on PR #100, where `mergeable_state` reached `clean` on the bot's approval alone.
+
+The reason it was off is that `CODEOWNERS` was `* @goodolclint`. At that breadth the setting is unusable: it would require the operator on *every* pull request and end the verdict-gated merge loop, so the guard had to be built in the workflow instead.
+
+Operator ruling 2026-09-02: narrow the ownership rather than accept the weakness. `CODEOWNERS` now names only the governance and release paths — the same set the detector checks. Ordinary PRs have no code owner and an automated approval still merges them; a PR touching what governs review or what gets published requires the operator.
+
+This inverts the design. With the setting enabled, GitHub enforces the property, and it enforces it far better than the workflow step can: it is not a one-shot check, it has no pagination limit, it does not depend on matching the right bot identity, it needs no dismissal permission, and it applies to an approval from **any** source — including `.github/workflows/claude.yml`, the ungated second path noted below, which the dismissal step cannot see.
+
+The workflow gate stays, as defence-in-depth and as the only control while the setting is off. **Enabling the setting is the operator's action and is not done by this decision.** Until it is, the dismissal step is still load-bearing and should be read that way.
+
+The two lists must be kept in sync; both files say so. Drift is the failure mode, and it is silent in the direction that matters — a path in the detector but not in `CODEOWNERS` is protected only by the weaker mechanism.
+
+One edge case is worth knowing before enabling the setting: **GitHub does not let an author approve their own pull request.** An operator-authored PR touching a governance path would have no eligible code-owner reviewer, and with admin enforcement on there is no bypass. In practice every recent PR is authored by `goodolclint-claude[bot]`, so the operator is free to approve; but an operator-authored governance change would need admin enforcement toggled, or to go through the bot.
 
 Three limits remain, and are not closed by this decision:
 

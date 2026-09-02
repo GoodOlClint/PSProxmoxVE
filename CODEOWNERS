@@ -1,1 +1,41 @@
-* @goodolclint
+# Ownership is deliberately NARROW.
+#
+# It used to be `* @goodolclint`, which does nothing while branch protection's
+# "Require review from Code Owners" is off, and would block every pull request
+# the moment it was switched on. That made the setting unusable, so the
+# self-approval guard had to be built in the review workflow instead.
+#
+# The paths below are the ones where an automated approval must not be
+# sufficient: they govern how review itself works, what the reviewer is told,
+# what it judges against, and what gets published. Everything else has no code
+# owner, so an automated approval still merges it and the bot-driven flow is
+# unaffected.
+#
+# KEEP IN SYNC with the governance detector in
+# .github/workflows/claude-code-review.yml. The two lists express the same
+# policy through different mechanisms and drifting apart is the failure mode:
+# CODEOWNERS is enforced by GitHub, the detector is a backstop for when the
+# branch-protection setting is off.
+
+# --- what governs review ---
+/.github/workflows/                     @goodolclint
+/.github/review-prompt.md               @goodolclint
+/.claude/                               @goodolclint
+/.mcp.json                              @goodolclint
+
+# Unanchored, so these match at any depth. The harness auto-loads them as
+# project instructions before the model starts.
+CLAUDE.md                               @goodolclint
+AGENTS.md                               @goodolclint
+
+# --- what the reviewer defers to ---
+/DECISIONS.md                           @goodolclint
+/docs/decisions/                        @goodolclint
+/tests/PSProxmoxVE.Core.Tests/Fixtures/ @goodolclint
+
+# --- what gets published ---
+/src/PSProxmoxVE/PSProxmoxVE.psd1       @goodolclint
+/CHANGELOG.md                           @goodolclint
+
+# This file, or ownership could be removed by a pull request.
+/CODEOWNERS                             @goodolclint
