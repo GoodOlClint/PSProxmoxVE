@@ -45,14 +45,14 @@ namespace PSProxmoxVE.Core.Services
         }
 
         /// <summary>
-        /// Creates a snapshot of a VM. Returns the task UPID.
+        /// Creates a snapshot of a VM. Returns the task PVE started.
         /// </summary>
         /// <param name="session">The authenticated PVE session.</param>
         /// <param name="node">The cluster node name.</param>
         /// <param name="vmid">The VM ID.</param>
         /// <param name="snapname">Snapshot name (alphanumeric, no spaces).</param>
         /// <param name="description">Optional description.</param>
-        /// <param name="vmstate">Whether to save VM RAM state (live snapshot). Default false.</param>
+        /// <param name="vmstate">Whether to save VM RAM state (live snapshot). Sent only when true.</param>
         public PveTask CreateSnapshot(
             PveSession session,
             string node,
@@ -67,11 +67,12 @@ namespace PSProxmoxVE.Core.Services
 
             var formData = new Dictionary<string, string>
             {
-                ["snapname"] = snapname,
-                ["vmstate"] = vmstate ? "1" : "0"
+                ["snapname"] = snapname
             };
             if (!string.IsNullOrEmpty(description))
                 formData["description"] = description!;
+            if (vmstate)
+                formData["vmstate"] = "1";
 
             return Invoke(session, client =>
             {
@@ -82,7 +83,7 @@ namespace PSProxmoxVE.Core.Services
         }
 
         /// <summary>
-        /// Removes a snapshot from a VM. Returns the task UPID.
+        /// Removes a snapshot from a VM. Returns the task PVE started.
         /// </summary>
         /// <param name="session">The authenticated PVE session.</param>
         /// <param name="node">The cluster node name.</param>
@@ -107,7 +108,7 @@ namespace PSProxmoxVE.Core.Services
         }
 
         /// <summary>
-        /// Rolls a VM back to a snapshot. Returns the task UPID.
+        /// Rolls a VM back to a snapshot. Returns the task PVE started.
         /// </summary>
         /// <param name="session">The authenticated PVE session.</param>
         /// <param name="node">The cluster node name.</param>
@@ -139,7 +140,7 @@ namespace PSProxmoxVE.Core.Services
         {
             var data = JObject.Parse(response)["data"];
             if (data?.Type == JTokenType.String)
-                return new PveTask { Upid = data.ToString(), Node = node };
+                return new PveTask { Upid = data.ToString(), Node = node, Status = "running" };
 
             var task = data?.ToObject<PveTask>() ?? new PveTask();
             task.Node = node;
