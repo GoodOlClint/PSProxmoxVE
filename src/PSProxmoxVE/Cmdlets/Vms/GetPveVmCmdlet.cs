@@ -75,7 +75,8 @@ namespace PSProxmoxVE.Cmdlets.Vms
             WriteVerbose("Getting VMs...");
             var service = new VmService();
 
-            IEnumerable<PveVm> vms = service.GetVms(session, Node);
+            IEnumerable<PveVm> vms = service.GetVms(session, Node,
+                onNodeSkipped: (nodeName, ex) => WriteWarning($"Skipping node '{nodeName}': {ex.Message}"));
 
             if (VmId.HasValue)
                 vms = vms.Where(v => v.VmId == VmId.Value);

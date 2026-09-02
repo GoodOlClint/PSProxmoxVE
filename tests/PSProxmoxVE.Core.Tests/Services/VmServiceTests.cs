@@ -1,9 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Reflection;
 using Moq;
 using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Client;
+using PSProxmoxVE.Core.Exceptions;
 using PSProxmoxVE.Core.Services;
 using Xunit;
 
@@ -268,5 +272,126 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Equal("305", captured!["newid"]);
         }
 
+
+        // ---------------------------------------------------------------------
+        // GetVms multi-node aggregation: issue #142
+        // ---------------------------------------------------------------------
+
+        /// <summary>
+        /// Points the private NodeService field a VmService constructs at a mock client,
+        /// so the "list all nodes" call the multi-node overload issues is reachable
+        /// without a real HTTP connection. VmService(client) only injects the client used
+        /// for the per-node qemu calls; NodeService is never constructor-injectable from
+        /// VmService, so this is the only offline path to the aggregation loop.
+        /// </summary>
+        private static void InjectNodeServiceClient(VmService service, IPveHttpClient client)
+        {
+            var field = typeof(VmService).GetField("_nodeService", BindingFlags.NonPublic | BindingFlags.Instance)
+                ?? throw new InvalidOperationException("VmService._nodeService field not found.");
+            field.SetValue(service, new NodeService(client));
+        }
+
+        private static Mock<IPveHttpClient> SetupTwoNodeCluster()
+        {
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient
+                .Setup(c => c.GetAsync("nodes"))
+                .ReturnsAsync("{\"data\":[{\"node\":\"pve1\"},{\"node\":\"pve2\"}]}");
+            return mockClient;
+        }
+
+        [Fact]
+        public void GetVms_AllNodes_A500OnOneNodeIsSkippedAndReportedButOtherNodeResultsReturn()
+        {
+            var mockClient = SetupTwoNodeCluster();
+            mockClient
+                .Setup(c => c.GetAsync("nodes/pve1/qemu"))
+                .ReturnsAsync("{\"data\":[{\"vmid\":100}]}");
+            mockClient
+                .Setup(c => c.GetAsync("nodes/pve2/qemu"))
+                .ThrowsAsync(new PveApiException(HttpStatusCode.InternalServerError, "internal error", "nodes/pve2/qemu", "GET"));
+
+            var service = new VmService(mockClient.Object);
+            InjectNodeServiceClient(service, mockClient.Object);
+
+            var skipped = new List<string>();
+            var vms = service.GetVms(CreateSession(), onNodeSkipped: (node, ex) => skipped.Add(node));
+
+            var vm = Assert.Single(vms);
+            Assert.Equal(100, vm.VmId);
+            Assert.Equal(new[] { "pve2" }, skipped);
+        }
+
+        [Fact]
+        public void GetVms_AllNodes_A403OnOneNodePropagatesInsteadOfBeingSwallowed()
+        {
+            var mockClient = SetupTwoNodeCluster();
+            mockClient
+                .Setup(c => c.GetAsync("nodes/pve1/qemu"))
+                .ReturnsAsync("{\"data\":[{\"vmid\":100}]}");
+            mockClient
+                .Setup(c => c.GetAsync("nodes/pve2/qemu"))
+                .ThrowsAsync(new PveApiException(HttpStatusCode.Forbidden, "permission denied", "nodes/pve2/qemu", "GET"));
+
+            var service = new VmService(mockClient.Object);
+            InjectNodeServiceClient(service, mockClient.Object);
+
+            var ex = Assert.Throws<PveApiException>(() => service.GetVms(CreateSession()));
+            Assert.Equal(HttpStatusCode.Forbidden, ex.StatusCode);
+        }
+
+        [Fact]
+        public void GetVms_AllNodes_ConnectivityFailureOnOneNodeIsSkippedAndReported()
+        {
+            // PveHttpClient.SendOnceAsync never lets a raw HttpRequestException escape — it
+            // wraps one as PveApiException(ServiceUnavailable, ..., inner: HttpRequestException).
+            // That is the shape a real connectivity failure takes by the time it reaches
+            // VmService, so that is what this test throws.
+            var mockClient = SetupTwoNodeCluster();
+            mockClient
+                .Setup(c => c.GetAsync("nodes/pve1/qemu"))
+                .ReturnsAsync("{\"data\":[{\"vmid\":100}]}");
+            mockClient
+                .Setup(c => c.GetAsync("nodes/pve2/qemu"))
+                .ThrowsAsync(new PveApiException(HttpStatusCode.ServiceUnavailable, "connection refused",
+                    "nodes/pve2/qemu", "GET", new HttpRequestException("connection refused")));
+
+            var service = new VmService(mockClient.Object);
+            InjectNodeServiceClient(service, mockClient.Object);
+
+            var skipped = new List<string>();
+            var vms = service.GetVms(CreateSession(), onNodeSkipped: (node, ex) => skipped.Add(node));
+
+            var vm = Assert.Single(vms);
+            Assert.Equal(100, vm.VmId);
+            Assert.Equal(new[] { "pve2" }, skipped);
+        }
+
+        [Fact]
+        public void GetVms_AllNodes_ClientTimeoutOnOneNodeIsSkippedAndReported()
+        {
+            // PveHttpClient.SendOnceAsync wraps an HttpClient timeout as
+            // PveApiException(RequestTimeout) — the case of a powered-off or
+            // firewall-blackholed node, which must be skipped like any other
+            // unreachable node rather than aborting the whole listing.
+            var mockClient = SetupTwoNodeCluster();
+            mockClient
+                .Setup(c => c.GetAsync("nodes/pve1/qemu"))
+                .ReturnsAsync("{\"data\":[{\"vmid\":100}]}");
+            mockClient
+                .Setup(c => c.GetAsync("nodes/pve2/qemu"))
+                .ThrowsAsync(new PveApiException(HttpStatusCode.RequestTimeout, "Request timed out after 100s.",
+                    "nodes/pve2/qemu", "GET"));
+
+            var service = new VmService(mockClient.Object);
+            InjectNodeServiceClient(service, mockClient.Object);
+
+            var skipped = new List<string>();
+            var vms = service.GetVms(CreateSession(), onNodeSkipped: (node, ex) => skipped.Add(node));
+
+            var vm = Assert.Single(vms);
+            Assert.Equal(100, vm.VmId);
+            Assert.Equal(new[] { "pve2" }, skipped);
+        }
     }
 }
