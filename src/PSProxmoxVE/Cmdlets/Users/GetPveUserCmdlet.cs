@@ -1,7 +1,6 @@
 using System.Management.Automation;
-using Newtonsoft.Json.Linq;
-using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Users;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Users
 {
@@ -31,16 +30,13 @@ namespace PSProxmoxVE.Cmdlets.Users
         protected override void ProcessRecord()
         {
             var session = GetSession();
-            using var client = new PveHttpClient(session);
 
             WriteVerbose("Getting users...");
-            var json = client.GetAsync("access/users").GetAwaiter().GetResult();
-            var root = JObject.Parse(json);
-            var data = root["data"] as JArray ?? new JArray();
+            var service = new UserService();
+            var users = service.GetUsers(session);
 
-            foreach (var item in data)
+            foreach (var user in users)
             {
-                var user = item.ToObject<PveUser>()!;
                 if (MatchesFilters(user))
                     WriteObject(user);
             }

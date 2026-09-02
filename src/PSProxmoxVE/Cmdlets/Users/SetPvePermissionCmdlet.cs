@@ -1,6 +1,5 @@
-using System.Collections.Generic;
 using System.Management.Automation;
-using PSProxmoxVE.Core.Client;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Users
 {
@@ -48,26 +47,26 @@ namespace PSProxmoxVE.Cmdlets.Users
                 return;
 
             var session = GetSession();
-            using var client = new PveHttpClient(session);
 
             WriteVerbose($"Setting permission for '{UgId}' at '{Path}'...");
-            var data = new Dictionary<string, string>
-            {
-                ["path"]  = Path,
-                ["roles"] = Role
-            };
-
+            string? users = null, groups = null, tokens = null;
             if (string.Equals(Type, "group", System.StringComparison.OrdinalIgnoreCase))
-                data["groups"] = UgId;
+                groups = UgId;
             else if (string.Equals(Type, "token", System.StringComparison.OrdinalIgnoreCase) || UgId.Contains("!"))
-                data["tokens"] = UgId;
+                tokens = UgId;
             else
-                data["users"] = UgId;
+                users = UgId;
 
-            if (Propagate.IsPresent) data["propagate"] = "1";
-            if (Delete.IsPresent)    data["delete"]    = "1";
-
-            client.PutAsync("access/acl", data).GetAwaiter().GetResult();
+            var service = new UserService();
+            service.SetPermission(
+                session,
+                Path,
+                Role,
+                users: users,
+                groups: groups,
+                tokens: tokens,
+                propagate: Propagate.IsPresent ? true : (bool?)null,
+                delete: Delete.IsPresent ? true : (bool?)null);
         }
     }
 }

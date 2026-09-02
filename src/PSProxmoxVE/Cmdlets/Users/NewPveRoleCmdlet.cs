@@ -1,7 +1,6 @@
-using System.Collections.Generic;
 using System.Management.Automation;
-using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Users;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Users
 {
@@ -32,16 +31,10 @@ namespace PSProxmoxVE.Cmdlets.Users
                 return;
 
             var session = GetSession();
-            using var client = new PveHttpClient(session);
 
             WriteVerbose($"Creating role '{RoleId}'...");
-            var data = new Dictionary<string, string>
-            {
-                ["roleid"] = RoleId
-            };
-            if (!string.IsNullOrEmpty(Privileges)) data["privs"] = Privileges!;
-
-            client.PostAsync("access/roles", data).GetAwaiter().GetResult();
+            var service = new UserService();
+            service.CreateRole(session, RoleId, Privileges);
 
             WriteObject(new PveRole { RoleId = RoleId, Privileges = Privileges });
         }
