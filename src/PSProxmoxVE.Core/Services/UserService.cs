@@ -623,7 +623,15 @@ namespace PSProxmoxVE.Core.Services
                 var result = new List<PvePermission>();
                 foreach (var prop in ((JObject)data).Properties())
                 {
-                    var perm = new PvePermission { Path = prop.Name };
+                    var privileges = prop.Value is JObject privMap
+                        ? privMap.Properties().ToDictionary(
+                            p => p.Name,
+                            p => p.Value.Type == JTokenType.Boolean
+                                ? p.Value.Value<bool>()
+                                : p.Value.Type == JTokenType.Integer && p.Value.Value<long>() != 0,
+                            StringComparer.OrdinalIgnoreCase)
+                        : null;
+                    var perm = new PvePermission { Path = prop.Name, Privileges = privileges };
                     result.Add(perm);
                 }
                 return result.ToArray();

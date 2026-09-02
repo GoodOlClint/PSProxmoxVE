@@ -768,16 +768,56 @@ namespace PSProxmoxVE.Core.Tests.Services
             _mockClient.Setup(c => c.GetAsync("access/permissions"))
                 .ReturnsAsync(@"{""data"":{
                     ""/"":{ ""Datastore.Audit"":1, ""VM.Audit"":1 },
-                    ""/nodes/pve1"":{ ""Sys.Console"":1 }
+                    ""/vms/100"":{ ""VM.Audit"":1, ""VM.PowerMgmt"":0 }
                 }}");
 
             // Act
             var result = _service.GetPermissions(_session);
 
-            // Assert
+            // Assert — a key's presence means the privilege is granted; its value is whether
+            // that grant propagates to sub-paths (PVE's "propagate boolean" contract).
             Assert.Equal(2, result.Length);
             Assert.Contains(result, p => p.Path == "/");
-            Assert.Contains(result, p => p.Path == "/nodes/pve1");
+            var vmPerm = Assert.Single(result, p => p.Path == "/vms/100");
+            Assert.NotNull(vmPerm.Privileges);
+            Assert.True(vmPerm.Privileges!.ContainsKey("VM.Audit"));
+            Assert.True(vmPerm.Privileges!["VM.Audit"]);
+            Assert.True(vmPerm.Privileges!.ContainsKey("VM.PowerMgmt"));
+            Assert.False(vmPerm.Privileges!["VM.PowerMgmt"]);
+        }
+
+        [Fact]
+        public void GetPermissions_ArrayResponse_LeavesPrivilegesNull()
+        {
+            // Arrange — the flat /access/acl-shaped array response carries no privilege map
+            _mockClient.Setup(c => c.GetAsync("access/permissions"))
+                .ReturnsAsync(@"{""data"":[
+                    { ""path"":""/vms/100"", ""roleid"":""PVEVMAdmin"", ""ugid"":""deploy@pve"", ""propagate"":1 }
+                ]}");
+
+            // Act
+            var result = _service.GetPermissions(_session);
+
+            // Assert
+            var perm = Assert.Single(result);
+            Assert.Equal("/vms/100", perm.Path);
+            Assert.Null(perm.Privileges);
+        }
+
+        [Fact]
+        public void GetPermissions_EmptyPrivilegeMap_YieldsNonNullEmptyDictionary()
+        {
+            // Arrange
+            _mockClient.Setup(c => c.GetAsync("access/permissions"))
+                .ReturnsAsync(@"{""data"":{""/"":{}}}");
+
+            // Act
+            var result = _service.GetPermissions(_session);
+
+            // Assert
+            var perm = Assert.Single(result);
+            Assert.NotNull(perm.Privileges);
+            Assert.Empty(perm.Privileges!);
         }
 
         [Fact]
