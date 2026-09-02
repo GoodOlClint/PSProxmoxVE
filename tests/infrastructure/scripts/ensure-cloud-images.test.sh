@@ -174,6 +174,35 @@ else
     [[ -f "$TMP/cache/$LOCAL_IMG_NAME" ]] && fatal "corrupt cloud image left in cache" || pass "corrupt cloud image removed, not handed back"
 fi
 
+echo "case 6: stale-by-age cache still verifies AND the redownload fails — must fall back to it"
+reset_cache
+cp "$GOOD_IMG" "$TMP/cache/$LOCAL_IMG_NAME"
+echo 10 > "$TMP/cache/$LOCAL_IMG_NAME.age_days"
+cp "$GOOD_OVA" "$TMP/cache/$OVA_NAME"
+export IMG_SOURCE="$GOOD_IMG" OVA_SOURCE="$GOOD_OVA" CURL_FAIL_IMG=1 CURL_FAIL_OVA=0
+export STUB_LOG="$TMP/log6"; : > "$STUB_LOG"
+if bash "$TARGET" "$TMP/cache" > "$TMP/out6" 2>&1; then
+    pass "falls back to the still-good stale-by-age copy"
+    grep -q "using stale cached copy" "$TMP/out6" && pass "reports the fallback" || fatal "silent about the fallback"
+    [[ -f "$TMP/cache/$LOCAL_IMG_NAME" ]] && pass "verified stale copy kept" || fatal "verified stale copy removed"
+else
+    fatal "exited non-zero despite a stale-by-age copy that still verifies: $(cat "$TMP/out6")"
+fi
+
+echo "case 7: stale-by-age cache no longer verifies AND the redownload fails — must not hand it back"
+reset_cache
+cp "$BAD_CONTENT" "$TMP/cache/$LOCAL_IMG_NAME"
+echo 10 > "$TMP/cache/$LOCAL_IMG_NAME.age_days"
+cp "$GOOD_OVA" "$TMP/cache/$OVA_NAME"
+export IMG_SOURCE="$GOOD_IMG" OVA_SOURCE="$GOOD_OVA" CURL_FAIL_IMG=1 CURL_FAIL_OVA=0
+export STUB_LOG="$TMP/log7"; : > "$STUB_LOG"
+if bash "$TARGET" "$TMP/cache" > "$TMP/out7" 2>&1; then
+    fatal "exited 0 despite a stale-by-age copy that no longer verifies: $(cat "$TMP/out7")"
+else
+    pass "fails the run rather than falling back to an unverifiable stale-by-age copy"
+    [[ -f "$TMP/cache/$LOCAL_IMG_NAME" ]] && fatal "unverifiable stale-by-age copy left in cache" || pass "unverifiable stale-by-age copy removed"
+fi
+
 if [[ "$fail" -eq 0 ]]; then
     echo "PASS"
 else

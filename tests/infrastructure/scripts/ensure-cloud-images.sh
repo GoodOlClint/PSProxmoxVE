@@ -97,11 +97,17 @@ download_if_stale() {
         echo "Downloaded ${description}: $(du -h "${filepath}" | cut -f1)"
     else
         rm -f "${tmp_path}"
-        # If we have a stale copy, keep using it
-        if [ -f "${filepath}" ]; then
+        # A copy that failed verification above is already gone by this
+        # point; a copy that's here because it was merely stale-by-age was
+        # never re-verified this run. Verify it now, at the point we'd
+        # actually hand it back — checking only here, not proactively before
+        # the redownload attempt, avoids deleting a copy the redownload was
+        # about to replace anyway.
+        if [ -f "${filepath}" ] && verify_checksum "${filepath}" "${sums_url}" "${upstream_name}"; then
             echo "WARNING: Download failed, using stale cached copy" >&2
             return 0
         fi
+        rm -f "${filepath}"
         echo "ERROR: Failed to download ${description}" >&2
         return 1
     fi
