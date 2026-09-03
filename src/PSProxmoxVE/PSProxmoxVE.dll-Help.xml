@@ -708,11 +708,12 @@
         <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>ApiToken</maml:name>
           <maml:description>
-            <maml:para>API token in USER@REALM!TOKENID=UUID format.</maml:para>
+            <maml:para>API token in USER@REALM!TOKENID=UUID format, as a SecureString.</maml:para>
+            <maml:para>Build one with `Read-Host -AsSecureString`, or read it from a secret vault. `ConvertTo-SecureString 'root@pam!mytoken=...' -AsPlainText -Force` also works, but a token written as a literal lands in shell history and in any transcript. A plain string is still accepted in this release and emits a deprecation warning; it is removed in the next major release.</maml:para>
           </maml:description>
-          <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+          <command:parameterValue required="true" variableLength="false">SecureString</command:parameterValue>
           <dev:type>
-            <maml:name>String</maml:name>
+            <maml:name>SecureString</maml:name>
             <maml:uri />
           </dev:type>
           <dev:defaultValue>None</dev:defaultValue>
@@ -888,11 +889,12 @@
       <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>ApiToken</maml:name>
         <maml:description>
-          <maml:para>API token in USER@REALM!TOKENID=UUID format.</maml:para>
+          <maml:para>API token in USER@REALM!TOKENID=UUID format, as a SecureString.</maml:para>
+          <maml:para>Build one with `Read-Host -AsSecureString`, or read it from a secret vault. `ConvertTo-SecureString 'root@pam!mytoken=...' -AsPlainText -Force` also works, but a token written as a literal lands in shell history and in any transcript. A plain string is still accepted in this release and emits a deprecation warning; it is removed in the next major release.</maml:para>
         </maml:description>
-        <command:parameterValue required="true" variableLength="false">String</command:parameterValue>
+        <command:parameterValue required="true" variableLength="false">SecureString</command:parameterValue>
         <dev:type>
-          <maml:name>String</maml:name>
+          <maml:name>SecureString</maml:name>
           <maml:uri />
         </dev:type>
         <dev:defaultValue>None</dev:defaultValue>

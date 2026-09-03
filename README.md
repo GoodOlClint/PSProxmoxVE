@@ -64,8 +64,9 @@ Import-Module PSProxmoxVE
 $cred = Get-Credential -UserName 'root@pam'
 Connect-PveServer -Server 'pve.example.com' -Credential $cred -SkipCertificateCheck
 
-# Using API token
-Connect-PveServer -Server 'pve.example.com' -ApiToken 'root@pam!mytoken=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+# Using API token (SecureString)
+$token = Read-Host -AsSecureString -Prompt 'API token (root@pam!mytoken=...)'
+Connect-PveServer -Server 'pve.example.com' -ApiToken $token
 
 # Verify connection
 Test-PveConnection -Detailed
@@ -167,7 +168,9 @@ API tokens provide persistent, non-expiring authentication. They are the recomme
 4. Copy the token value — it is shown only once
 
 ```powershell
-Connect-PveServer -Server 'pve.example.com' -ApiToken 'root@pam!automation=12345678-abcd-efgh-ijkl-123456789012'
+# Read-Host keeps the token out of shell history and transcripts.
+$token = Read-Host -AsSecureString -Prompt 'API token (root@pam!automation=...)'
+Connect-PveServer -Server 'pve.example.com' -ApiToken $token
 ```
 
 ## Multi-Cluster Usage

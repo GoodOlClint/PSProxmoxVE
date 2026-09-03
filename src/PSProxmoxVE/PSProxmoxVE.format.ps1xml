@@ -1357,7 +1357,6 @@
     </View>
 
     <!-- PSProxmoxVE.Core.Authentication.PveSession -->
-    <!-- Hides sensitive properties (Ticket, ApiToken, CsrfToken) from default output -->
     <View>
       <Name>PSProxmoxVE.Core.Authentication.PveSession</Name>
       <ViewSelectedBy>

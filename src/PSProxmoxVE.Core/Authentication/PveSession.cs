@@ -28,16 +28,16 @@ namespace PSProxmoxVE.Core.Authentication
         public PveAuthMode AuthMode { get; }
 
         /// <summary>The API token string, when using API token authentication.</summary>
-        public string? ApiToken { get; }
+        internal string? ApiToken { get; }
 
         /// <summary>The user (user@realm) the ticket was issued to; null for API token sessions.</summary>
         public string? Username { get; }
 
         /// <summary>The session ticket cookie value, when using ticket authentication.</summary>
-        public string? Ticket => ReadTicket()?.Ticket;
+        internal string? Ticket => ReadTicket()?.Ticket;
 
         /// <summary>The CSRF prevention token, when using ticket authentication.</summary>
-        public string? CsrfToken => ReadTicket()?.CsrfToken;
+        internal string? CsrfToken => ReadTicket()?.CsrfToken;
 
         /// <summary>The UTC expiry time for the session ticket.</summary>
         public DateTime TicketExpiry => ReadTicket()?.Expiry ?? DateTime.MaxValue;
