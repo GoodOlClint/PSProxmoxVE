@@ -1,8 +1,6 @@
-using System;
 using System.Management.Automation;
-using Newtonsoft.Json.Linq;
-using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Vms;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.CloudInit
 {
@@ -31,14 +29,10 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
         {
             var session = GetSession();
             RequireVersion(session, "Cloud-Init management", 7, 2);
-            using var client = new PveHttpClient(session);
+            var service = new CloudInitService();
 
             WriteVerbose($"Getting cloud-init config for VM {VmId}...");
-            var json = client.GetAsync($"nodes/{Uri.EscapeDataString(Node)}/qemu/{VmId}/config").GetAwaiter().GetResult();
-            var root = JObject.Parse(json);
-            var data = root["data"];
-
-            var config = data?.ToObject<PveVmConfig>() ?? new PveVmConfig();
+            var config = service.GetFullVmConfig(session, Node, VmId);
             WriteObject(config);
         }
     }
