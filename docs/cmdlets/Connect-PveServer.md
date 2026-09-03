@@ -20,7 +20,7 @@ Connect-PveServer [-Server] <String> [-Port <Int32>] -Credential <PSCredential> 
 
 ### ApiToken
 ```
-Connect-PveServer [-Server] <String> [-Port <Int32>] -ApiToken <String> [-SkipCertificateCheck]
+Connect-PveServer [-Server] <String> [-Port <Int32>] -ApiToken <SecureString> [-SkipCertificateCheck]
  [-TimeoutSeconds <Int32>] [-PassThru] [-Quiet] [-ProgressAction <ActionPreference>] [<CommonParameters>]
 ```
 
@@ -39,10 +39,13 @@ PS C:\> {{ Add example code here }}
 ## PARAMETERS
 
 ### -ApiToken
-API token in USER@REALM!TOKENID=UUID format.
+API token in USER@REALM!TOKENID=UUID format, as a SecureString.
+
+Build one with `Read-Host -AsSecureString`, or read it from a secret vault. `ConvertTo-SecureString 'root@pam!mytoken=...' -AsPlainText -Force` also works, but a token written as a literal lands in shell history and in any transcript.
+A plain string is still accepted in this release and emits a deprecation warning; it is removed in the next major release.
 
 ```yaml
-Type: String
+Type: SecureString
 Parameter Sets: ApiToken
 Aliases:
 

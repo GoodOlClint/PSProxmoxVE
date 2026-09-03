@@ -35,9 +35,70 @@ Describe 'Connect-PveServer' {
                 Connect-PveServer `
                     -Server     'pve.example.com' `
                     -Credential $cred `
-                    -ApiToken   'root@pam!mytoken=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' `
+                    -ApiToken   (ConvertTo-SecureString 'root@pam!mytoken=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' -AsPlainText -Force) `
                     -ErrorAction Stop
             } | Should -Throw
+        }
+    }
+
+    Context 'ApiToken accepts a SecureString and warns on a plain string' {
+        BeforeAll {
+            # Rejected by the token-format check before any HTTP call, so these cases stay offline.
+            $script:BadToken = 'not-a-valid-token'
+        }
+
+        It 'ApiToken should be typed SecureString' {
+            (Get-Command 'Connect-PveServer').Parameters['ApiToken'].ParameterType |
+                Should -Be ([System.Security.SecureString])
+        }
+
+        It 'Should bind a plain string and warn that it is deprecated' {
+            $warnings = @()
+            $err = $null
+            try {
+                Connect-PveServer -Server 'pve.example.com' -ApiToken $script:BadToken `
+                    -ErrorAction Stop -WarningVariable +warnings
+            } catch { $err = $_ }
+            $err.FullyQualifiedErrorId | Should -Match 'PveAuthenticationFailed'
+            ($warnings -join "`n") | Should -Match 'deprecated'
+        }
+
+        It 'Should not warn about deprecation when given a SecureString' {
+            $secure = ConvertTo-SecureString $script:BadToken -AsPlainText -Force
+            $warnings = @()
+            $err = $null
+            try {
+                Connect-PveServer -Server 'pve.example.com' -ApiToken $secure `
+                    -ErrorAction Stop -WarningVariable +warnings
+            } catch { $err = $_ }
+            $err.FullyQualifiedErrorId | Should -Match 'PveAuthenticationFailed'
+            ($warnings -join "`n") | Should -Not -Match 'deprecated'
+        }
+
+        It 'Should not warn when a SecureString follows a binding failure that transformed a string' {
+            $securePass = ConvertTo-SecureString 'hunter2' -AsPlainText -Force
+            $cred = [System.Management.Automation.PSCredential]::new('root@pam', $securePass)
+            try {
+                Connect-PveServer -Server 'pve.example.com' -Credential $cred `
+                    -ApiToken $script:BadToken -ErrorAction Stop
+            } catch { }
+
+            $secure = ConvertTo-SecureString $script:BadToken -AsPlainText -Force
+            $warnings = @()
+            try {
+                Connect-PveServer -Server 'pve.example.com' -ApiToken $secure `
+                    -ErrorAction Stop -WarningVariable +warnings
+            } catch { }
+            ($warnings -join "`n") | Should -Not -Match 'deprecated'
+        }
+
+        It 'Should reject an empty SecureString as an invalid argument' {
+            $err = $null
+            try {
+                Connect-PveServer -Server 'pve.example.com' `
+                    -ApiToken (New-Object System.Security.SecureString) -ErrorAction Stop
+            } catch { $err = $_ }
+            $err.FullyQualifiedErrorId | Should -Match 'ApiTokenEmpty'
         }
     }
 

@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using System.Reflection;
 using Xunit;
 using PSProxmoxVE.Core.Authentication;
 
@@ -183,6 +185,49 @@ namespace PSProxmoxVE.Core.Tests.Authentication
 
             Assert.True(session.SkipCertificateCheck);
         }
+
+        [Theory]
+        [InlineData("ApiToken")]
+        [InlineData("Ticket")]
+        [InlineData("CsrfToken")]
+        public void CredentialProperties_AreNotPubliclyReadable(string propertyName)
+        {
+            var property = typeof(PveSession).GetProperty(
+                propertyName,
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+
+            Assert.NotNull(property);
+            Assert.False(property!.GetMethod!.IsPublic);
+        }
+
+        [Fact]
+        public void PublicProperties_ExposeNoApiToken()
+        {
+            const string token = "root@pam!mytoken=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+            var session = new PveSession(TestHostname, TestPort, false, token);
+
+            Assert.DoesNotContain(RenderPublicProperties(session), v => v.Contains(token));
+        }
+
+        [Fact]
+        public void PublicProperties_ExposeNoTicketOrCsrfToken()
+        {
+            const string ticket = "PVE:root@pam:SECRETTICKET";
+            const string csrf = "SECRETCSRFTOKEN";
+            var session = new PveSession(TestHostname, TestPort, false, "root@pam", ticket, csrf,
+                DateTime.UtcNow.AddHours(2));
+
+            var rendered = RenderPublicProperties(session);
+            Assert.DoesNotContain(rendered, v => v.Contains(ticket));
+            Assert.DoesNotContain(rendered, v => v.Contains(csrf));
+        }
+
+        private static string[] RenderPublicProperties(PveSession session) =>
+            typeof(PveSession)
+                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Select(p => p.GetValue(session)?.ToString())
+                .Where(v => v != null)
+                .ToArray()!;
 
         [Fact]
         public void Timeout_DefaultIs100Seconds()

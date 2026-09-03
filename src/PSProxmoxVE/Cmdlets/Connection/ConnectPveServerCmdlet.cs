@@ -1,5 +1,7 @@
 using System;
 using System.Management.Automation;
+using System.Runtime.InteropServices;
+using System.Security;
 using PSProxmoxVE.Core.Authentication;
 
 namespace PSProxmoxVE.Cmdlets.Connection
@@ -39,10 +41,12 @@ namespace PSProxmoxVE.Cmdlets.Connection
         /// <summary>
         /// Proxmox VE API token in the format USER@REALM!TOKENID=UUID,
         /// e.g. root@pam!mytoken=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.
+        /// A plain string is still accepted for this release and warns; it is removed in the next major.
         /// </summary>
         [Parameter(Mandatory = true, ParameterSetName = ParameterSetApiToken, HelpMessage = "API token in USER@REALM!TOKENID=UUID format.")]
-        [ValidateNotNullOrEmpty]
-        public string? ApiToken { get; set; }
+        [ApiTokenTransformation]
+        [ValidateNotNull]
+        public SecureString? ApiToken { get; set; }
 
         /// <summary>When specified, skips TLS certificate validation for the server.</summary>
         [Parameter(Mandatory = false, HelpMessage = "Skip TLS certificate validation.")]
@@ -111,10 +115,37 @@ namespace PSProxmoxVE.Cmdlets.Connection
 
                 case ParameterSetApiToken:
                 {
+                    var moduleOwnsToken = ApiTokenTransformationAttribute.WasConvertedFromString(ApiToken);
+                    if (moduleOwnsToken)
+                        WriteWarning(
+                            "Passing -ApiToken as a plain string is deprecated and will be removed in the next major release. " +
+                            "Pass a SecureString instead, for example (Read-Host -AsSecureString), a token retrieved from a " +
+                            "secret vault, or (ConvertTo-SecureString 'USER@REALM!TOKENID=UUID' -AsPlainText -Force).");
+
+                    if (ApiToken!.Length == 0)
+                        ThrowTerminatingError(new ErrorRecord(
+                            new ArgumentException("API token cannot be empty.", nameof(ApiToken)),
+                            "ApiTokenEmpty",
+                            ErrorCategory.InvalidArgument,
+                            null));
+
+                    string apiToken;
+                    var ptr = Marshal.SecureStringToGlobalAllocUnicode(ApiToken);
+                    try
+                    {
+                        apiToken = Marshal.PtrToStringUni(ptr) ?? string.Empty;
+                    }
+                    finally
+                    {
+                        Marshal.ZeroFreeGlobalAllocUnicode(ptr);
+                        if (moduleOwnsToken)
+                            ApiToken.Dispose();
+                    }
+
                     try
                     {
                         session = PveAuthenticator.AuthenticateWithApiToken(
-                            Server, Port, SkipCertificateCheck.IsPresent, ApiToken!, timeout);
+                            Server, Port, SkipCertificateCheck.IsPresent, apiToken, timeout);
                     }
                     catch (Exception ex)
                     {
