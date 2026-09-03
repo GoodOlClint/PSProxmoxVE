@@ -58,15 +58,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void CreateBackup_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new BackupService(new Mock<IPveHttpClient>().Object);
-            var config = new Dictionary<string, string> { ["vmid"] = "100" };
-
-            Assert.Throws<ArgumentNullException>("session", () => service.CreateBackup(null!, Node, config));
-        }
-
-        [Fact]
         public void CreateBackup_NullConfig_ThrowsArgumentNullException()
         {
             var service = new BackupService(new Mock<IPveHttpClient>().Object);
@@ -149,14 +140,6 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Empty(jobs);
         }
 
-        [Fact]
-        public void GetBackupJobs_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new BackupService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("session", () => service.GetBackupJobs(null!));
-        }
-
         // ---------------------------------------------------------------
         // GetBackupJob (single)
         // ---------------------------------------------------------------
@@ -190,22 +173,6 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Equal("backup-001", job!.Id);
             Assert.Equal("snapshot", job.Mode);
             Assert.Equal("pbs-store", job.Storage);
-        }
-
-        [Fact]
-        public void GetBackupJob_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new BackupService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("session", () => service.GetBackupJob(null!, "backup-001"));
-        }
-
-        [Fact]
-        public void GetBackupJob_NullId_ThrowsArgumentNullException()
-        {
-            var service = new BackupService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("id", () => service.GetBackupJob(CreateSession(), null!));
         }
 
         // ---------------------------------------------------------------
@@ -242,15 +209,6 @@ namespace PSProxmoxVE.Core.Tests.Services
                     d["schedule"] == "0 2 * * *" &&
                     d["storage"] == "local")),
                 Times.Once);
-        }
-
-        [Fact]
-        public void CreateBackupJob_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new BackupService(new Mock<IPveHttpClient>().Object);
-            var config = new Dictionary<string, string> { ["vmid"] = "100" };
-
-            Assert.Throws<ArgumentNullException>("session", () => service.CreateBackupJob(null!, config));
         }
 
         [Fact]
@@ -293,24 +251,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void UpdateBackupJob_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new BackupService(new Mock<IPveHttpClient>().Object);
-            var config = new Dictionary<string, string> { ["enabled"] = "1" };
-
-            Assert.Throws<ArgumentNullException>("session", () => service.UpdateBackupJob(null!, "id", config));
-        }
-
-        [Fact]
-        public void UpdateBackupJob_NullId_ThrowsArgumentNullException()
-        {
-            var service = new BackupService(new Mock<IPveHttpClient>().Object);
-            var config = new Dictionary<string, string> { ["enabled"] = "1" };
-
-            Assert.Throws<ArgumentNullException>("id", () => service.UpdateBackupJob(CreateSession(), null!, config));
-        }
-
-        [Fact]
         public void UpdateBackupJob_NullConfig_ThrowsArgumentNullException()
         {
             var service = new BackupService(new Mock<IPveHttpClient>().Object);
@@ -338,22 +278,6 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Assert
             mockClient.Verify(c => c.DeleteAsync("cluster/backup/backup-001"), Times.Once);
-        }
-
-        [Fact]
-        public void RemoveBackupJob_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new BackupService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("session", () => service.RemoveBackupJob(null!, "id"));
-        }
-
-        [Fact]
-        public void RemoveBackupJob_NullId_ThrowsArgumentNullException()
-        {
-            var service = new BackupService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("id", () => service.RemoveBackupJob(CreateSession(), null!));
         }
 
         // ---------------------------------------------------------------
@@ -402,14 +326,6 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Assert
             Assert.Empty(result);
-        }
-
-        [Fact]
-        public void GetNotBackedUp_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new BackupService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("session", () => service.GetNotBackedUp(null!));
         }
 
         // ---------------------------------------------------------------

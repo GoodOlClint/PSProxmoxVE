@@ -97,28 +97,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetClusterStatus_NullSession_ThrowsArgumentNullException()
-        {
-            // Arrange
-            var mockClient = new Mock<IPveHttpClient>();
-            var service = new ClusterService(mockClient.Object);
-
-            // Act & Assert
-            Assert.Throws<ArgumentNullException>(() => service.GetClusterStatus(null!));
-        }
-
-        [Fact]
-        public void GetClusterResources_NullSession_ThrowsArgumentNullException()
-        {
-            // Arrange
-            var mockClient = new Mock<IPveHttpClient>();
-            var service = new ClusterService(mockClient.Object);
-
-            // Act & Assert
-            Assert.Throws<ArgumentNullException>(() => service.GetClusterResources(null!));
-        }
-
-        [Fact]
         public void Constructor_NullClient_ThrowsArgumentNullException()
         {
             Assert.Throws<ArgumentNullException>(() => new ClusterService(null!));

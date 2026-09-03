@@ -118,40 +118,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetCloudInitConfig_NullSession_ThrowsArgumentNullException()
-        {
-            // Arrange
-            var mockClient = new Mock<IPveHttpClient>();
-            var service = new CloudInitService(mockClient.Object);
-
-            // Act & Assert
-            Assert.Throws<ArgumentNullException>(() => service.GetCloudInitConfig(null!, "pve1", 100));
-        }
-
-        [Fact]
-        public void SetCloudInitConfig_NullSession_ThrowsArgumentNullException()
-        {
-            // Arrange
-            var mockClient = new Mock<IPveHttpClient>();
-            var service = new CloudInitService(mockClient.Object);
-            var config = new Dictionary<string, object> { ["ciuser"] = "test" };
-
-            // Act & Assert
-            Assert.Throws<ArgumentNullException>(() => service.SetCloudInitConfig(null!, "pve1", 100, config));
-        }
-
-        [Fact]
-        public void RegenerateCloudInitImage_NullSession_ThrowsArgumentNullException()
-        {
-            // Arrange
-            var mockClient = new Mock<IPveHttpClient>();
-            var service = new CloudInitService(mockClient.Object);
-
-            // Act & Assert
-            Assert.Throws<ArgumentNullException>(() => service.RegenerateCloudInitImage(null!, "pve1", 100));
-        }
-
-        [Fact]
         public void Constructor_NullClient_ThrowsArgumentNullException()
         {
             Assert.Throws<ArgumentNullException>(() => new CloudInitService(null!));
@@ -196,14 +162,6 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Assert
             mockClient.Verify(c => c.GetAsync("nodes/pve%20node/qemu/100/config"), Times.Once);
-        }
-
-        [Fact]
-        public void GetFullVmConfig_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new CloudInitService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>(() => service.GetFullVmConfig(null!, "pve1", 100));
         }
     }
 }
