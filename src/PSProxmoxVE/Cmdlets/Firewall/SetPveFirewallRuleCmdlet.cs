@@ -10,8 +10,8 @@ namespace PSProxmoxVE.Cmdlets.Firewall
     [OutputType(typeof(void))]
     public sealed class SetPveFirewallRuleCmdlet : PveCmdletBase
     {
-        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The firewall level: Cluster, Node, Vm, or Container.")]
-        [ValidateSet("Cluster", "Node", "Vm", "Container")]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The firewall level: Cluster, Node, Vm, Container, or Group.")]
+        [ValidateSet("Cluster", "Node", "Vm", "Container", "Group")]
         public string Level { get; set; } = string.Empty;
 
         [Parameter(Mandatory = false, HelpMessage = "The node name. Required when Level is Node, Vm, or Container.")]
@@ -20,6 +20,9 @@ namespace PSProxmoxVE.Cmdlets.Firewall
         [Parameter(Mandatory = false, HelpMessage = "The VM/Container ID. Required when Level is Vm or Container.")]
         [ValidateRange(100, 999999999)]
         public int? VmId { get; set; }
+
+        [Parameter(Mandatory = false, HelpMessage = "The security group name. Required when Level is Group.")]
+        public string? Group { get; set; }
 
         [Parameter(Mandatory = true, HelpMessage = "The rule position to update.")]
         public int Position { get; set; }
@@ -65,7 +68,8 @@ namespace PSProxmoxVE.Cmdlets.Firewall
         protected override void ProcessRecord()
         {
             var level = Level;
-            if (!string.Equals(level, "Cluster", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(level, "Cluster", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(level, "Group", StringComparison.OrdinalIgnoreCase))
             {
                 if (string.IsNullOrEmpty(Node))
                 {
@@ -86,8 +90,21 @@ namespace PSProxmoxVE.Cmdlets.Firewall
                     return;
                 }
             }
+            if (string.Equals(level, "Group", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(Group))
+                {
+                    ThrowTerminatingError(new ErrorRecord(
+                        new PSArgumentException("Group is required when Level is Group."),
+                        "GroupRequired", ErrorCategory.InvalidArgument, null));
+                    return;
+                }
+            }
 
-            if (!ShouldProcess($"firewall rule at position {Position} ({Level})", "Update"))
+            var target = string.Equals(level, "Group", StringComparison.OrdinalIgnoreCase)
+                ? $"firewall rule at position {Position} ({Level} '{Group}')"
+                : $"firewall rule at position {Position} ({Level})";
+            if (!ShouldProcess(target, "Update"))
                 return;
 
             var session = GetSession();
@@ -122,7 +139,10 @@ namespace PSProxmoxVE.Cmdlets.Firewall
                 config["iface"] = Iface!;
 
             WriteVerbose($"Updating firewall rule at position {Position} ({level})...");
-            service.UpdateRule(session, level, Position, config, Node, vmid);
+            if (string.Equals(level, "Group", StringComparison.OrdinalIgnoreCase))
+                service.UpdateGroupRule(session, Group!, Position, config);
+            else
+                service.UpdateRule(session, level, Position, config, Node, vmid);
         }
     }
 }
