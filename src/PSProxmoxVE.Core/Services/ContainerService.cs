@@ -6,6 +6,7 @@ using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Containers;
 using PSProxmoxVE.Core.Models.Vms;
+using PSProxmoxVE.Core.Utilities;
 
 namespace PSProxmoxVE.Core.Services
 {
@@ -201,7 +202,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/snapshot", formData)
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -222,7 +223,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.DeleteAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/snapshot/{Uri.EscapeDataString(snapname)}")
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -243,7 +244,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/snapshot/{Uri.EscapeDataString(snapname)}/rollback")
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -270,7 +271,7 @@ namespace PSProxmoxVE.Core.Services
                     kvp => kvp.Value?.ToString() ?? string.Empty);
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/lxc", formData)
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -300,7 +301,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/status/shutdown", formData)
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -325,7 +326,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.DeleteAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}{queryString}")
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -356,7 +357,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/clone", formData)
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -382,7 +383,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/migrate", formData)
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -422,7 +423,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.PutAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/resize", formData)
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -447,7 +448,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/move_volume", formData)
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -467,7 +468,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/template")
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -505,19 +506,8 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/status/{action}")
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
-        }
-
-        private static PveTask ParseTask(string response, string node)
-        {
-            var data = JObject.Parse(response)["data"];
-            if (data?.Type == JTokenType.String)
-                return new PveTask { Upid = data.ToString(), Node = node, Status = "running" };
-
-            var task = data?.ToObject<PveTask>() ?? new PveTask();
-            task.Node = node;
-            return task;
         }
     }
 }
