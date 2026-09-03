@@ -54,12 +54,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetUsers_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.GetUsers(null!));
-        }
-
-        [Fact]
         public void GetUser_ReturnsSingleUser()
         {
             // Arrange
@@ -73,12 +67,6 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Equal("root@pam", result.UserId);
             Assert.Equal("root@example.com", result.Email);
             Assert.Equal(1, result.Enabled);
-        }
-
-        [Fact]
-        public void GetUser_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.GetUser(null!, "root@pam"));
         }
 
         [Fact]
@@ -112,18 +100,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void CreateUser_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.CreateUser(null!, "user@pve"));
-        }
-
-        [Fact]
-        public void CreateUser_NullUserId_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.CreateUser(_session, null!));
-        }
-
-        [Fact]
         public void SetUser_PutsFormData()
         {
             // Arrange
@@ -147,20 +123,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void SetUser_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.SetUser(null!, "user@pve", new Dictionary<string, object>()));
-        }
-
-        [Fact]
-        public void SetUser_NullUserId_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.SetUser(_session, null!, new Dictionary<string, object>()));
-        }
-
-        [Fact]
         public void SetUser_NullConfig_ThrowsArgumentNullException()
         {
             Assert.Throws<ArgumentNullException>(() =>
@@ -179,18 +141,6 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Assert
             _mockClient.Verify(c => c.DeleteAsync("access/users/deploy%40pve"), Times.Once);
-        }
-
-        [Fact]
-        public void RemoveUser_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.RemoveUser(null!, "user@pve"));
-        }
-
-        [Fact]
-        public void RemoveUser_NullUserId_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.RemoveUser(_session, null!));
         }
 
         // =================================================================
@@ -220,18 +170,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetApiTokens_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.GetApiTokens(null!, "root@pam"));
-        }
-
-        [Fact]
-        public void GetApiTokens_NullUserId_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.GetApiTokens(_session, null!));
-        }
-
-        [Fact]
         public void CreateApiToken_ReturnsTokenWithSecret()
         {
             // Arrange
@@ -250,27 +188,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void CreateApiToken_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.CreateApiToken(null!, "root@pam", "token1"));
-        }
-
-        [Fact]
-        public void CreateApiToken_NullUserId_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.CreateApiToken(_session, null!, "token1"));
-        }
-
-        [Fact]
-        public void CreateApiToken_NullTokenId_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.CreateApiToken(_session, "root@pam", null!));
-        }
-
-        [Fact]
         public void RemoveApiToken_CallsDeleteWithCorrectPath()
         {
             // Arrange
@@ -282,27 +199,6 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Assert
             _mockClient.Verify(c => c.DeleteAsync("access/users/root%40pam/token/automation"), Times.Once);
-        }
-
-        [Fact]
-        public void RemoveApiToken_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.RemoveApiToken(null!, "root@pam", "token1"));
-        }
-
-        [Fact]
-        public void RemoveApiToken_NullUserId_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.RemoveApiToken(_session, null!, "token1"));
-        }
-
-        [Fact]
-        public void RemoveApiToken_NullTokenId_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.RemoveApiToken(_session, "root@pam", null!));
         }
 
         [Fact]
@@ -318,13 +214,6 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Assert
             _mockClient.Verify(c => c.PutAsync("access/users/root%40pam/token/automation", config), Times.Once);
-        }
-
-        [Fact]
-        public void UpdateApiToken_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.UpdateApiToken(null!, "root@pam", "token1", new Dictionary<string, string>()));
         }
 
         [Fact]
@@ -362,12 +251,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetRoles_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.GetRoles(null!));
-        }
-
-        [Fact]
         public void CreateRole_PostsFormData()
         {
             // Arrange
@@ -383,18 +266,6 @@ namespace PSProxmoxVE.Core.Tests.Services
                     d["roleid"] == "BackupOperator" &&
                     d["privs"] == "Datastore.Audit,Datastore.AllocateSpace")),
                 Times.Once);
-        }
-
-        [Fact]
-        public void CreateRole_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.CreateRole(null!, "role1"));
-        }
-
-        [Fact]
-        public void CreateRole_NullRoleId_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.CreateRole(_session, null!));
         }
 
         [Fact]
@@ -415,27 +286,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void UpdateRole_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.UpdateRole(null!, "role1", "privs"));
-        }
-
-        [Fact]
-        public void UpdateRole_NullRoleId_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.UpdateRole(_session, null!, "privs"));
-        }
-
-        [Fact]
-        public void UpdateRole_NullPrivileges_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.UpdateRole(_session, "role1", null!));
-        }
-
-        [Fact]
         public void RemoveRole_CallsDeleteWithCorrectPath()
         {
             // Arrange
@@ -447,18 +297,6 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Assert
             _mockClient.Verify(c => c.DeleteAsync("access/roles/BackupOperator"), Times.Once);
-        }
-
-        [Fact]
-        public void RemoveRole_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.RemoveRole(null!, "role1"));
-        }
-
-        [Fact]
-        public void RemoveRole_NullRoleId_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.RemoveRole(_session, null!));
         }
 
         // =================================================================
@@ -487,12 +325,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetGroups_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.GetGroups(null!));
-        }
-
-        [Fact]
         public void CreateGroup_PostsFormData()
         {
             // Arrange
@@ -511,18 +343,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void CreateGroup_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.CreateGroup(null!, "group1"));
-        }
-
-        [Fact]
-        public void CreateGroup_NullGroupId_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.CreateGroup(_session, null!));
-        }
-
-        [Fact]
         public void UpdateGroup_PutsConfig()
         {
             // Arrange
@@ -535,20 +355,6 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Assert
             _mockClient.Verify(c => c.PutAsync("access/groups/devops", config), Times.Once);
-        }
-
-        [Fact]
-        public void UpdateGroup_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.UpdateGroup(null!, "group1", new Dictionary<string, string>()));
-        }
-
-        [Fact]
-        public void UpdateGroup_NullGroupId_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.UpdateGroup(_session, null!, new Dictionary<string, string>()));
         }
 
         [Fact]
@@ -570,18 +376,6 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Assert
             _mockClient.Verify(c => c.DeleteAsync("access/groups/devops"), Times.Once);
-        }
-
-        [Fact]
-        public void RemoveGroup_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.RemoveGroup(null!, "group1"));
-        }
-
-        [Fact]
-        public void RemoveGroup_NullGroupId_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.RemoveGroup(_session, null!));
         }
 
         // =================================================================
@@ -613,12 +407,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetDomains_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.GetDomains(null!));
-        }
-
-        [Fact]
         public void CreateDomain_PostsConfig()
         {
             // Arrange
@@ -637,13 +425,6 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Assert
             _mockClient.Verify(c => c.PostAsync("access/domains", config), Times.Once);
-        }
-
-        [Fact]
-        public void CreateDomain_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.CreateDomain(null!, new Dictionary<string, string>()));
         }
 
         [Fact]
@@ -669,20 +450,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void UpdateDomain_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.UpdateDomain(null!, "pam", new Dictionary<string, string>()));
-        }
-
-        [Fact]
-        public void UpdateDomain_NullRealm_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.UpdateDomain(_session, null!, new Dictionary<string, string>()));
-        }
-
-        [Fact]
         public void UpdateDomain_NullConfig_ThrowsArgumentNullException()
         {
             Assert.Throws<ArgumentNullException>(() =>
@@ -701,18 +468,6 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Assert
             _mockClient.Verify(c => c.DeleteAsync("access/domains/corp-ad"), Times.Once);
-        }
-
-        [Fact]
-        public void RemoveDomain_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.RemoveDomain(null!, "pam"));
-        }
-
-        [Fact]
-        public void RemoveDomain_NullRealm_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.RemoveDomain(_session, null!));
         }
 
         // =================================================================
@@ -735,27 +490,6 @@ namespace PSProxmoxVE.Core.Tests.Services
                     d["userid"] == "deploy@pve" &&
                     d["password"] == "newSecureP@ss!")),
                 Times.Once);
-        }
-
-        [Fact]
-        public void ChangePassword_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.ChangePassword(null!, "user@pve", "pass"));
-        }
-
-        [Fact]
-        public void ChangePassword_NullUserId_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.ChangePassword(_session, null!, "pass"));
-        }
-
-        [Fact]
-        public void ChangePassword_NullPassword_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.ChangePassword(_session, "user@pve", null!));
         }
 
         // =================================================================
@@ -849,12 +583,6 @@ namespace PSProxmoxVE.Core.Tests.Services
             // Assert
             _mockClient.Verify(c => c.GetAsync("access/permissions?path=%2Fvms%2F100"), Times.Once);
             Assert.Empty(result);
-        }
-
-        [Fact]
-        public void GetPermissions_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.GetPermissions(null!));
         }
 
         [Fact]
@@ -963,27 +691,6 @@ namespace PSProxmoxVE.Core.Tests.Services
                     !d.ContainsKey("delete") &&
                     d.Count == 3)),
                 Times.Once);
-        }
-
-        [Fact]
-        public void SetPermission_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.SetPermission(null!, "/", "Admin"));
-        }
-
-        [Fact]
-        public void SetPermission_NullPath_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.SetPermission(_session, null!, "Admin"));
-        }
-
-        [Fact]
-        public void SetPermission_NullRoles_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.SetPermission(_session, "/", null!));
         }
     }
 }

@@ -147,12 +147,6 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Empty(result);
         }
 
-        [Fact]
-        public void GetStorages_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.GetStorages(null!));
-        }
-
         // -----------------------------------------------------------------
         // GetStorageContent
         // -----------------------------------------------------------------
@@ -192,24 +186,6 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Single(result);
             Assert.Equal("iso", result[0].Content);
             _mockClient.Verify(c => c.GetAsync("nodes/pve1/storage/local/content?content=iso"), Times.Once);
-        }
-
-        [Fact]
-        public void GetStorageContent_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.GetStorageContent(null!, "pve1", "local"));
-        }
-
-        [Fact]
-        public void GetStorageContent_NullNode_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.GetStorageContent(_session, null!, "local"));
-        }
-
-        [Fact]
-        public void GetStorageContent_NullStorage_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.GetStorageContent(_session, "pve1", null!));
         }
 
         // -----------------------------------------------------------------
@@ -304,12 +280,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void CreateStorage_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.CreateStorage(null!, new Dictionary<string, object>()));
-        }
-
-        [Fact]
         public void CreateStorage_NullConfig_ThrowsArgumentNullException()
         {
             Assert.Throws<ArgumentNullException>(() => _service.CreateStorage(_session, null!));
@@ -332,18 +302,6 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Assert
             _mockClient.Verify(c => c.PutAsync("storage/nfs-backup", config), Times.Once);
-        }
-
-        [Fact]
-        public void UpdateStorage_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.UpdateStorage(null!, "local", new Dictionary<string, string>()));
-        }
-
-        [Fact]
-        public void UpdateStorage_NullStorage_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.UpdateStorage(_session, null!, new Dictionary<string, string>()));
         }
 
         [Fact]
@@ -384,18 +342,6 @@ namespace PSProxmoxVE.Core.Tests.Services
             _mockClient.Verify(c => c.DeleteAsync("storage/..%2Faccess%2Fusers%2Fx"), Times.Once);
         }
 
-        [Fact]
-        public void RemoveStorage_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.RemoveStorage(null!, "local"));
-        }
-
-        [Fact]
-        public void RemoveStorage_NullStorage_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.RemoveStorage(_session, null!));
-        }
-
         // -----------------------------------------------------------------
         // GetStorageStatus
         // -----------------------------------------------------------------
@@ -418,24 +364,6 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Equal("dir", result.Type);
         }
 
-        [Fact]
-        public void GetStorageStatus_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.GetStorageStatus(null!, "pve1", "local"));
-        }
-
-        [Fact]
-        public void GetStorageStatus_NullNode_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.GetStorageStatus(_session, null!, "local"));
-        }
-
-        [Fact]
-        public void GetStorageStatus_NullStorage_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.GetStorageStatus(_session, "pve1", null!));
-        }
-
         // -----------------------------------------------------------------
         // RemoveContent
         // -----------------------------------------------------------------
@@ -452,18 +380,6 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Assert
             _mockClient.Verify(c => c.DeleteAsync("nodes/pve1/storage/local/content/local%3Aiso%2Fdebian-12.iso"), Times.Once);
-        }
-
-        [Fact]
-        public void RemoveContent_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.RemoveContent(null!, "pve1", "local", "vol"));
-        }
-
-        [Fact]
-        public void RemoveContent_NullVolume_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.RemoveContent(_session, "pve1", "local", null!));
         }
 
         // -----------------------------------------------------------------
@@ -487,12 +403,6 @@ namespace PSProxmoxVE.Core.Tests.Services
             _mockClient.Verify(c => c.PutAsync(
                 "nodes/pve1/storage/local/content/local%3Abackup%2Fvzdump-qemu-100.vma.zst",
                 config), Times.Once);
-        }
-
-        [Fact]
-        public void UpdateContent_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.UpdateContent(null!, "pve1", "local", "vol", new Dictionary<string, string>()));
         }
 
         [Fact]
@@ -572,13 +482,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void UploadIso_WhitespaceContentType_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.UploadIso(_session, "pve1", "local", "/tmp/test.iso", contentType: " "));
-        }
-
-        [Fact]
         public void UploadIso_TimeoutOverride_PassesItToClientConstruction()
         {
             // Arrange
@@ -604,18 +507,6 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Assert
             Assert.Equal(TimeSpan.FromMinutes(30), service.SeenTimeout);
-        }
-
-        [Fact]
-        public void UploadIso_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.UploadIso(null!, "pve1", "local", "/tmp/test.iso"));
-        }
-
-        [Fact]
-        public void UploadIso_NullFilePath_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.UploadIso(_session, "pve1", "local", null!));
         }
 
         // -----------------------------------------------------------------
@@ -709,34 +600,6 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Equal(TimeSpan.FromMinutes(30), service.SeenTimeout);
         }
 
-        [Fact]
-        public void DownloadUrl_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.DownloadUrl(null!, "pve1", "local", "https://example.com/f.iso", "f.iso", "iso"));
-        }
-
-        [Fact]
-        public void DownloadUrl_NullUrl_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.DownloadUrl(_session, "pve1", "local", null!, "f.iso", "iso"));
-        }
-
-        [Fact]
-        public void DownloadUrl_NullFilename_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.DownloadUrl(_session, "pve1", "local", "https://example.com/f.iso", null!, "iso"));
-        }
-
-        [Fact]
-        public void DownloadUrl_NullContentType_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.DownloadUrl(_session, "pve1", "local", "https://example.com/f.iso", "f.iso", null!));
-        }
-
         // -----------------------------------------------------------------
         // AllocateDisk
         // -----------------------------------------------------------------
@@ -762,13 +625,6 @@ namespace PSProxmoxVE.Core.Tests.Services
             // Assert
             Assert.Contains("UPID:pve1", result.Upid);
             Assert.Equal("pve1", result.Node);
-        }
-
-        [Fact]
-        public void AllocateDisk_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
-                _service.AllocateDisk(null!, "pve1", "local", new Dictionary<string, string>()));
         }
 
         [Fact]

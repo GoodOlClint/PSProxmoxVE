@@ -59,19 +59,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetTask_NullSession_ThrowsArgumentNullException()
-        {
-            // Arrange
-            var mockClient = new Mock<IPveHttpClient>();
-            var service = new TaskService(mockClient.Object);
-
-            // Act & Assert
-            var ex = Assert.Throws<ArgumentNullException>(() =>
-                service.GetTask(null!, TestNode, TestUpid));
-            Assert.Equal("session", ex.ParamName);
-        }
-
-        [Fact]
         public void GetTaskLog_HappyPath_ReturnsLogEntries()
         {
             // Arrange

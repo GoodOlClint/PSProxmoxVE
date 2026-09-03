@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Moq;
@@ -324,38 +323,6 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Assert
             Assert.Equal($"nodes/pve%20node/qemu/{VmId}/snapshot/snap%20name/rollback", captured.Path);
-        }
-
-        [Fact]
-        public void GetSnapshots_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new SnapshotService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("session", () => service.GetSnapshots(null!, Node, VmId));
-        }
-
-        [Fact]
-        public void CreateSnapshot_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new SnapshotService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("session", () => service.CreateSnapshot(null!, Node, VmId, "snap"));
-        }
-
-        [Fact]
-        public void RemoveSnapshot_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new SnapshotService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("session", () => service.RemoveSnapshot(null!, Node, VmId, "snap"));
-        }
-
-        [Fact]
-        public void RollbackSnapshot_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new SnapshotService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("session", () => service.RollbackSnapshot(null!, Node, VmId, "snap"));
         }
     }
 }

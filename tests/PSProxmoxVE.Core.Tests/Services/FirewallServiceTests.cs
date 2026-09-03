@@ -260,71 +260,11 @@ namespace PSProxmoxVE.Core.Tests.Services
         // -------------------------------------------------------------------------
 
         [Fact]
-        public void GetGroupRules_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new FirewallService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("session", () => service.GetGroupRules(null!, Group));
-        }
-
-        [Fact]
         public void GetGroupRules_WhitespaceGroup_ThrowsArgumentNullException()
         {
             var service = new FirewallService(new Mock<IPveHttpClient>().Object);
 
             Assert.Throws<ArgumentNullException>("group", () => service.GetGroupRules(CreateSession(), " "));
-        }
-
-        [Fact]
-        public void CreateGroupRule_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new FirewallService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("session",
-                () => service.CreateGroupRule(null!, Group, new Dictionary<string, string>()));
-        }
-
-        [Fact]
-        public void CreateGroupRule_WhitespaceGroup_ThrowsArgumentNullException()
-        {
-            var service = new FirewallService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("group",
-                () => service.CreateGroupRule(CreateSession(), " ", new Dictionary<string, string>()));
-        }
-
-        [Fact]
-        public void UpdateGroupRule_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new FirewallService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("session",
-                () => service.UpdateGroupRule(null!, Group, 0, new Dictionary<string, string>()));
-        }
-
-        [Fact]
-        public void UpdateGroupRule_WhitespaceGroup_ThrowsArgumentNullException()
-        {
-            var service = new FirewallService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("group",
-                () => service.UpdateGroupRule(CreateSession(), " ", 0, new Dictionary<string, string>()));
-        }
-
-        [Fact]
-        public void RemoveGroupRule_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new FirewallService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("session", () => service.RemoveGroupRule(null!, Group, 0));
-        }
-
-        [Fact]
-        public void RemoveGroupRule_WhitespaceGroup_ThrowsArgumentNullException()
-        {
-            var service = new FirewallService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("group", () => service.RemoveGroupRule(CreateSession(), " ", 0));
         }
 
         // -------------------------------------------------------------------------

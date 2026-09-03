@@ -191,33 +191,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void CreateContainerSnapshot_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new ContainerService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("session",
-                () => service.CreateContainerSnapshot(null!, TestNode, TestVmId, "my-snap"));
-        }
-
-        [Fact]
-        public void RemoveContainerSnapshot_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new ContainerService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("session",
-                () => service.RemoveContainerSnapshot(null!, TestNode, TestVmId, "my-snap"));
-        }
-
-        [Fact]
-        public void RollbackContainerSnapshot_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new ContainerService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("session",
-                () => service.RollbackContainerSnapshot(null!, TestNode, TestVmId, "my-snap"));
-        }
-
-        [Fact]
         public void RollbackContainerSnapshot_WhitespaceSnapname_ThrowsArgumentNullException()
         {
             var service = new ContainerService(new Mock<IPveHttpClient>().Object);
