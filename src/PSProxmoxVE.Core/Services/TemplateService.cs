@@ -39,8 +39,9 @@ namespace PSProxmoxVE.Core.Services
         /// <param name="session">The authenticated PVE session.</param>
         /// <param name="node">Optional cluster node name to filter templates by node.</param>
         /// <param name="onNodeSkipped">
-        /// Optional callback invoked with the node name and the exception when a node is
-        /// skipped because it is unreachable, forwarded to <see cref="VmService.GetVms"/>.
+        /// Forwarded to <see cref="VmService.GetVms"/>, which does not invoke it for the
+        /// all-nodes listing (a single <c>cluster/resources</c> call has no per-node
+        /// failure to report); kept for source compatibility with existing callers.
         /// </param>
         public PveVm[] GetTemplates(PveSession session, string? node = null, Action<string, Exception>? onNodeSkipped = null)
         {

@@ -130,16 +130,18 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetTemplates_AllNodes_AggregatesAcrossNodesAndStampsNode()
+        public void GetTemplates_AllNodes_SourcesFromClusterResourcesInOneCall()
         {
-            // Arrange
+            // Arrange: issue #152 — VmService.GetVms(node: null) now sources the all-nodes
+            // listing from cluster/resources instead of a call per node.
             var mockClient = new Mock<IPveHttpClient>();
-            mockClient.Setup(c => c.GetAsync("nodes"))
-                .ReturnsAsync(@"{""data"": [{""node"": ""pve1""}, {""node"": ""pve2""}]}");
-            mockClient.Setup(c => c.GetAsync("nodes/pve1/qemu"))
-                .ReturnsAsync(@"{""data"": [{""vmid"": 100, ""template"": 1}, {""vmid"": 101, ""template"": 0}]}");
-            mockClient.Setup(c => c.GetAsync("nodes/pve2/qemu"))
-                .ReturnsAsync(@"{""data"": [{""vmid"": 200, ""template"": 1}]}");
+            mockClient.Setup(c => c.GetAsync("cluster/resources?type=vm"))
+                .ReturnsAsync(@"{""data"": [
+                    {""type"": ""qemu"", ""vmid"": 100, ""node"": ""pve1"", ""template"": 1},
+                    {""type"": ""qemu"", ""vmid"": 101, ""node"": ""pve1"", ""template"": 0},
+                    {""type"": ""qemu"", ""vmid"": 200, ""node"": ""pve2"", ""template"": 1},
+                    {""type"": ""lxc"", ""vmid"": 300, ""node"": ""pve2"", ""template"": 1}
+                ]}");
             var service = new TemplateService(mockClient.Object);
 
             // Act
@@ -149,46 +151,8 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Equal(2, templates.Length);
             Assert.Contains(templates, t => t.VmId == 100 && t.Node == "pve1");
             Assert.Contains(templates, t => t.VmId == 200 && t.Node == "pve2");
-        }
-
-        [Fact]
-        public void GetTemplates_AllNodes_UnreachableNodeIsSkippedAndReported()
-        {
-            // Arrange
-            var mockClient = new Mock<IPveHttpClient>();
-            mockClient.Setup(c => c.GetAsync("nodes"))
-                .ReturnsAsync(@"{""data"": [{""node"": ""pve1""}, {""node"": ""pve2""}]}");
-            mockClient.Setup(c => c.GetAsync("nodes/pve1/qemu"))
-                .ReturnsAsync(@"{""data"": [{""vmid"": 100, ""template"": 1}]}");
-            mockClient.Setup(c => c.GetAsync("nodes/pve2/qemu"))
-                .ThrowsAsync(new PveApiException(HttpStatusCode.InternalServerError, "internal error", "nodes/pve2/qemu", "GET"));
-            var service = new TemplateService(mockClient.Object);
-
-            // Act
-            var skipped = new List<string>();
-            var templates = service.GetTemplates(CreateSession(), onNodeSkipped: (node, ex) => skipped.Add(node));
-
-            // Assert
-            var template = Assert.Single(templates);
-            Assert.Equal(100, template.VmId);
-            Assert.Equal(new[] { "pve2" }, skipped);
-        }
-
-        [Fact]
-        public void GetTemplates_AllNodes_PermissionErrorOnOneNodePropagates()
-        {
-            // Arrange
-            var mockClient = new Mock<IPveHttpClient>();
-            mockClient.Setup(c => c.GetAsync("nodes"))
-                .ReturnsAsync(@"{""data"": [{""node"": ""pve1""}, {""node"": ""pve2""}]}");
-            mockClient.Setup(c => c.GetAsync("nodes/pve1/qemu"))
-                .ReturnsAsync(@"{""data"": [{""vmid"": 100, ""template"": 1}]}");
-            mockClient.Setup(c => c.GetAsync("nodes/pve2/qemu"))
-                .ThrowsAsync(new PveApiException(HttpStatusCode.Forbidden, "permission denied", "nodes/pve2/qemu", "GET"));
-            var service = new TemplateService(mockClient.Object);
-
-            // Act & Assert
-            Assert.Throws<PveApiException>(() => service.GetTemplates(CreateSession()));
+            Assert.DoesNotContain(templates, t => t.VmId == 300);
+            mockClient.Verify(c => c.GetAsync("cluster/resources?type=vm"), Times.Once);
         }
     }
 }
