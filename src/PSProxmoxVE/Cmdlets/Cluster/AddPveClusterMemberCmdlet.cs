@@ -112,7 +112,8 @@ namespace PSProxmoxVE.Cmdlets.Cluster
             {
                 return taskService.WaitForTask(session, nodeName, upid);
             }
-            catch (PveApiException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
+            catch (Exception ex) when (ex is PveSessionExpiredException
+                || (ex is PveApiException api && api.StatusCode == HttpStatusCode.Unauthorized))
             {
                 WriteVerbose("Session expired during join — waiting for auth services to restart...");
                 var newSession = ReauthenticateWithRetry(session, plainPassword);
