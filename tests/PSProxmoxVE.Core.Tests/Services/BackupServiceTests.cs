@@ -50,6 +50,7 @@ namespace PSProxmoxVE.Core.Tests.Services
             // Assert
             Assert.Equal(upid, task.Upid);
             Assert.Equal(Node, task.Node);
+            Assert.Equal("running", task.Status);
             mockClient.Verify(c => c.PostAsync(
                 $"nodes/{Node}/vzdump",
                 It.Is<Dictionary<string, string>>(d => d["vmid"] == "100" && d["storage"] == "local")),

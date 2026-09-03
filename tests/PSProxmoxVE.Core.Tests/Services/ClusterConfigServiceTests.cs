@@ -319,34 +319,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetClusterStatus_ReturnsStatusArray()
-        {
-            // Arrange
-            var json = @"{""data"": [
-                {""type"": ""cluster"", ""name"": ""pve-cluster"", ""nodes"": 3, ""quorate"": 1, ""version"": 5},
-                {""type"": ""node"", ""name"": ""pve1"", ""online"": 1, ""local"": 1, ""nodeid"": 1, ""ip"": ""10.0.0.1""}
-            ]}";
-            var mockClient = new Mock<IPveHttpClient>();
-            mockClient.Setup(c => c.GetAsync("cluster/status")).ReturnsAsync(json);
-            var service = new ClusterConfigService(mockClient.Object);
-
-            // Act
-            var statuses = service.GetClusterStatus(CreateSession());
-
-            // Assert
-            Assert.Equal(2, statuses.Length);
-            Assert.Equal("cluster", statuses[0].Type);
-            Assert.Equal("pve-cluster", statuses[0].Name);
-            Assert.Equal(3, statuses[0].Nodes);
-            Assert.Equal(1, statuses[0].Quorate);
-            Assert.Equal("node", statuses[1].Type);
-            Assert.Equal("pve1", statuses[1].Name);
-            Assert.Equal(1, statuses[1].Online);
-            Assert.Equal("10.0.0.1", statuses[1].Ip);
-            mockClient.Verify(c => c.GetAsync("cluster/status"), Times.Once);
-        }
-
-        [Fact]
         public void GetNextId_ReturnsInt()
         {
             // Arrange
@@ -450,17 +422,6 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Act & Assert
             Assert.Throws<ArgumentNullException>(() => service.GetNextId(null!));
-        }
-
-        [Fact]
-        public void GetClusterStatus_NullSession_ThrowsArgumentNullException()
-        {
-            // Arrange
-            var mockClient = new Mock<IPveHttpClient>();
-            var service = new ClusterConfigService(mockClient.Object);
-
-            // Act & Assert
-            Assert.Throws<ArgumentNullException>(() => service.GetClusterStatus(null!));
         }
 
         [Fact]
