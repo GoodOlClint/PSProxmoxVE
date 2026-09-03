@@ -40,6 +40,7 @@ namespace PSProxmoxVE.Core.Tests.Services
             // Assert
             Assert.Equal(upid, task.Upid);
             Assert.Equal(Node, task.Node);
+            Assert.Equal("running", task.Status);
             mockClient.Verify(c => c.PostAsync(
                 $"nodes/{Node}/qemu/{VmId}/template",
                 It.IsAny<Dictionary<string, string>>()),

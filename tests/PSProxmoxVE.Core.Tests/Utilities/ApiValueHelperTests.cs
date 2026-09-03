@@ -9,7 +9,6 @@ namespace PSProxmoxVE.Core.Tests.Utilities
         [Theory]
         [InlineData(true)]
         [InlineData(1L)]
-        [InlineData(1)]
         [InlineData("1")]
         public void IsExited_TrueValues_ReturnsTrue(object value)
         {
@@ -19,12 +18,12 @@ namespace PSProxmoxVE.Core.Tests.Utilities
         [Theory]
         [InlineData(false)]
         [InlineData(0L)]
-        [InlineData(0)]
         [InlineData("0")]
         [InlineData(null)]
         [InlineData("")]
         [InlineData("true")]
         [InlineData(2L)]
+        [InlineData(1)]
         [InlineData(42)]
         public void IsExited_FalseValues_ReturnsFalse(object? value)
         {
