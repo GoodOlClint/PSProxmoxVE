@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Management.Automation;
-using Newtonsoft.Json.Linq;
-using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Storage;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Storage
 {
@@ -84,7 +83,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
         [Parameter(Mandatory = false, HelpMessage = "Limit access to these nodes (comma-separated).")]
         public string? Nodes { get; set; }
 
-        private static void AddIfNotEmpty(Dictionary<string, string> data, string key, string? value)
+        private static void AddIfNotEmpty(Dictionary<string, object> data, string key, string? value)
         {
             if (!string.IsNullOrEmpty(value))
                 data[key] = value!;
@@ -104,10 +103,9 @@ namespace PSProxmoxVE.Cmdlets.Storage
             }
 
             var session = GetSession();
-            using var client = new PveHttpClient(session);
 
             WriteVerbose($"Creating storage '{Storage}'...");
-            var data = new Dictionary<string, string>
+            var data = new Dictionary<string, object>
             {
                 ["storage"] = Storage,
                 ["type"]    = Type
@@ -145,9 +143,8 @@ namespace PSProxmoxVE.Cmdlets.Storage
             if (Shared.IsPresent)  data["shared"]  = "1";
             if (Disable.IsPresent) data["disable"] = "1";
 
-            client.PostAsync("storage", data).GetAwaiter().GetResult();
+            new StorageService().CreateStorage(session, data);
 
-            // Return the storage object representing what was created
             var storage = new PveStorage
             {
                 Storage = Storage,

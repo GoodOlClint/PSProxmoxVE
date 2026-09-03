@@ -102,6 +102,9 @@ namespace PSProxmoxVE.Core.Services
         /// HTTP timeout override for this upload. Defaults to 30 minutes, overriding the
         /// session's default 100-second timeout so that large files have time to transfer.
         /// </param>
+        /// <param name="contentType">
+        /// The storage content type to upload as (e.g. "iso", "vztmpl", "import"). Defaults to "iso".
+        /// </param>
         public PveTask UploadIso(
             PveSession session,
             string node,
@@ -110,16 +113,18 @@ namespace PSProxmoxVE.Core.Services
             string? checksum = null,
             string? checksumAlgorithm = null,
             Action<long, long>? progressCallback = null,
-            TimeSpan? timeout = null)
+            TimeSpan? timeout = null,
+            string contentType = "iso")
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
             if (string.IsNullOrWhiteSpace(storage)) throw new ArgumentNullException(nameof(storage));
             if (string.IsNullOrWhiteSpace(filePath)) throw new ArgumentNullException(nameof(filePath));
+            if (string.IsNullOrWhiteSpace(contentType)) throw new ArgumentNullException(nameof(contentType));
 
             var formFields = new Dictionary<string, string>
             {
-                ["content"] = "iso"
+                ["content"] = contentType
             };
 
             return Invoke(session, timeout ?? TimeSpan.FromMinutes(30), client =>
@@ -145,13 +150,19 @@ namespace PSProxmoxVE.Core.Services
         /// <param name="url">The URL to download from.</param>
         /// <param name="filename">The target filename on the storage.</param>
         /// <param name="contentType">The content type (e.g. "iso", "vztmpl").</param>
+        /// <param name="timeout">
+        /// HTTP timeout override for this request. Defaults to 30 minutes, matching
+        /// <see cref="UploadIso"/>, since scheduling a download can outlast the session's
+        /// default 100-second timeout on a slow or busy node.
+        /// </param>
         public PveTask DownloadUrl(
             PveSession session,
             string node,
             string storage,
             string url,
             string filename,
-            string contentType)
+            string contentType,
+            TimeSpan? timeout = null)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
@@ -167,7 +178,7 @@ namespace PSProxmoxVE.Core.Services
                 ["content"] = contentType
             };
 
-            return Invoke(session, client =>
+            return Invoke(session, timeout ?? TimeSpan.FromMinutes(30), client =>
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/storage/{Uri.EscapeDataString(storage)}/download-url", formData)
                     .GetAwaiter().GetResult();
@@ -196,8 +207,12 @@ namespace PSProxmoxVE.Core.Services
                     kvp => kvp.Key,
                     kvp => kvp.Value?.ToString() ?? string.Empty);
                 var response = client.PostAsync("storage", formData).GetAwaiter().GetResult();
+                if (string.IsNullOrWhiteSpace(response))
+                    return new PveStorage();
                 var data = JObject.Parse(response)["data"];
-                return data?.ToObject<PveStorage>() ?? new PveStorage();
+                return data?.Type == JTokenType.Object
+                    ? data.ToObject<PveStorage>() ?? new PveStorage()
+                    : new PveStorage();
             });
         }
 
@@ -334,7 +349,7 @@ namespace PSProxmoxVE.Core.Services
         {
             var data = JObject.Parse(response)["data"];
             if (data?.Type == JTokenType.String)
-                return new PveTask { Upid = data.ToString(), Node = node };
+                return new PveTask { Upid = data.ToString(), Node = node, Status = "running" };
 
             var task = data?.ToObject<PveTask>() ?? new PveTask();
             task.Node = node;
