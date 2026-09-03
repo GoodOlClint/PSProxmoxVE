@@ -10,8 +10,8 @@ namespace PSProxmoxVE.Cmdlets.Firewall
     [OutputType(typeof(PveFirewallRule))]
     public sealed class GetPveFirewallRuleCmdlet : PveCmdletBase
     {
-        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The firewall level: Cluster, Node, Vm, or Container.")]
-        [ValidateSet("Cluster", "Node", "Vm", "Container")]
+        [Parameter(Mandatory = true, Position = 0, HelpMessage = "The firewall level: Cluster, Node, Vm, Container, or Group.")]
+        [ValidateSet("Cluster", "Node", "Vm", "Container", "Group")]
         public string Level { get; set; } = string.Empty;
 
         [Parameter(Mandatory = false, HelpMessage = "The node name. Required when Level is Node, Vm, or Container.")]
@@ -21,13 +21,17 @@ namespace PSProxmoxVE.Cmdlets.Firewall
         [ValidateRange(100, 999999999)]
         public int? VmId { get; set; }
 
+        [Parameter(Mandatory = false, HelpMessage = "The security group name. Required when Level is Group.")]
+        public string? Group { get; set; }
+
         [Parameter(Mandatory = false, HelpMessage = "Optional rule position to filter by.")]
         public int? Position { get; set; }
 
         protected override void ProcessRecord()
         {
             var level = Level;
-            if (!string.Equals(level, "Cluster", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(level, "Cluster", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(level, "Group", StringComparison.OrdinalIgnoreCase))
             {
                 if (string.IsNullOrEmpty(Node))
                 {
@@ -48,13 +52,25 @@ namespace PSProxmoxVE.Cmdlets.Firewall
                     return;
                 }
             }
+            if (string.Equals(level, "Group", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(Group))
+                {
+                    ThrowTerminatingError(new ErrorRecord(
+                        new PSArgumentException("Group is required when Level is Group."),
+                        "GroupRequired", ErrorCategory.InvalidArgument, null));
+                    return;
+                }
+            }
 
             var session = GetSession();
             var service = new FirewallService();
             var vmid = VmId;
 
             WriteVerbose($"Getting firewall rules at level '{level}'...");
-            var rules = service.GetRules(session, level, Node, vmid);
+            var rules = string.Equals(level, "Group", StringComparison.OrdinalIgnoreCase)
+                ? service.GetGroupRules(session, Group!)
+                : service.GetRules(session, level, Node, vmid);
 
             if (Position.HasValue)
             {

@@ -86,6 +86,21 @@ Describe 'Get-PveFirewallRule' {
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
+
+    Context 'Group level' {
+        It 'Should include Group in the Level ValidateSet' {
+            Skip-IfMissing 'Get-PveFirewallRule'
+            $param = $script:Cmd.Parameters['Level']
+            $validateSet = $param.Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] }
+            $validateSet.ValidValues | Should -Contain 'Group'
+        }
+
+        It 'Should throw when Level is Group and Group is not specified' {
+            Skip-IfMissing 'Get-PveFirewallRule'
+            { Get-PveFirewallRule -Level 'Group' -ErrorAction Stop } |
+                Should -Throw '*Group is required when Level is Group*'
+        }
+    }
 }
 
 # ---------------------------------------------------------------------------
@@ -138,6 +153,21 @@ Describe 'New-PveFirewallRule' {
                 Should -Throw '*No active Proxmox VE session*'
         }
     }
+
+    Context 'Group level' {
+        It 'Should include Group in the Level ValidateSet' {
+            Skip-IfMissing 'New-PveFirewallRule'
+            $param = $script:Cmd.Parameters['Level']
+            $validateSet = $param.Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] }
+            $validateSet.ValidValues | Should -Contain 'Group'
+        }
+
+        It 'Should throw when Level is Group and Group is not specified' {
+            Skip-IfMissing 'New-PveFirewallRule'
+            { New-PveFirewallRule -Level 'Group' -Action 'ACCEPT' -Type 'in' -ErrorAction Stop } |
+                Should -Throw '*Group is required when Level is Group*'
+        }
+    }
 }
 
 # ---------------------------------------------------------------------------
@@ -183,6 +213,21 @@ Describe 'Set-PveFirewallRule' {
             Skip-IfMissing 'Set-PveFirewallRule'
             { Set-PveFirewallRule -Level 'cluster' -Position 0 -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
+        }
+    }
+
+    Context 'Group level' {
+        It 'Should include Group in the Level ValidateSet' {
+            Skip-IfMissing 'Set-PveFirewallRule'
+            $param = $script:Cmd.Parameters['Level']
+            $validateSet = $param.Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] }
+            $validateSet.ValidValues | Should -Contain 'Group'
+        }
+
+        It 'Should throw when Level is Group and Group is not specified' {
+            Skip-IfMissing 'Set-PveFirewallRule'
+            { Set-PveFirewallRule -Level 'Group' -Position 0 -ErrorAction Stop } |
+                Should -Throw '*Group is required when Level is Group*'
         }
     }
 }
@@ -238,6 +283,21 @@ Describe 'Remove-PveFirewallRule' {
             Skip-IfMissing 'Remove-PveFirewallRule'
             { Remove-PveFirewallRule -Level 'cluster' -Position 0 -Confirm:$false -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
+        }
+    }
+
+    Context 'Group level' {
+        It 'Should include Group in the Level ValidateSet' {
+            Skip-IfMissing 'Remove-PveFirewallRule'
+            $param = $script:Cmd.Parameters['Level']
+            $validateSet = $param.Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] }
+            $validateSet.ValidValues | Should -Contain 'Group'
+        }
+
+        It 'Should throw when Level is Group and Group is not specified' {
+            Skip-IfMissing 'Remove-PveFirewallRule'
+            { Remove-PveFirewallRule -Level 'Group' -Position 0 -Confirm:$false -ErrorAction Stop } |
+                Should -Throw '*Group is required when Level is Group*'
         }
     }
 }
