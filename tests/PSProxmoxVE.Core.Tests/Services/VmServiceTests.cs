@@ -277,12 +277,30 @@ namespace PSProxmoxVE.Core.Tests.Services
         // -----------------------------------------------------------------
 
         [Fact]
-        public void GetVm_VmNotInNodeListing_ThrowsInvalidOperationException()
+        public void GetVm_HitsStatusCurrentDirectly_NotTheNodeListing()
         {
             var mockClient = new Mock<IPveHttpClient>();
             mockClient
-                .Setup(c => c.GetAsync($"nodes/{TestNode}/qemu"))
-                .ReturnsAsync("{\"data\":[]}");
+                .Setup(c => c.GetAsync($"nodes/{TestNode}/qemu/{TestVmId}/status/current"))
+                .ReturnsAsync("{\"data\":{\"vmid\":100,\"name\":\"web1\",\"status\":\"running\"}}");
+
+            var service = new VmService(mockClient.Object);
+            var vm = service.GetVm(CreateSession(), TestNode, TestVmId);
+
+            Assert.Equal(100, vm.VmId);
+            Assert.Equal("web1", vm.Name);
+            Assert.Equal(TestNode, vm.Node);
+            mockClient.Verify(c => c.GetAsync($"nodes/{TestNode}/qemu/{TestVmId}/status/current"), Times.Once);
+            mockClient.Verify(c => c.GetAsync($"nodes/{TestNode}/qemu"), Times.Never);
+        }
+
+        [Fact]
+        public void GetVm_NullData_ThrowsInvalidOperationException()
+        {
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient
+                .Setup(c => c.GetAsync($"nodes/{TestNode}/qemu/{TestVmId}/status/current"))
+                .ReturnsAsync("{}");
 
             var service = new VmService(mockClient.Object);
 
@@ -291,108 +309,176 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Contains(TestVmId.ToString(), ex.Message);
         }
 
-
-        // ---------------------------------------------------------------------
-        // GetVms multi-node aggregation: issue #142
-        // ---------------------------------------------------------------------
-
-        private static Mock<IPveHttpClient> SetupTwoNodeCluster()
+        [Fact]
+        public void GetVm_NotFoundOrServerError_ThrowsInvalidOperationException()
         {
             var mockClient = new Mock<IPveHttpClient>();
             mockClient
-                .Setup(c => c.GetAsync("nodes"))
-                .ReturnsAsync("{\"data\":[{\"node\":\"pve1\"},{\"node\":\"pve2\"}]}");
-            return mockClient;
-        }
-
-        [Fact]
-        public void GetVms_AllNodes_A500OnOneNodeIsSkippedAndReportedButOtherNodeResultsReturn()
-        {
-            var mockClient = SetupTwoNodeCluster();
-            mockClient
-                .Setup(c => c.GetAsync("nodes/pve1/qemu"))
-                .ReturnsAsync("{\"data\":[{\"vmid\":100}]}");
-            mockClient
-                .Setup(c => c.GetAsync("nodes/pve2/qemu"))
-                .ThrowsAsync(new PveApiException(HttpStatusCode.InternalServerError, "internal error", "nodes/pve2/qemu", "GET"));
+                .Setup(c => c.GetAsync($"nodes/{TestNode}/qemu/{TestVmId}/status/current"))
+                .ThrowsAsync(new PveApiException(HttpStatusCode.InternalServerError, "config file does not exist",
+                    $"nodes/{TestNode}/qemu/{TestVmId}/status/current", "GET"));
 
             var service = new VmService(mockClient.Object);
 
-            var skipped = new List<string>();
-            var vms = service.GetVms(CreateSession(), onNodeSkipped: (node, ex) => skipped.Add(node));
-
-            var vm = Assert.Single(vms);
-            Assert.Equal(100, vm.VmId);
-            Assert.Equal(new[] { "pve2" }, skipped);
+            var ex = Assert.Throws<InvalidOperationException>(
+                () => service.GetVm(CreateSession(), TestNode, TestVmId));
+            Assert.Contains(TestVmId.ToString(), ex.Message);
         }
 
         [Fact]
-        public void GetVms_AllNodes_A403OnOneNodePropagatesInsteadOfBeingSwallowed()
+        public void GetVm_Forbidden_PropagatesInsteadOfBeingSwallowed()
         {
-            var mockClient = SetupTwoNodeCluster();
+            var mockClient = new Mock<IPveHttpClient>();
             mockClient
-                .Setup(c => c.GetAsync("nodes/pve1/qemu"))
-                .ReturnsAsync("{\"data\":[{\"vmid\":100}]}");
-            mockClient
-                .Setup(c => c.GetAsync("nodes/pve2/qemu"))
-                .ThrowsAsync(new PveApiException(HttpStatusCode.Forbidden, "permission denied", "nodes/pve2/qemu", "GET"));
+                .Setup(c => c.GetAsync($"nodes/{TestNode}/qemu/{TestVmId}/status/current"))
+                .ThrowsAsync(new PveApiException(HttpStatusCode.Forbidden, "permission denied",
+                    $"nodes/{TestNode}/qemu/{TestVmId}/status/current", "GET"));
 
             var service = new VmService(mockClient.Object);
 
-            var ex = Assert.Throws<PveApiException>(() => service.GetVms(CreateSession()));
+            var ex = Assert.Throws<PveApiException>(() => service.GetVm(CreateSession(), TestNode, TestVmId));
             Assert.Equal(HttpStatusCode.Forbidden, ex.StatusCode);
         }
 
         [Fact]
-        public void GetVms_AllNodes_ConnectivityFailureOnOneNodeIsSkippedAndReported()
+        public void GetVm_ConnectivityFailure_PropagatesInsteadOfReadingAsNotFound()
         {
-            // PveHttpClient.SendOnceAsync never lets a raw HttpRequestException escape — it
-            // wraps one as PveApiException(ServiceUnavailable, ..., inner: HttpRequestException).
-            // That is the shape a real connectivity failure takes by the time it reaches
-            // VmService, so that is what this test throws.
-            var mockClient = SetupTwoNodeCluster();
+            // PveHttpClient.SendOnceAsync wraps a connectivity failure as
+            // PveApiException(ServiceUnavailable) — the node being unreachable, not the VM
+            // being absent, so this must not be folded into the not-found conversion.
+            var mockClient = new Mock<IPveHttpClient>();
             mockClient
-                .Setup(c => c.GetAsync("nodes/pve1/qemu"))
-                .ReturnsAsync("{\"data\":[{\"vmid\":100}]}");
-            mockClient
-                .Setup(c => c.GetAsync("nodes/pve2/qemu"))
+                .Setup(c => c.GetAsync($"nodes/{TestNode}/qemu/{TestVmId}/status/current"))
                 .ThrowsAsync(new PveApiException(HttpStatusCode.ServiceUnavailable, "connection refused",
-                    "nodes/pve2/qemu", "GET", new HttpRequestException("connection refused")));
+                    $"nodes/{TestNode}/qemu/{TestVmId}/status/current", "GET", new HttpRequestException("connection refused")));
 
             var service = new VmService(mockClient.Object);
 
-            var skipped = new List<string>();
-            var vms = service.GetVms(CreateSession(), onNodeSkipped: (node, ex) => skipped.Add(node));
+            var ex = Assert.Throws<PveApiException>(() => service.GetVm(CreateSession(), TestNode, TestVmId));
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+        }
 
-            var vm = Assert.Single(vms);
-            Assert.Equal(100, vm.VmId);
-            Assert.Equal(new[] { "pve2" }, skipped);
+        // ---------------------------------------------------------------------
+        // GetVms: issue #152 — all-nodes listing sources from cluster/resources
+        // ---------------------------------------------------------------------
+
+        private const string ClusterResourcesJson = @"{
+            ""data"": [
+                {
+                    ""id"": ""qemu/100"",
+                    ""type"": ""qemu"",
+                    ""vmid"": 100,
+                    ""name"": ""web1"",
+                    ""status"": ""running"",
+                    ""node"": ""pve1"",
+                    ""maxcpu"": 2,
+                    ""maxmem"": 4294967296,
+                    ""maxdisk"": 34359738368,
+                    ""uptime"": 3600,
+                    ""template"": 0,
+                    ""tags"": ""prod;web""
+                },
+                {
+                    ""id"": ""qemu/101"",
+                    ""type"": ""qemu"",
+                    ""vmid"": 101,
+                    ""name"": ""db1"",
+                    ""status"": ""stopped"",
+                    ""node"": ""pve2"",
+                    ""maxcpu"": 4,
+                    ""maxmem"": 8589934592,
+                    ""maxdisk"": 68719476736,
+                    ""uptime"": 0,
+                    ""template"": 1
+                },
+                {
+                    ""id"": ""lxc/200"",
+                    ""type"": ""lxc"",
+                    ""vmid"": 200,
+                    ""name"": ""ct1"",
+                    ""status"": ""running"",
+                    ""node"": ""pve1""
+                }
+            ]
+        }";
+
+        [Fact]
+        public void GetVms_NoNode_IssuesExactlyOneClusterResourcesCallAndNoPerNodeCalls()
+        {
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient
+                .Setup(c => c.GetAsync("cluster/resources?type=vm"))
+                .ReturnsAsync(ClusterResourcesJson);
+
+            var service = new VmService(mockClient.Object);
+            var vms = service.GetVms(CreateSession());
+
+            Assert.Equal(2, vms.Length);
+            mockClient.Verify(c => c.GetAsync("cluster/resources?type=vm"), Times.Once);
+            mockClient.Verify(c => c.GetAsync(It.Is<string>(s => s.Contains("/qemu"))), Times.Never);
+            mockClient.Verify(c => c.GetAsync("nodes"), Times.Never);
         }
 
         [Fact]
-        public void GetVms_AllNodes_ClientTimeoutOnOneNodeIsSkippedAndReported()
+        public void GetVms_NoNode_ExcludesLxcRowsFromTheSharedResourcesResponse()
         {
-            // PveHttpClient.SendOnceAsync wraps an HttpClient timeout as
-            // PveApiException(RequestTimeout) — the case of a powered-off or
-            // firewall-blackholed node, which must be skipped like any other
-            // unreachable node rather than aborting the whole listing.
-            var mockClient = SetupTwoNodeCluster();
+            // "type=vm" is PVE's guest filter, not QEMU-only — it returns lxc rows too.
+            var mockClient = new Mock<IPveHttpClient>();
             mockClient
-                .Setup(c => c.GetAsync("nodes/pve1/qemu"))
-                .ReturnsAsync("{\"data\":[{\"vmid\":100}]}");
-            mockClient
-                .Setup(c => c.GetAsync("nodes/pve2/qemu"))
-                .ThrowsAsync(new PveApiException(HttpStatusCode.RequestTimeout, "Request timed out after 100s.",
-                    "nodes/pve2/qemu", "GET"));
+                .Setup(c => c.GetAsync("cluster/resources?type=vm"))
+                .ReturnsAsync(ClusterResourcesJson);
 
             var service = new VmService(mockClient.Object);
+            var vms = service.GetVms(CreateSession());
 
-            var skipped = new List<string>();
-            var vms = service.GetVms(CreateSession(), onNodeSkipped: (node, ex) => skipped.Add(node));
+            Assert.DoesNotContain(vms, v => v.VmId == 200);
+            Assert.All(vms, v => Assert.NotEqual(200, v.VmId));
+        }
+
+        [Fact]
+        public void GetVms_NoNode_MapsClusterResourceRowsOntoPveVm()
+        {
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient
+                .Setup(c => c.GetAsync("cluster/resources?type=vm"))
+                .ReturnsAsync(ClusterResourcesJson);
+
+            var service = new VmService(mockClient.Object);
+            var vms = service.GetVms(CreateSession());
+
+            var web1 = vms.Single(v => v.VmId == 100);
+            Assert.Equal("web1", web1.Name);
+            Assert.Equal("running", web1.Status);
+            Assert.Equal("pve1", web1.Node);
+            Assert.Equal(2, web1.CpuCount);
+            Assert.Equal(4294967296L, web1.MaxMem);
+            Assert.Equal(34359738368L, web1.MaxDisk);
+            Assert.Equal(3600L, web1.Uptime);
+            Assert.Equal(0, web1.Template);
+            Assert.Equal("prod;web", web1.Tags);
+
+            var db1 = vms.Single(v => v.VmId == 101);
+            Assert.Equal("db1", db1.Name);
+            Assert.Equal("stopped", db1.Status);
+            Assert.Equal(4, db1.CpuCount);
+            Assert.Equal(1, db1.Template);
+        }
+
+        [Fact]
+        public void GetVms_WithNode_StillHitsNodesQemuNotClusterResources()
+        {
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient
+                .Setup(c => c.GetAsync($"nodes/{TestNode}/qemu"))
+                .ReturnsAsync("{\"data\":[{\"vmid\":100}]}");
+
+            var service = new VmService(mockClient.Object);
+            var vms = service.GetVms(CreateSession(), TestNode);
 
             var vm = Assert.Single(vms);
             Assert.Equal(100, vm.VmId);
-            Assert.Equal(new[] { "pve2" }, skipped);
+            mockClient.Verify(c => c.GetAsync($"nodes/{TestNode}/qemu"), Times.Once);
+            mockClient.Verify(c => c.GetAsync(It.Is<string>(s => s.StartsWith("cluster/resources"))), Times.Never);
         }
     }
 }

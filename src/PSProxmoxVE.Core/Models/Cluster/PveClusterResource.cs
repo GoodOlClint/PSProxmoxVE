@@ -99,6 +99,18 @@ public class PveClusterResource
     public int? VmId { get; set; }
 
     /// <summary>
+    /// The guest's configured tags, semicolon-separated. Only for VM/LXC types.
+    /// </summary>
+    [JsonProperty("tags")]
+    public string? Tags { get; set; }
+
+    /// <summary>
+    /// The guest's current config lock, if any (e.g. "migrate", "backup"). Only for VM/LXC types.
+    /// </summary>
+    [JsonProperty("lock")]
+    public string? Lock { get; set; }
+
+    /// <summary>
     /// The HA (High Availability) state of the resource, if managed by HA.
     /// </summary>
     [JsonProperty("hastate")]

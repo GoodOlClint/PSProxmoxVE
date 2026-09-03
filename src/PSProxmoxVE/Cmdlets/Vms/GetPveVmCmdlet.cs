@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Management.Automation;
+using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
 
@@ -95,27 +96,28 @@ namespace PSProxmoxVE.Cmdlets.Vms
             if (TemplatesOnly.IsPresent)
                 vms = vms.Where(v => v.Template == 1);
 
-            // Materialize before enrichment to avoid multiple enumeration
-            var vmList = vms.ToList();
-
             if (Detailed.IsPresent)
             {
-                WriteVerbose($"Enriching {vmList.Count} VM(s) with detailed status...");
-                foreach (var vm in vmList)
+                using var client = new PveHttpClient(session);
+                var detailService = new VmService(client);
+                foreach (var vm in vms)
                 {
                     try
                     {
-                        service.EnrichVmStatus(session, vm.Node ?? Node ?? string.Empty, vm);
+                        detailService.EnrichVmStatus(session, vm.Node ?? Node ?? string.Empty, vm);
                     }
                     catch (PSProxmoxVE.Core.Exceptions.PveApiException)
                     {
                         // Skip enrichment for inaccessible VMs (e.g. locked, migrating)
                     }
+                    WriteObject(vm);
                 }
             }
-
-            foreach (var vm in vmList)
-                WriteObject(vm);
+            else
+            {
+                foreach (var vm in vms)
+                    WriteObject(vm);
+            }
         }
     }
 }

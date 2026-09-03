@@ -4,7 +4,6 @@ using System.Linq;
 using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Client;
-using PSProxmoxVE.Core.Models.Nodes;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Utilities;
 
@@ -15,19 +14,15 @@ namespace PSProxmoxVE.Core.Services
     /// </summary>
     public class VmService : PveServiceBase
     {
-        private readonly NodeService _nodeService;
-
         /// <summary>Initializes a new instance that creates its own HTTP clients.</summary>
         public VmService()
         {
-            _nodeService = new NodeService();
         }
 
         /// <summary>Initializes a new instance that uses the supplied HTTP client for all requests.</summary>
         /// <param name="client">The HTTP client to use. The caller owns its lifetime.</param>
         public VmService(IPveHttpClient client) : base(client)
         {
-            _nodeService = new NodeService(client);
         }
 
         // -------------------------------------------------------------------------
@@ -35,15 +30,15 @@ namespace PSProxmoxVE.Core.Services
         // -------------------------------------------------------------------------
 
         /// <summary>
-        /// Returns VMs. If <paramref name="node"/> is null, queries every cluster node.
+        /// Returns VMs. If <paramref name="node"/> is null, lists the whole cluster with a
+        /// single call to <c>cluster/resources?type=vm</c> instead of one call per node.
         /// </summary>
         /// <param name="session">The authenticated PVE session.</param>
         /// <param name="node">Optional cluster node name to filter VMs by node.</param>
         /// <param name="onNodeSkipped">
-        /// Optional callback invoked with the node name and the exception when a node is
-        /// skipped because it is unreachable (connectivity failure or a 5xx from that node).
-        /// A 401/403/404 or any other non-5xx <see cref="PSProxmoxVE.Core.Exceptions.PveApiException"/>
-        /// propagates instead of being swallowed.
+        /// Not invoked. The cluster-wide listing is one call to <c>cluster/resources</c>
+        /// with no per-node failure to report; kept on the signature for source
+        /// compatibility with existing callers.
         /// </param>
         public PveVm[] GetVms(PveSession session, string? node = null, Action<string, Exception>? onNodeSkipped = null)
         {
@@ -52,42 +47,39 @@ namespace PSProxmoxVE.Core.Services
             if (node != null)
                 return GetVmsOnNode(session, node);
 
-            // Query all nodes and aggregate
-            var nodes = _nodeService.GetNodes(session);
-            var all = new List<PveVm>();
-            foreach (var n in nodes)
+            return Invoke(session, client =>
             {
-                try
-                {
-                    var vms = GetVmsOnNode(session, n.Name);
-                    // Stamp the node name in case it wasn't returned by the API
-                    foreach (var vm in vms)
-                        vm.Node ??= n.Name;
-                    all.AddRange(vms);
-                }
-                catch (Exception ex) when (IsNodeUnreachable(ex))
-                {
-                    onNodeSkipped?.Invoke(n.Name, ex);
-                }
-            }
-            return all.ToArray();
+                const string resource = "cluster/resources?type=vm";
+                var response = client.GetAsync(resource).GetAwaiter().GetResult();
+                var data = JObject.Parse(response)["data"];
+                var resources = data?.ToObject<PSProxmoxVE.Core.Models.Cluster.PveClusterResource[]>()
+                    ?? Array.Empty<PSProxmoxVE.Core.Models.Cluster.PveClusterResource>();
+                // "type=vm" is PVE's guest filter, not a QEMU-only one — it returns both
+                // "qemu" and "lxc" rows, so the QEMU guests need filtering out here.
+                return resources.Where(r => r.Type == "qemu").Select(ToPveVm).ToArray();
+            });
         }
 
         /// <summary>
-        /// True for a connectivity failure or a 5xx PVE API response — the cases where the
-        /// node itself is unreachable rather than the request being rejected. A 401/403/404
-        /// (or any other non-5xx status) means the request was understood and refused, which
-        /// is not something a per-node listing loop should hide.
+        /// Maps a <c>/cluster/resources</c> row (type "qemu") onto <see cref="PveVm"/>. The
+        /// resources endpoint does not carry <see cref="PveVm.QmpStatus"/>,
+        /// <see cref="PveVm.Pid"/> or <see cref="PveVm.AgentStatus"/> — those remain null
+        /// until <c>Get-PveVm -Detailed</c> or <see cref="GetVm"/> enrich from
+        /// <c>status/current</c>.
         /// </summary>
-        private static bool IsNodeUnreachable(Exception ex) => ex switch
+        private static PveVm ToPveVm(PSProxmoxVE.Core.Models.Cluster.PveClusterResource r) => new PveVm
         {
-            System.Net.Http.HttpRequestException => true,
-            // PveHttpClient wraps a connection failure as 503 and a client-side timeout as
-            // 408 (Client/PveHttpClient.cs SendOnceAsync) — both mean the node did not answer,
-            // not that it rejected the request.
-            PSProxmoxVE.Core.Exceptions.PveApiException apiEx =>
-                apiEx.StatusCode == System.Net.HttpStatusCode.RequestTimeout || (int)apiEx.StatusCode >= 500,
-            _ => false
+            VmId = r.VmId ?? 0,
+            Name = r.Name,
+            Status = r.Status,
+            Node = r.Node,
+            CpuCount = r.MaxCpu.HasValue ? (int)r.MaxCpu.Value : (int?)null,
+            MaxMem = r.MaxMem,
+            MaxDisk = r.MaxDisk,
+            Uptime = r.Uptime,
+            Tags = r.Tags,
+            Template = r.Template ?? 0,
+            Lock = r.Lock,
         };
 
         private PveVm[] GetVmsOnNode(PveSession session, string node)
@@ -101,7 +93,8 @@ namespace PSProxmoxVE.Core.Services
         }
 
         /// <summary>
-        /// Returns a single VM by its ID on the specified node.
+        /// Returns a single VM by its ID, fetched directly from
+        /// <c>status/current</c> rather than listing the whole node.
         /// </summary>
         /// <param name="session">The authenticated PVE session.</param>
         /// <param name="node">The cluster node name.</param>
@@ -111,12 +104,34 @@ namespace PSProxmoxVE.Core.Services
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
-            var vms = GetVmsOnNode(session, node);
-            var vm = vms.FirstOrDefault(v => v.VmId == vmid);
-            if (vm == null)
-                throw new InvalidOperationException($"VM {vmid} not found on node '{node}'.");
-            vm.Node ??= node;
-            return vm;
+            return Invoke(session, client =>
+            {
+                JToken? data;
+                try
+                {
+                    var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/status/current")
+                        .GetAwaiter().GetResult();
+                    data = JObject.Parse(response)["data"];
+                }
+                catch (PSProxmoxVE.Core.Exceptions.PveApiException ex) when (
+                    ex.StatusCode == System.Net.HttpStatusCode.NotFound ||
+                    ex.StatusCode == System.Net.HttpStatusCode.InternalServerError)
+                {
+                    // Preserves the not-found contract GetVmsOnNode gave callers (e.g.
+                    // ImportPveOvaCmdlet) when the VM wasn't in the node's listing yet.
+                    // Excludes 502/503/504 deliberately: PveHttpClient.SendOnceAsync wraps a
+                    // connectivity failure as 503, which is the node being unreachable, not
+                    // the VM being absent, and must propagate rather than read as not-found.
+                    throw new InvalidOperationException($"VM {vmid} not found on node '{node}'.", ex);
+                }
+
+                if (data == null)
+                    throw new InvalidOperationException($"VM {vmid} not found on node '{node}'.");
+
+                var vm = data.ToObject<PveVm>() ?? new PveVm { VmId = vmid };
+                vm.Node ??= node;
+                return vm;
+            });
         }
 
         /// <summary>
