@@ -1,9 +1,6 @@
-using System;
 using System.Management.Automation;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Nodes;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Nodes
 {
@@ -32,33 +29,8 @@ namespace PSProxmoxVE.Cmdlets.Nodes
             var session = GetSession();
 
             WriteVerbose($"Getting status for node '{Node}'...");
-            var resource = $"nodes/{Uri.EscapeDataString(Node)}/status";
-
-            string responseBody;
-            try
-            {
-                using var client = new PveHttpClient(session);
-                responseBody = client.GetAsync(resource).GetAwaiter().GetResult();
-            }
-            catch (Exception ex)
-            {
-                ThrowTerminatingError(new ErrorRecord(
-                    ex,
-                    "GetPveNodeStatusFailed",
-                    ErrorCategory.ConnectionError,
-                    Node));
-                return;
-            }
-
-            var json = JObject.Parse(responseBody);
-            var dataToken = json["data"] ?? throw new InvalidOperationException("Response did not contain a 'data' field.");
-
-            var status = dataToken.ToObject<PveNodeStatus>(JsonSerializer.CreateDefault())
-                ?? throw new InvalidOperationException("Failed to deserialize node status.");
-
-            // The /nodes/{node}/status response does not include the node name; populate it.
-            if (string.IsNullOrEmpty(status.Node))
-                status.Node = Node;
+            var service = new NodeService();
+            var status = service.GetNodeStatus(session, Node);
 
             WriteObject(status);
         }

@@ -45,6 +45,18 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
+        public void GetNodes_MissingDataField_Throws()
+        {
+            // Arrange
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient.Setup(c => c.GetAsync("nodes")).ReturnsAsync("{}");
+            var service = new NodeService(mockClient.Object);
+
+            // Act & Assert
+            Assert.Throws<InvalidOperationException>(() => service.GetNodes(CreateSession()));
+        }
+
+        [Fact]
         public void GetNodeStatus_ReturnsPveNodeStatus()
         {
             // Arrange
@@ -68,6 +80,61 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Equal(17179869184L, status.MemoryUsed);
             Assert.Equal(864000L, status.Uptime);
             mockClient.Verify(c => c.GetAsync("nodes/pve1/status"), Times.Once);
+        }
+
+        [Fact]
+        public void GetNodeStatus_StampsNodeWhenResponseOmitsIt()
+        {
+            // Arrange
+            var json = @"{""data"": {""status"": ""online"", ""maxcpu"": 16}}";
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient.Setup(c => c.GetAsync("nodes/pve1/status")).ReturnsAsync(json);
+            var service = new NodeService(mockClient.Object);
+
+            // Act
+            var status = service.GetNodeStatus(CreateSession(), "pve1");
+
+            // Assert
+            Assert.Equal("pve1", status.Node);
+            mockClient.Verify(c => c.GetAsync("nodes/pve1/status"), Times.Once);
+        }
+
+        [Fact]
+        public void GetNodeStatus_EscapesNodeInPath()
+        {
+            // Arrange
+            var json = @"{""data"": {""node"": ""pve node"", ""status"": ""online""}}";
+            string? capturedPath = null;
+            var calls = 0;
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient.Setup(c => c.GetAsync(It.IsAny<string>()))
+                .Callback<string>(path =>
+                {
+                    capturedPath = path;
+                    calls++;
+                })
+                .ReturnsAsync(json);
+            var service = new NodeService(mockClient.Object);
+
+            // Act
+            var status = service.GetNodeStatus(CreateSession(), "pve node");
+
+            // Assert
+            Assert.Equal("nodes/pve%20node/status", capturedPath);
+            Assert.Equal(1, calls);
+            Assert.Equal("pve node", status.Node);
+        }
+
+        [Fact]
+        public void GetNodeStatus_MissingDataField_Throws()
+        {
+            // Arrange
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient.Setup(c => c.GetAsync("nodes/pve1/status")).ReturnsAsync("{}");
+            var service = new NodeService(mockClient.Object);
+
+            // Act & Assert
+            Assert.Throws<InvalidOperationException>(() => service.GetNodeStatus(CreateSession(), "pve1"));
         }
 
         [Fact]

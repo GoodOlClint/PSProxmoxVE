@@ -1,10 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.Management.Automation;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Nodes;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Nodes
 {
@@ -30,27 +27,8 @@ namespace PSProxmoxVE.Cmdlets.Nodes
             var session = GetSession();
 
             WriteVerbose("Getting cluster nodes...");
-            string responseBody;
-            try
-            {
-                using var client = new PveHttpClient(session);
-                responseBody = client.GetAsync("nodes").GetAwaiter().GetResult();
-            }
-            catch (Exception ex)
-            {
-                ThrowTerminatingError(new ErrorRecord(
-                    ex,
-                    "GetPveNodeFailed",
-                    ErrorCategory.ConnectionError,
-                    session.Hostname));
-                return;
-            }
-
-            var json = JObject.Parse(responseBody);
-            var dataToken = json["data"] ?? throw new InvalidOperationException("Response did not contain a 'data' field.");
-
-            var nodes = dataToken.ToObject<List<PveNode>>(
-                JsonSerializer.CreateDefault()) ?? new List<PveNode>();
+            var service = new NodeService();
+            var nodes = service.GetNodes(session);
 
             foreach (var node in nodes)
             {
