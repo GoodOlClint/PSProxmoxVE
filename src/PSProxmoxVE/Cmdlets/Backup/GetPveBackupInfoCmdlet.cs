@@ -1,5 +1,5 @@
-using System.Collections.Generic;
 using System.Management.Automation;
+using PSProxmoxVE.Core.Models.Backup;
 using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Backup
@@ -12,7 +12,7 @@ namespace PSProxmoxVE.Cmdlets.Backup
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveBackupInfo")]
-    [OutputType(typeof(PSObject))]
+    [OutputType(typeof(PveBackupInfo))]
     public sealed class GetPveBackupInfoCmdlet : PveCmdletBase
     {
         protected override void ProcessPveRecord()
@@ -26,12 +26,7 @@ namespace PSProxmoxVE.Cmdlets.Backup
 
             foreach (var item in items)
             {
-                var pso = new PSObject();
-                foreach (var kvp in item)
-                {
-                    pso.Properties.Add(new PSNoteProperty(kvp.Key, kvp.Value));
-                }
-                WriteObject(pso);
+                WriteObject(item);
             }
         }
     }

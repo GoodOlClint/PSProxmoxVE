@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Management.Automation;
+using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
 using PSProxmoxVE.Core.Utilities;
 
@@ -54,19 +55,19 @@ namespace PSProxmoxVE.Cmdlets.Vms
             // Poll for completion with timeout
             var sw = Stopwatch.StartNew();
             var deadline = TimeSpan.FromSeconds(Timeout);
-            System.Collections.Generic.Dictionary<string, object?> result;
+            PveGuestExecStatus result;
             do
             {
                 System.Threading.Thread.Sleep(1000);
                 if (sw.Elapsed >= deadline)
                     throw new TimeoutException($"Guest command did not complete within {Timeout} seconds.");
                 result = service.GetGuestExecStatus(session, Node, VmId, pid);
-            } while (!result.TryGetValue("exited", out var exited) || !ApiValueHelper.IsExited(exited));
+            } while (!ApiValueHelper.IsExited(result.Exited));
 
             var output = new PSObject();
-            output.Properties.Add(new PSNoteProperty("ExitCode", result.TryGetValue("exitcode", out var ec) && ec is long ecl ? (int)ecl : -1));
-            output.Properties.Add(new PSNoteProperty("Stdout", DecodeBase64(result.TryGetValue("out-data", out var od) ? od?.ToString() : null)));
-            output.Properties.Add(new PSNoteProperty("Stderr", DecodeBase64(result.TryGetValue("err-data", out var ed) ? ed?.ToString() : null)));
+            output.Properties.Add(new PSNoteProperty("ExitCode", result.ExitCode ?? -1));
+            output.Properties.Add(new PSNoteProperty("Stdout", DecodeBase64(result.OutData)));
+            output.Properties.Add(new PSNoteProperty("Stderr", DecodeBase64(result.ErrData)));
             output.Properties.Add(new PSNoteProperty("Pid", pid));
 
             WriteObject(output);

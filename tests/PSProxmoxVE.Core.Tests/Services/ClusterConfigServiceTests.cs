@@ -21,10 +21,13 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetClusterConfig_ReturnsJObject()
+        public void GetClusterConfig_ReturnsTypedEntriesWithUnknownKeyInAdditionalProperties()
         {
-            // Arrange
-            var json = @"{""data"": {""nodes"": {""pve1"": {}}, ""totem"": {""version"": ""2""}}}";
+            // Arrange — GET /cluster/config is a directory index: an array of
+            // entries, not a single object. The item schema documents no named
+            // fields, but the endpoint's "links" metadata gives the child-URL
+            // template as "{name}", so every entry carries a "name" key.
+            var json = @"{""data"": [{""name"": ""nodes""}, {""name"": ""totem"", ""extra"": ""x""}]}";
             var mockClient = new Mock<IPveHttpClient>();
             mockClient.Setup(c => c.GetAsync("cluster/config")).ReturnsAsync(json);
             var service = new ClusterConfigService(mockClient.Object);
@@ -33,9 +36,10 @@ namespace PSProxmoxVE.Core.Tests.Services
             var config = service.GetClusterConfig(CreateSession());
 
             // Assert
-            Assert.NotNull(config);
-            Assert.NotNull(config["nodes"]);
-            Assert.NotNull(config["totem"]);
+            Assert.Equal(2, config.Count);
+            Assert.Equal("nodes", config[0].Name);
+            Assert.Equal("totem", config[1].Name);
+            Assert.Equal("x", config[1].AdditionalProperties["extra"]);
             mockClient.Verify(c => c.GetAsync("cluster/config"), Times.Once);
         }
 

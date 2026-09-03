@@ -1,4 +1,5 @@
 using System.Management.Automation;
+using PSProxmoxVE.Core.Models.Nodes;
 using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Nodes
@@ -11,7 +12,7 @@ namespace PSProxmoxVE.Cmdlets.Nodes
     /// </para>
     /// </summary>
     [Cmdlet(VerbsCommon.Get, "PveNodeDns")]
-    [OutputType(typeof(PSObject))]
+    [OutputType(typeof(PveNodeDns))]
     public sealed class GetPveNodeDnsCmdlet : PveCmdletBase
     {
         /// <summary>The Proxmox VE node name.</summary>
@@ -27,13 +28,7 @@ namespace PSProxmoxVE.Cmdlets.Nodes
             WriteVerbose($"Getting DNS configuration for node '{Node}'...");
             var dns = service.GetNodeDns(session, Node);
 
-            var psObj = new PSObject();
-            foreach (var kvp in dns)
-            {
-                psObj.Properties.Add(new PSNoteProperty(kvp.Key, kvp.Value));
-            }
-
-            WriteObject(psObj);
+            WriteObject(dns);
         }
     }
 }

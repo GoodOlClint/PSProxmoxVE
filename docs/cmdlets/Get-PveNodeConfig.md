@@ -84,7 +84,7 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 ### System.String
 ## OUTPUTS
 
-### System.Management.Automation.PSObject
+### PSProxmoxVE.Core.Models.Nodes.PveNodeConfig
 ## NOTES
 
 ## RELATED LINKS

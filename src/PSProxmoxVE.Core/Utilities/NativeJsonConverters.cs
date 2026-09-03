@@ -43,4 +43,25 @@ namespace PSProxmoxVE.Core.Utilities
             serializer.Serialize(writer, value);
         }
     }
+
+    /// <summary>
+    /// JSON converter for a boolean field the PVE API sends as boolean, integer
+    /// (1/0), or string ("1"/"0") depending on endpoint and version. Delegates
+    /// the tolerant interpretation to <see cref="ApiValueHelper.IsExited"/>.
+    /// </summary>
+    public class TolerantBooleanConverter : JsonConverter<bool?>
+    {
+        /// <inheritdoc />
+        public override bool? ReadJson(JsonReader reader, Type objectType, bool? existingValue, bool hasExistingValue, JsonSerializer serializer)
+        {
+            var token = JToken.Load(reader);
+            return token.Type == JTokenType.Null ? (bool?)null : ApiValueHelper.IsExited(JsonHelper.ToNative(token));
+        }
+
+        /// <inheritdoc />
+        public override void WriteJson(JsonWriter writer, bool? value, JsonSerializer serializer)
+        {
+            serializer.Serialize(writer, value);
+        }
+    }
 }

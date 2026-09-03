@@ -68,7 +68,7 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 ### None
 ## OUTPUTS
 
-### System.Management.Automation.PSObject
+### PSProxmoxVE.Core.Models.Backup.PveBackupInfo
 ## NOTES
 
 ## RELATED LINKS

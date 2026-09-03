@@ -108,5 +108,62 @@ namespace PSProxmoxVE.Core.Tests.Models
             Assert.NotNull(nodes[0].LoadAverage);
             Assert.Equal(3, nodes[0].LoadAverage!.Length);
         }
+
+        [Fact]
+        public void PveNodeConfig_Deserialize_HasDocumentedFields()
+        {
+            var json = @"{""data"": {
+                ""description"": ""Primary node"",
+                ""wakeonlan"": ""AA:BB:CC:DD:EE:FF"",
+                ""ballooning-target"": 80,
+                ""startall-onboot-delay"": 30,
+                ""digest"": ""abc123""
+            }}";
+            var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
+            var config = data.ToObject<PveNodeConfig>();
+            Assert.NotNull(config);
+            Assert.Equal("Primary node", config.Description);
+            Assert.Equal("AA:BB:CC:DD:EE:FF", config.WakeOnLan);
+            Assert.Equal(80, config.BallooningTarget);
+            Assert.Equal(30, config.StartAllOnbootDelay);
+            Assert.Equal("abc123", config.Digest);
+        }
+
+        [Fact]
+        public void PveNodeConfig_UnmappedKey_LandsInAdditionalProperties()
+        {
+            var json = @"{""data"": {""description"": ""n1"", ""acmedomain0"": ""example.com,plugin=dns""}}";
+            var data = JObject.Parse(json)["data"];
+            var config = data!.ToObject<PveNodeConfig>();
+            Assert.NotNull(config);
+            Assert.Equal("example.com,plugin=dns", config!.AdditionalProperties["acmedomain0"]);
+            Assert.False(config.AdditionalProperties.ContainsKey("description"));
+        }
+
+        [Fact]
+        public void PveNodeDns_Deserialize_HasDocumentedFields()
+        {
+            var json = @"{""data"": {""dns1"": ""8.8.8.8"", ""dns2"": ""8.8.4.4"", ""dns3"": ""1.1.1.1"", ""search"": ""example.com""}}";
+            var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
+            var dns = data.ToObject<PveNodeDns>();
+            Assert.NotNull(dns);
+            Assert.Equal("8.8.8.8", dns.Dns1);
+            Assert.Equal("8.8.4.4", dns.Dns2);
+            Assert.Equal("1.1.1.1", dns.Dns3);
+            Assert.Equal("example.com", dns.Search);
+        }
+
+        [Fact]
+        public void PveNodeDns_UnmappedKey_LandsInAdditionalProperties()
+        {
+            var json = @"{""data"": {""dns1"": ""8.8.8.8"", ""dns4"": ""9.9.9.9""}}";
+            var data = JObject.Parse(json)["data"];
+            var dns = data!.ToObject<PveNodeDns>();
+            Assert.NotNull(dns);
+            Assert.Equal("9.9.9.9", dns!.AdditionalProperties["dns4"]);
+            Assert.False(dns.AdditionalProperties.ContainsKey("dns1"));
+        }
     }
 }
