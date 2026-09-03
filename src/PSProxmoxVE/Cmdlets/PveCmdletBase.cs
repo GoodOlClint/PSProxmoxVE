@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Management.Automation;
 using PSProxmoxVE.Core.Authentication;
-using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Errors;
 using PSProxmoxVE.Core.Exceptions;
 using PSProxmoxVE.Core.Models.Vms;
@@ -204,52 +203,9 @@ namespace PSProxmoxVE.Cmdlets
             int timeoutSeconds = 60,
             bool isContainer = false)
         {
-            var task = InvokeGuestTask(session, node, issueOperation);
-
-            // Then poll status/current until VM/container reaches the expected status.
-            // We query the status/current endpoint directly instead of the list endpoint
-            // because it returns qmpstatus (needed for paused state detection — PVE reports
-            // status=running but qmpstatus=paused for suspended VMs).
-            var statusResource = isContainer
-                ? $"nodes/{Uri.EscapeDataString(node)}/lxc/{vmid}/status/current"
-                : $"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/status/current";
-
-            var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
-            var lastMatched = false;
-            using var pollClient = new PveHttpClient(session);
-            while (DateTime.UtcNow < deadline)
-            {
-                try
-                {
-                    var json = pollClient.GetAsync(statusResource).GetAwaiter().GetResult();
-                    var snapshot = GuestStatusSnapshot.Evaluate(json, expectedStatus);
-                    lastMatched = snapshot.StatusMatched;
-
-                    // snapshot.Locked is the config `lock:` property (backup, clone, migrate,
-                    // snapshot) — not the /var/lock/qemu-server flock, which PVE does not
-                    // expose. The flock race is handled by retrying, not by waiting.
-                    if (snapshot.StatusMatched && !snapshot.Locked)
-                        return task;
-                }
-                catch (PSProxmoxVE.Core.Exceptions.PveApiException ex) when (
-                    ex.StatusCode != System.Net.HttpStatusCode.Unauthorized
-                    && ex.StatusCode != System.Net.HttpStatusCode.Forbidden
-                    && ex.StatusCode != System.Net.HttpStatusCode.NotFound)
-                {
-                    WriteVerbose($"Status poll failed, retrying: {ex.Message}");
-                }
-
-                System.Threading.Thread.Sleep(2000);
-            }
-
-            // The guest still reports the expected status on the final poll and only the
-            // lock outlasted the deadline.
-            if (lastMatched)
-                return task;
-
-            throw new PveTaskTimeoutException(
-                task.Upid ?? "unknown",
-                TimeSpan.FromSeconds(timeoutSeconds));
+            return new GuestLifecycleService().WaitForStatusTransition(
+                session, node, issueOperation, vmid, expectedStatus, timeoutSeconds, isContainer,
+                onProgress: WriteVerbose);
         }
 
         /// <summary>
@@ -267,18 +223,7 @@ namespace PSProxmoxVE.Cmdlets
         /// <returns>The completed task, or the issued task when the call returned no UPID.</returns>
         protected PveTask InvokeGuestTask(PveSession session, string node, Func<PveTask> issueOperation)
         {
-            if (issueOperation == null) throw new ArgumentNullException(nameof(issueOperation));
-
-            var taskService = new TaskService();
-            return GuestLockRetry.Execute(
-                () =>
-                {
-                    var task = issueOperation();
-                    return string.IsNullOrEmpty(task.Upid)
-                        ? task
-                        : taskService.WaitForTask(session, node, task.Upid);
-                },
-                onRetry: ex => WriteVerbose($"Guest is locked, retrying: {ex.Message}"));
+            return new GuestLifecycleService().InvokeGuestTask(session, node, issueOperation, onProgress: WriteVerbose);
         }
 
         /// <summary>
@@ -304,20 +249,10 @@ namespace PSProxmoxVE.Cmdlets
         /// <returns>Dictionary of parsed link entries, or null if input is null.</returns>
         protected Dictionary<string, string>? ParseLinks(string[]? links)
         {
-            if (links == null) return null;
-
-            var result = new Dictionary<string, string>();
-            foreach (var link in links)
-            {
-                var parts = link.Split(new[] { '=' }, 2);
-                if (parts.Length != 2 || string.IsNullOrWhiteSpace(parts[0]) || string.IsNullOrWhiteSpace(parts[1]))
-                {
-                    WriteWarning($"Ignoring malformed link entry '{link}'. Expected format: 'link0=10.0.0.1'");
-                    continue;
-                }
-                result[parts[0].Trim()] = parts[1].Trim();
-            }
-            return result.Count > 0 ? result : null;
+            var (result, malformed) = CorosyncLinks.Parse(links);
+            foreach (var link in malformed)
+                WriteWarning($"Ignoring malformed link entry '{link}'. Expected format: 'link0=10.0.0.1'");
+            return result;
         }
     }
 }
