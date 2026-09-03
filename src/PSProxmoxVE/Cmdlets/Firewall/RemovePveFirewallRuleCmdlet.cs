@@ -29,37 +29,11 @@ namespace PSProxmoxVE.Cmdlets.Firewall
         protected override void ProcessRecord()
         {
             var level = Level;
-            if (!string.Equals(level, "Cluster", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(level, "Group", StringComparison.OrdinalIgnoreCase))
+            if (!FirewallScope.TryValidate(level, Node, VmId, Group, out var scopeErrorId, out var scopeMessage))
             {
-                if (string.IsNullOrEmpty(Node))
-                {
-                    ThrowTerminatingError(new ErrorRecord(
-                        new PSArgumentException("Node is required when Level is not Cluster."),
-                        "NodeRequired", ErrorCategory.InvalidArgument, null));
-                    return;
-                }
-            }
-            if (string.Equals(level, "Vm", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(level, "Container", StringComparison.OrdinalIgnoreCase))
-            {
-                if (!VmId.HasValue)
-                {
-                    ThrowTerminatingError(new ErrorRecord(
-                        new PSArgumentException("VmId is required when Level is Vm or Container."),
-                        "VmIdRequired", ErrorCategory.InvalidArgument, null));
-                    return;
-                }
-            }
-            if (string.Equals(level, "Group", StringComparison.OrdinalIgnoreCase))
-            {
-                if (string.IsNullOrWhiteSpace(Group))
-                {
-                    ThrowTerminatingError(new ErrorRecord(
-                        new PSArgumentException("Group is required when Level is Group."),
-                        "GroupRequired", ErrorCategory.InvalidArgument, null));
-                    return;
-                }
+                ThrowTerminatingError(new ErrorRecord(
+                    new PSArgumentException(scopeMessage), scopeErrorId, ErrorCategory.InvalidArgument, null));
+                return;
             }
 
             var target = string.Equals(level, "Group", StringComparison.OrdinalIgnoreCase)

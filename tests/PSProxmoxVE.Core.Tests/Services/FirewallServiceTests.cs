@@ -326,5 +326,116 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             Assert.Throws<ArgumentNullException>("group", () => service.RemoveGroupRule(CreateSession(), " ", 0));
         }
+
+        // -------------------------------------------------------------------------
+        // FirewallScope.TryValidate
+        // -------------------------------------------------------------------------
+
+        [Theory]
+        [InlineData("Cluster", null, null, null)]
+        [InlineData("cluster", null, null, null)]
+        [InlineData("Node", "pve1", null, null)]
+        [InlineData("NODE", "pve1", null, null)]
+        [InlineData("Vm", "pve1", 100, null)]
+        [InlineData("vm", "pve1", 100, null)]
+        [InlineData("Container", "pve1", 101, null)]
+        [InlineData("Group", null, null, "web-servers")]
+        [InlineData("GROUP", null, null, "web-servers")]
+        public void TryValidate_WithRequiredIdentifiers_ReturnsTrue(string level, string? node, int? vmid, string? group)
+        {
+            var result = FirewallScope.TryValidate(level, node, vmid, group, out var errorId, out var message);
+
+            Assert.True(result);
+            Assert.Equal(string.Empty, errorId);
+            Assert.Equal(string.Empty, message);
+        }
+
+        [Theory]
+        [InlineData("Node")]
+        [InlineData("Vm")]
+        [InlineData("Container")]
+        public void TryValidate_MissingNode_ReturnsFalseWithNodeRequired(string level)
+        {
+            var result = FirewallScope.TryValidate(level, null, 100, null, out var errorId, out var message);
+
+            Assert.False(result);
+            Assert.Equal("NodeRequired", errorId);
+            Assert.Equal("Node is required when Level is not Cluster.", message);
+        }
+
+        [Fact]
+        public void TryValidate_WhitespaceNode_IsAcceptedLikeTheOriginalIsNullOrEmptyCheck()
+        {
+            var result = FirewallScope.TryValidate("Node", "   ", null, null, out var errorId, out var message);
+
+            Assert.True(result);
+            Assert.Equal(string.Empty, errorId);
+            Assert.Equal(string.Empty, message);
+        }
+
+        [Fact]
+        public void TryValidate_VmMissingNodeAndVmId_ReturnsFalseWithNodeRequired()
+        {
+            var result = FirewallScope.TryValidate("Vm", null, null, null, out var errorId, out var message);
+
+            Assert.False(result);
+            Assert.Equal("NodeRequired", errorId);
+            Assert.Equal("Node is required when Level is not Cluster.", message);
+        }
+
+        [Theory]
+        [InlineData("Vm")]
+        [InlineData("Container")]
+        public void TryValidate_MissingVmId_ReturnsFalseWithVmIdRequired(string level)
+        {
+            var result = FirewallScope.TryValidate(level, "pve1", null, null, out var errorId, out var message);
+
+            Assert.False(result);
+            Assert.Equal("VmIdRequired", errorId);
+            Assert.Equal("VmId is required when Level is Vm or Container.", message);
+        }
+
+        [Fact]
+        public void TryValidate_GroupMissingGroup_ReturnsFalseWithGroupRequired()
+        {
+            var result = FirewallScope.TryValidate("Group", null, null, null, out var errorId, out var message);
+
+            Assert.False(result);
+            Assert.Equal("GroupRequired", errorId);
+            Assert.Equal("Group is required when Level is Group.", message);
+        }
+
+        [Fact]
+        public void TryValidate_GroupWhitespaceGroup_ReturnsFalseWithGroupRequired()
+        {
+            var result = FirewallScope.TryValidate("Group", null, null, "   ", out var errorId, out var message);
+
+            Assert.False(result);
+            Assert.Equal("GroupRequired", errorId);
+            Assert.Equal("Group is required when Level is Group.", message);
+        }
+
+        // -------------------------------------------------------------------------
+        // GetRules base path (cross-checked against an accepted FirewallScope.TryValidate scope)
+        // -------------------------------------------------------------------------
+
+        [Theory]
+        [InlineData("Cluster", null, null, "cluster/firewall")]
+        [InlineData("Node", "pve1", null, "nodes/pve1/firewall")]
+        [InlineData("Vm", "pve1", 100, "nodes/pve1/qemu/100/firewall")]
+        [InlineData("Container", "pve1", 101, "nodes/pve1/lxc/101/firewall")]
+        public void GetRules_AcceptedScope_UsesExpectedBasePath(
+            string level, string? node, int? vmid, string expectedPath)
+        {
+            Assert.True(FirewallScope.TryValidate(level, node, vmid, null, out _, out _));
+
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient.Setup(c => c.GetAsync(It.IsAny<string>())).ReturnsAsync(RulesJson());
+            var service = new FirewallService(mockClient.Object);
+
+            service.GetRules(CreateSession(), level, node, vmid);
+
+            mockClient.Verify(c => c.GetAsync($"{expectedPath}/rules"), Times.Once);
+        }
     }
 }
