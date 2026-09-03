@@ -249,7 +249,7 @@ namespace PSProxmoxVE.Core.Services
                 // POST (not PUT) because import-from triggers a background task
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/config", formData)
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -276,7 +276,7 @@ namespace PSProxmoxVE.Core.Services
                     kvp => kvp.Value?.ToString() ?? string.Empty);
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu", formData)
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -312,7 +312,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/status/shutdown", formData)
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -343,7 +343,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/status/reboot", formData)
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -395,7 +395,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.DeleteAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}{queryString}")
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -435,7 +435,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/clone", formData)
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -468,7 +468,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/migrate", formData)
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -504,7 +504,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.PutAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/resize", formData)
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -521,21 +521,10 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/status/{action}")
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
-        private static PveTask ParseTask(string response, string node)
-        {
-            var data = JObject.Parse(response)["data"];
-            // Many endpoints return the UPID string directly as the data value
-            if (data?.Type == JTokenType.String)
-                return new PveTask { Upid = data.ToString(), Node = node };
-
-            var task = data?.ToObject<PveTask>() ?? new PveTask();
-            task.Node = node;
-            return task;
-        }
 
         // -------------------------------------------------------------------------
         // QEMU Guest Agent
@@ -664,7 +653,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/move_disk", formData)
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
