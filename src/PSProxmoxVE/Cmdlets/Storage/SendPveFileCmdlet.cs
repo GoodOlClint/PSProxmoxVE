@@ -75,12 +75,10 @@ namespace PSProxmoxVE.Cmdlets.Storage
 
             var session = GetSession();
 
-            if ((!string.IsNullOrEmpty(Checksum) || !string.IsNullOrEmpty(ChecksumAlgorithm))
-                && session.ServerVersion != null && !session.ServerVersion.IsAtLeast(7, 1))
-            {
-                WriteWarning("The -Checksum and -ChecksumAlgorithm parameters require PVE 7.1 or later. "
-                    + $"Connected server is PVE {session.ServerVersion}. The upload will proceed without checksum verification.");
-            }
+            WarnIfBelowVersion(session,
+                !string.IsNullOrEmpty(Checksum) || !string.IsNullOrEmpty(ChecksumAlgorithm), 7, 1,
+                "The -Checksum and -ChecksumAlgorithm parameters require",
+                "The upload will proceed without checksum verification.");
 
             TimeSpan timeout;
             if (TimeoutSeconds.HasValue)

@@ -213,16 +213,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
             if (!string.IsNullOrEmpty(uploadResult.Upid))
             {
                 WriteVerbose("Waiting for OVA upload task to complete on PVE...");
-                var completedUpload = taskService.WaitForTask(session, Node, uploadResult.Upid);
-                if (completedUpload.ExitStatus != null && completedUpload.ExitStatus != "OK")
-                {
-                    ThrowTerminatingError(new ErrorRecord(
-                        new InvalidOperationException($"OVA upload task failed with status: {completedUpload.ExitStatus}"),
-                        "OvaUploadFailed",
-                        ErrorCategory.InvalidResult,
-                        uploadResult.Upid));
-                    return;
-                }
+                taskService.WaitForTask(session, Node, uploadResult.Upid);
             }
 
             // Step 5: Create VM with disks and network in a single API call.
@@ -298,16 +289,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
             if (Wait.IsPresent && !string.IsNullOrEmpty(createTask.Upid))
             {
                 WriteVerbose("Waiting for VM creation + disk import to complete...");
-                var completedCreate = taskService.WaitForTask(session, Node, createTask.Upid);
-                if (completedCreate.ExitStatus != null && completedCreate.ExitStatus != "OK")
-                {
-                    ThrowTerminatingError(new ErrorRecord(
-                        new InvalidOperationException($"OVA import task failed with status: {completedCreate.ExitStatus}"),
-                        "OvaImportFailed",
-                        ErrorCategory.InvalidResult,
-                        createTask.Upid));
-                    return;
-                }
+                taskService.WaitForTask(session, Node, createTask.Upid);
             }
 
             // Step 8: Output the created VM

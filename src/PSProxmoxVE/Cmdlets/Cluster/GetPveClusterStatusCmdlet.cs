@@ -18,7 +18,7 @@ namespace PSProxmoxVE.Cmdlets.Cluster
         protected override void ProcessRecord()
         {
             var session = GetSession();
-            var service = new ClusterConfigService();
+            var service = new ClusterService();
 
             WriteVerbose("Getting cluster status...");
             var statuses = service.GetClusterStatus(session);

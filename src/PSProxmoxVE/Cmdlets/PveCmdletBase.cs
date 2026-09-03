@@ -93,6 +93,40 @@ namespace PSProxmoxVE.Cmdlets
         }
 
         /// <summary>
+        /// Emits a soft warning when <paramref name="condition"/> holds and the connected
+        /// server is below <paramref name="requiredMajor"/>.<paramref name="requiredMinor"/>.
+        /// Unlike <see cref="RequireVersion"/>, this never blocks the call: the parameter or
+        /// feature may simply be silently ignored by an older server.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="condition">True when the caller used the parameter/feature this warning covers.</param>
+        /// <param name="requiredMajor">Major version the parameter/feature requires.</param>
+        /// <param name="requiredMinor">Minor version the parameter/feature requires.</param>
+        /// <param name="requirementClause">
+        /// The warning's leading clause, ending in "requires"/"require" (e.g. "The -DhcpRange
+        /// parameter requires"), so the full sentence reads
+        /// "&lt;requirementClause&gt; PVE &lt;requiredMajor&gt;.&lt;requiredMinor&gt; or later.".
+        /// </param>
+        /// <param name="consequence">Trailing sentence describing what happens if the server is too old.</param>
+        protected void WarnIfBelowVersion(
+            PveSession session,
+            bool condition,
+            int requiredMajor,
+            int requiredMinor,
+            string requirementClause,
+            string consequence)
+        {
+            if (!condition) return;
+
+            var version = session.ServerVersion;
+            if (version == null || version.IsAtLeast(requiredMajor, requiredMinor)) return;
+
+            WriteWarning(
+                $"{requirementClause} PVE {requiredMajor}.{requiredMinor} or later. " +
+                $"Connected server is PVE {version}. {consequence}");
+        }
+
+        /// <summary>
         /// Waits for a PVE task to complete, then optionally polls VM status until
         /// it matches <paramref name="expectedStatus"/>. Used by lifecycle cmdlets
         /// (Start, Stop, Suspend, Resume, etc.) when -Wait is specified.
@@ -148,10 +182,6 @@ namespace PSProxmoxVE.Cmdlets
                     ex.StatusCode != System.Net.HttpStatusCode.Unauthorized
                     && ex.StatusCode != System.Net.HttpStatusCode.Forbidden
                     && ex.StatusCode != System.Net.HttpStatusCode.NotFound)
-                {
-                    WriteVerbose($"Status poll failed, retrying: {ex.Message}");
-                }
-                catch (System.Net.Http.HttpRequestException ex)
                 {
                     WriteVerbose($"Status poll failed, retrying: {ex.Message}");
                 }

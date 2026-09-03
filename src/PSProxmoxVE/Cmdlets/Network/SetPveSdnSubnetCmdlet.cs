@@ -47,12 +47,8 @@ namespace PSProxmoxVE.Cmdlets.Network
             var session = GetSession();
             RequireVersion(session, "SDN", 6, 2, 8, 0);
 
-            if (!string.IsNullOrEmpty(DhcpRange)
-                && session.ServerVersion != null && !session.ServerVersion.IsAtLeast(8, 1))
-            {
-                WriteWarning("The -DhcpRange parameter requires PVE 8.1 or later. "
-                    + $"Connected server is PVE {session.ServerVersion}. The parameter will be sent but may be ignored.");
-            }
+            WarnIfBelowVersion(session, !string.IsNullOrEmpty(DhcpRange), 8, 1,
+                "The -DhcpRange parameter requires", "The parameter will be sent but may be ignored.");
 
             var service = new NetworkService();
 
