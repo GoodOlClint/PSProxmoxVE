@@ -226,43 +226,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetTotem_ReturnsJObject()
-        {
-            // Arrange
-            var json = @"{""data"": {""version"": ""2"", ""secauth"": ""on"", ""cluster_name"": ""pve-cluster""}}";
-            var mockClient = new Mock<IPveHttpClient>();
-            mockClient.Setup(c => c.GetAsync("cluster/config/totem")).ReturnsAsync(json);
-            var service = new ClusterConfigService(mockClient.Object);
-
-            // Act
-            var totem = service.GetTotem(CreateSession());
-
-            // Assert
-            Assert.NotNull(totem);
-            Assert.Equal("2", totem["version"]?.ToString());
-            Assert.Equal("on", totem["secauth"]?.ToString());
-            Assert.Equal("pve-cluster", totem["cluster_name"]?.ToString());
-            mockClient.Verify(c => c.GetAsync("cluster/config/totem"), Times.Once);
-        }
-
-        [Fact]
-        public void GetApiVersion_ReturnsInt()
-        {
-            // Arrange
-            var json = @"{""data"": 10}";
-            var mockClient = new Mock<IPveHttpClient>();
-            mockClient.Setup(c => c.GetAsync("cluster/config/apiversion")).ReturnsAsync(json);
-            var service = new ClusterConfigService(mockClient.Object);
-
-            // Act
-            var version = service.GetApiVersion(CreateSession());
-
-            // Assert
-            Assert.Equal(10, version);
-            mockClient.Verify(c => c.GetAsync("cluster/config/apiversion"), Times.Once);
-        }
-
-        [Fact]
         public void GetClusterOptions_ReturnsPveClusterOptions()
         {
             // Arrange

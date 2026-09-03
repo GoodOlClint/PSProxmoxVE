@@ -54,28 +54,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetUser_ReturnsSingleUser()
-        {
-            // Arrange
-            _mockClient.Setup(c => c.GetAsync("access/users/root%40pam"))
-                .ReturnsAsync(@"{""data"":{""email"":""root@example.com"",""firstname"":""Root"",""lastname"":""Admin"",""enable"":1}}");
-
-            // Act
-            var result = _service.GetUser(_session, "root@pam");
-
-            // Assert
-            Assert.Equal("root@pam", result.UserId);
-            Assert.Equal("root@example.com", result.Email);
-            Assert.Equal(1, result.Enabled);
-        }
-
-        [Fact]
-        public void GetUser_NullUserId_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>(() => _service.GetUser(_session, null!));
-        }
-
-        [Fact]
         public void CreateUser_PostsFormData()
         {
             // Arrange

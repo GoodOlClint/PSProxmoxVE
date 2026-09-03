@@ -175,23 +175,5 @@ namespace PSProxmoxVE.Core.Services
                 return PveTaskResponse.Parse(response, node);
             });
         }
-
-        /// <summary>
-        /// Returns the Proxmox VE version running on the server.
-        /// </summary>
-        public PveVersion GetVersion(PveSession session)
-        {
-            if (session == null) throw new ArgumentNullException(nameof(session));
-
-            return Invoke(session, client =>
-            {
-                var response = client.GetAsync("version").GetAwaiter().GetResult();
-                var data = JObject.Parse(response)["data"];
-                var versionStr = data?["version"]?.ToString();
-                if (string.IsNullOrEmpty(versionStr))
-                    throw new InvalidOperationException("Failed to retrieve PVE version from API response.");
-                return PveVersion.Parse(versionStr!);
-            });
-        }
     }
 }

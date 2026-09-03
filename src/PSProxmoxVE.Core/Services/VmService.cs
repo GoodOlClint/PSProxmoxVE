@@ -309,28 +309,6 @@ namespace PSProxmoxVE.Core.Services
         public PveTask StopVm(PveSession session, string node, int vmid)
             => PostStatus(session, node, vmid, "stop");
 
-        /// <summary>Gracefully shuts down a VM. Returns the task UPID.</summary>
-        /// <param name="session">The authenticated PVE session.</param>
-        /// <param name="node">The cluster node name.</param>
-        /// <param name="vmid">The VM ID.</param>
-        /// <param name="timeoutSeconds">Optional shutdown timeout in seconds.</param>
-        public PveTask ShutdownVm(PveSession session, string node, int vmid, int? timeoutSeconds = null)
-        {
-            if (session == null) throw new ArgumentNullException(nameof(session));
-            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
-
-            var formData = new Dictionary<string, string>();
-            if (timeoutSeconds.HasValue)
-                formData["timeout"] = timeoutSeconds.Value.ToString();
-
-            return Invoke(session, client =>
-            {
-                var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/status/shutdown", formData)
-                    .GetAwaiter().GetResult();
-                return PveTaskResponse.Parse(response, node);
-            });
-        }
-
         /// <summary>
         /// Reboots a VM through PVE's native reboot endpoint. Returns the task UPID.
         /// </summary>

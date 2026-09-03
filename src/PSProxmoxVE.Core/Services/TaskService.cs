@@ -84,25 +84,6 @@ namespace PSProxmoxVE.Core.Services
         }
 
         /// <summary>
-        /// Returns all log lines for a task identified by its UPID.
-        /// </summary>
-        public PveTaskLog[] GetTaskLog(PveSession session, string node, string upid)
-        {
-            if (session == null) throw new ArgumentNullException(nameof(session));
-            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
-            if (string.IsNullOrWhiteSpace(upid)) throw new ArgumentNullException(nameof(upid));
-
-            return Invoke(session, client =>
-            {
-                var encodedUpid = Uri.EscapeDataString(upid);
-                var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/tasks/{encodedUpid}/log")
-                    .GetAwaiter().GetResult();
-                var data = JObject.Parse(response)["data"];
-                return data?.ToObject<PveTaskLog[]>() ?? Array.Empty<PveTaskLog>();
-            });
-        }
-
-        /// <summary>
         /// Polls the task status until it completes, throws on timeout or failure. One HTTP
         /// client is held open for the whole wait.
         /// </summary>

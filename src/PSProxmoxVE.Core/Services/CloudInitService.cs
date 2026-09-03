@@ -14,14 +14,6 @@ namespace PSProxmoxVE.Core.Services
     /// </summary>
     public class CloudInitService : PveServiceBase
     {
-        // Cloud-Init field names as used in the PVE API
-        private static readonly string[] CloudInitFields =
-        {
-            "ciuser", "cipassword", "sshkeys",
-            "ipconfig0", "ipconfig1", "ipconfig2", "ipconfig3",
-            "nameserver", "searchdomain", "cicustom"
-        };
-
         private readonly VmService _vmService;
 
         /// <summary>
@@ -55,34 +47,6 @@ namespace PSProxmoxVE.Core.Services
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
 
             return _vmService.GetVmConfig(session, node, vmid);
-        }
-
-        /// <summary>
-        /// Retrieves the Cloud-Init specific configuration fields for a VM.
-        /// Internally fetches the full VM config and extracts the CI fields.
-        /// </summary>
-        public PveCloudInitConfig GetCloudInitConfig(PveSession session, string node, int vmid)
-        {
-            if (session == null) throw new ArgumentNullException(nameof(session));
-            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
-
-            return Invoke(session, client =>
-            {
-                var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/config")
-                    .GetAwaiter().GetResult();
-                var data = JObject.Parse(response)["data"];
-                if (data == null) return new PveCloudInitConfig();
-
-                // Extract only the Cloud-Init fields into a reduced JObject for deserialization
-                var ciObj = new JObject();
-                foreach (var field in CloudInitFields)
-                {
-                    if (data[field] != null)
-                        ciObj[field] = data[field];
-                }
-
-                return ciObj.ToObject<PveCloudInitConfig>() ?? new PveCloudInitConfig();
-            });
         }
 
         /// <summary>
