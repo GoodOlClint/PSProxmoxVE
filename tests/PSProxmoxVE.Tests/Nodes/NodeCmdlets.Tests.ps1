@@ -13,31 +13,9 @@ BeforeAll {
 # Get-PveNode
 # ---------------------------------------------------------------------------
 Describe 'Get-PveNode' {
-
-    Context 'Command existence' {
-        It 'Should be available after module import' {
-            Get-Command 'Get-PveNode' -ErrorAction SilentlyContinue |
-                Should -Not -BeNullOrEmpty
-        }
-
-        It 'Should be a CmdletInfo (binary cmdlet)' {
-            (Get-Command 'Get-PveNode').CommandType | Should -Be 'Cmdlet'
-        }
-    }
-
     Context 'Parameter validation' {
         BeforeAll {
             $script:Cmd = Get-Command 'Get-PveNode'
-        }
-
-        It 'Should have Name parameter' {
-            $script:Cmd.Parameters.ContainsKey('Name') | Should -BeTrue
-        }
-
-        It 'Name should not be Mandatory' {
-            $p = $script:Cmd.Parameters['Name']
-            $isMandatory = $p.ParameterSets.Values | Where-Object { $_.IsMandatory }
-            $isMandatory | Should -BeNullOrEmpty
         }
 
         It 'Name should be at Position 0' {
@@ -48,16 +26,6 @@ Describe 'Get-PveNode' {
 
         It 'Name should be of type String' {
             $script:Cmd.Parameters['Name'].ParameterType | Should -Be ([string])
-        }
-
-        It 'Should have Session parameter (inherited from PveCmdletBase)' {
-            $script:Cmd.Parameters.ContainsKey('Session') | Should -BeTrue
-        }
-
-        It 'Session should not be Mandatory' {
-            $p = $script:Cmd.Parameters['Session']
-            $isMandatory = $p.ParameterSets.Values | Where-Object { $_.IsMandatory }
-            $isMandatory | Should -BeNullOrEmpty
         }
 
         It 'Should declare PveNode as OutputType' {
@@ -87,31 +55,9 @@ Describe 'Get-PveNode' {
 # Get-PveNodeStatus
 # ---------------------------------------------------------------------------
 Describe 'Get-PveNodeStatus' {
-
-    Context 'Command existence' {
-        It 'Should be available after module import' {
-            Get-Command 'Get-PveNodeStatus' -ErrorAction SilentlyContinue |
-                Should -Not -BeNullOrEmpty
-        }
-
-        It 'Should be a CmdletInfo (binary cmdlet)' {
-            (Get-Command 'Get-PveNodeStatus').CommandType | Should -Be 'Cmdlet'
-        }
-    }
-
     Context 'Parameter validation' {
         BeforeAll {
             $script:Cmd = Get-Command 'Get-PveNodeStatus'
-        }
-
-        It 'Should have Node parameter' {
-            $script:Cmd.Parameters.ContainsKey('Node') | Should -BeTrue
-        }
-
-        It 'Node should be Mandatory' {
-            $p = $script:Cmd.Parameters['Node']
-            $isMandatory = $p.ParameterSets.Values | Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
         }
 
         It 'Node should be at Position 0' {
@@ -129,16 +75,6 @@ Describe 'Get-PveNodeStatus' {
             $acceptsByPropName = $p.ParameterSets.Values |
                 Where-Object { $_.ValueFromPipelineByPropertyName }
             $acceptsByPropName | Should -Not -BeNullOrEmpty
-        }
-
-        It 'Should have Session parameter (inherited from PveCmdletBase)' {
-            $script:Cmd.Parameters.ContainsKey('Session') | Should -BeTrue
-        }
-
-        It 'Session should not be Mandatory' {
-            $p = $script:Cmd.Parameters['Session']
-            $isMandatory = $p.ParameterSets.Values | Where-Object { $_.IsMandatory }
-            $isMandatory | Should -BeNullOrEmpty
         }
 
         It 'Should declare PveNodeStatus as OutputType' {

@@ -15,8 +15,8 @@ schema: 2.0.0
 ```
 New-PveStorage [-Storage] <String> [-Type] <String> [-Content <String>] [-Path <String>] [-Server <String>]
  [-Export <String>] [-VgName <String>] [-ThinPool <String>] [-Pool <String>] [-CephPool <String>]
- [-MonHost <String>] [-Shared] [-Disable] [-Nodes <String>] [-Session <PveSession>]
- [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
+ [-MonHost <String>] [-Target <String>] [-Portal <String>] [-Shared] [-Disable] [-Nodes <String>]
+ [-Session <PveSession>] [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -298,6 +298,36 @@ Accept wildcard characters: False
 Type: ActionPreference
 Parameter Sets: (All)
 Aliases: proga
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Portal
+iSCSI portal address (host:port).
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Target
+iSCSI target IQN (e.g. iqn.2024-01.com.example:storage).
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
 
 Required: False
 Position: Named

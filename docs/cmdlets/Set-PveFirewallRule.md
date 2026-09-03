@@ -13,9 +13,9 @@ Updates a firewall rule.
 ## SYNTAX
 
 ```
-Set-PveFirewallRule [-Level] <String> [-Node <String>] [-VmId <Int32>] -Position <Int32> [-Type <String>]
- [-Action <String>] [-Enable] [-Source <String>] [-Dest <String>] [-Proto <String>] [-Dport <String>]
- [-Sport <String>] [-Comment <String>] [-Macro <String>] [-Log <String>] [-Iface <String>]
+Set-PveFirewallRule [-Level] <String> [-Node <String>] [-VmId <Int32>] [-Group <String>] -Position <Int32>
+ [-Type <String>] [-Action <String>] [-Enable] [-Source <String>] [-Dest <String>] [-Proto <String>]
+ [-Dport <String>] [-Sport <String>] [-Comment <String>] [-Macro <String>] [-Log <String>] [-Iface <String>]
  [-Session <PveSession>] [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
@@ -326,6 +326,21 @@ Accept wildcard characters: False
 Type: ActionPreference
 Parameter Sets: (All)
 Aliases: proga
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Group
+The security group name. Required when Level is Group.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
 
 Required: False
 Position: Named

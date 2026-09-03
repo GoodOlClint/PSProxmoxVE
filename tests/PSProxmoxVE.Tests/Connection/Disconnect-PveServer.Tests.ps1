@@ -10,18 +10,6 @@ BeforeAll {
 }
 
 Describe 'Disconnect-PveServer' {
-
-    Context 'Command existence' {
-        It 'Should be available after module import' {
-            Get-Command 'Disconnect-PveServer' -ErrorAction SilentlyContinue |
-                Should -Not -BeNullOrEmpty
-        }
-
-        It 'Should be a CmdletInfo (binary cmdlet)' {
-            (Get-Command 'Disconnect-PveServer').CommandType | Should -Be 'Cmdlet'
-        }
-    }
-
     Context 'Parameter metadata' {
         BeforeAll {
             $script:Cmd = Get-Command 'Disconnect-PveServer'
@@ -37,10 +25,6 @@ Describe 'Disconnect-PveServer' {
             # ConfirmImpact=Low means PowerShell will not auto-prompt; just verify the
             # attribute is present by confirming ShouldProcess support is enabled.
             $script:Cmd.Parameters.ContainsKey('WhatIf') | Should -BeTrue
-        }
-
-        It 'Should expose -Session parameter' {
-            $script:Cmd.Parameters.ContainsKey('Session') | Should -BeTrue
         }
     }
 

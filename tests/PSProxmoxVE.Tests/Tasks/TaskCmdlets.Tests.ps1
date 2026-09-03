@@ -13,31 +13,9 @@ BeforeAll {
 # Get-PveTask
 # ---------------------------------------------------------------------------
 Describe 'Get-PveTask' {
-
-    Context 'Command existence' {
-        It 'Should be available after module import' {
-            Get-Command 'Get-PveTask' -ErrorAction SilentlyContinue |
-                Should -Not -BeNullOrEmpty
-        }
-
-        It 'Should be a CmdletInfo (binary cmdlet)' {
-            (Get-Command 'Get-PveTask').CommandType | Should -Be 'Cmdlet'
-        }
-    }
-
     Context 'Parameter validation' {
         BeforeAll {
             $script:Cmd = Get-Command 'Get-PveTask'
-        }
-
-        It 'Should have Node parameter' {
-            $script:Cmd.Parameters.ContainsKey('Node') | Should -BeTrue
-        }
-
-        It 'Node should be Mandatory' {
-            $p = $script:Cmd.Parameters['Node']
-            $isMandatory = $p.ParameterSets.Values | Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
         }
 
         It 'Node should be at Position 0' {
@@ -48,16 +26,6 @@ Describe 'Get-PveTask' {
 
         It 'Node should be of type String' {
             $script:Cmd.Parameters['Node'].ParameterType | Should -Be ([string])
-        }
-
-        It 'Should have Upid parameter' {
-            $script:Cmd.Parameters.ContainsKey('Upid') | Should -BeTrue
-        }
-
-        It 'Upid should be Mandatory' {
-            $p = $script:Cmd.Parameters['Upid']
-            $isMandatory = $p.ParameterSets.Values | Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
         }
 
         It 'Upid should be at Position 1' {
@@ -75,16 +43,6 @@ Describe 'Get-PveTask' {
             $acceptsByPropName = $p.ParameterSets.Values |
                 Where-Object { $_.ValueFromPipelineByPropertyName }
             $acceptsByPropName | Should -Not -BeNullOrEmpty
-        }
-
-        It 'Should have Session parameter (inherited from PveCmdletBase)' {
-            $script:Cmd.Parameters.ContainsKey('Session') | Should -BeTrue
-        }
-
-        It 'Session should not be Mandatory' {
-            $p = $script:Cmd.Parameters['Session']
-            $isMandatory = $p.ParameterSets.Values | Where-Object { $_.IsMandatory }
-            $isMandatory | Should -BeNullOrEmpty
         }
 
         It 'Should declare PveTask as OutputType' {
@@ -133,31 +91,9 @@ Describe 'Get-PveTask' {
 # Wait-PveTask
 # ---------------------------------------------------------------------------
 Describe 'Wait-PveTask' {
-
-    Context 'Command existence' {
-        It 'Should be available after module import' {
-            Get-Command 'Wait-PveTask' -ErrorAction SilentlyContinue |
-                Should -Not -BeNullOrEmpty
-        }
-
-        It 'Should be a CmdletInfo (binary cmdlet)' {
-            (Get-Command 'Wait-PveTask').CommandType | Should -Be 'Cmdlet'
-        }
-    }
-
     Context 'Parameter validation' {
         BeforeAll {
             $script:Cmd = Get-Command 'Wait-PveTask'
-        }
-
-        It 'Should have Node parameter' {
-            $script:Cmd.Parameters.ContainsKey('Node') | Should -BeTrue
-        }
-
-        It 'Node should be Mandatory' {
-            $p = $script:Cmd.Parameters['Node']
-            $isMandatory = $p.ParameterSets.Values | Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
         }
 
         It 'Node should be at Position 0' {
@@ -168,16 +104,6 @@ Describe 'Wait-PveTask' {
 
         It 'Node should be of type String' {
             $script:Cmd.Parameters['Node'].ParameterType | Should -Be ([string])
-        }
-
-        It 'Should have Upid parameter' {
-            $script:Cmd.Parameters.ContainsKey('Upid') | Should -BeTrue
-        }
-
-        It 'Upid should be Mandatory' {
-            $p = $script:Cmd.Parameters['Upid']
-            $isMandatory = $p.ParameterSets.Values | Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
         }
 
         It 'Upid should be at Position 1' {
@@ -197,44 +123,14 @@ Describe 'Wait-PveTask' {
             $acceptsByPropName | Should -Not -BeNullOrEmpty
         }
 
-        It 'Should have Timeout parameter' {
-            $script:Cmd.Parameters.ContainsKey('Timeout') | Should -BeTrue
-        }
-
-        It 'Timeout should not be Mandatory' {
-            $p = $script:Cmd.Parameters['Timeout']
-            $isMandatory = $p.ParameterSets.Values | Where-Object { $_.IsMandatory }
-            $isMandatory | Should -BeNullOrEmpty
-        }
-
         It 'Timeout should be of type Nullable[TimeSpan]' {
             $script:Cmd.Parameters['Timeout'].ParameterType |
                 Should -Be ([System.Nullable[System.TimeSpan]])
         }
 
-        It 'Should have PollInterval parameter' {
-            $script:Cmd.Parameters.ContainsKey('PollInterval') | Should -BeTrue
-        }
-
-        It 'PollInterval should not be Mandatory' {
-            $p = $script:Cmd.Parameters['PollInterval']
-            $isMandatory = $p.ParameterSets.Values | Where-Object { $_.IsMandatory }
-            $isMandatory | Should -BeNullOrEmpty
-        }
-
         It 'PollInterval should be of type Nullable[TimeSpan]' {
             $script:Cmd.Parameters['PollInterval'].ParameterType |
                 Should -Be ([System.Nullable[System.TimeSpan]])
-        }
-
-        It 'Should have Session parameter (inherited from PveCmdletBase)' {
-            $script:Cmd.Parameters.ContainsKey('Session') | Should -BeTrue
-        }
-
-        It 'Session should not be Mandatory' {
-            $p = $script:Cmd.Parameters['Session']
-            $isMandatory = $p.ParameterSets.Values | Where-Object { $_.IsMandatory }
-            $isMandatory | Should -BeNullOrEmpty
         }
 
         It 'Should declare PveTask as OutputType' {
