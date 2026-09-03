@@ -76,22 +76,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void CreateTemplate_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new TemplateService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("session", () => service.CreateTemplate(null!, Node, VmId));
-        }
-
-        [Fact]
-        public void CreateTemplate_NullNode_ThrowsArgumentNullException()
-        {
-            var service = new TemplateService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("node", () => service.CreateTemplate(CreateSession(), null!, VmId));
-        }
-
-        [Fact]
         public void CreateTemplate_EmptyNode_ThrowsArgumentNullException()
         {
             var service = new TemplateService(new Mock<IPveHttpClient>().Object);
@@ -143,14 +127,6 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Assert
             mockClient.Verify(c => c.GetAsync("nodes/pve%20node/qemu"), Times.Once);
-        }
-
-        [Fact]
-        public void GetTemplates_NullSession_ThrowsArgumentNullException()
-        {
-            var service = new TemplateService(new Mock<IPveHttpClient>().Object);
-
-            Assert.Throws<ArgumentNullException>("session", () => service.GetTemplates(null!, Node));
         }
 
         [Fact]

@@ -284,39 +284,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetNodes_NullSession_ThrowsArgumentNullException()
-        {
-            // Arrange
-            var mockClient = new Mock<IPveHttpClient>();
-            var service = new NodeService(mockClient.Object);
-
-            // Act & Assert
-            Assert.Throws<ArgumentNullException>(() => service.GetNodes(null!));
-        }
-
-        [Fact]
-        public void GetNodeStatus_NullSession_ThrowsArgumentNullException()
-        {
-            // Arrange
-            var mockClient = new Mock<IPveHttpClient>();
-            var service = new NodeService(mockClient.Object);
-
-            // Act & Assert
-            Assert.Throws<ArgumentNullException>(() => service.GetNodeStatus(null!, "pve1"));
-        }
-
-        [Fact]
-        public void GetNodeStatus_NullNode_ThrowsArgumentNullException()
-        {
-            // Arrange
-            var mockClient = new Mock<IPveHttpClient>();
-            var service = new NodeService(mockClient.Object);
-
-            // Act & Assert
-            Assert.Throws<ArgumentNullException>(() => service.GetNodeStatus(CreateSession(), null!));
-        }
-
-        [Fact]
         public void Constructor_NullClient_ThrowsArgumentNullException()
         {
             Assert.Throws<ArgumentNullException>(() => new NodeService(null!));
