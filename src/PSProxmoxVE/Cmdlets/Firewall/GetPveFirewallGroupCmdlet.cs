@@ -12,7 +12,7 @@ namespace PSProxmoxVE.Cmdlets.Firewall
         [Parameter(Mandatory = false, Position = 0, HelpMessage = "The security group name. If specified, returns rules within the group.")]
         public string? Group { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
             var service = new FirewallService();

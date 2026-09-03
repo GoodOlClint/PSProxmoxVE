@@ -89,7 +89,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
                 data[key] = value!;
         }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(Storage, "Create PVE Storage"))
                 return;

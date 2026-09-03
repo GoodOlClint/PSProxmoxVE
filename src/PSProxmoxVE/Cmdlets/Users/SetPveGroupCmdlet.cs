@@ -23,7 +23,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         [Parameter(Mandatory = false, HelpMessage = "Updated comment or description for the group.")]
         public string? Comment { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(GroupId, "Set PVE Group"))
                 return;

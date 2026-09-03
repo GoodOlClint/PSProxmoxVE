@@ -52,7 +52,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
         [Parameter(Mandatory = false, HelpMessage = "Filter by tag.")]
         public string? Tag { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
 

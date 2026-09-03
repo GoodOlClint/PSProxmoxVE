@@ -19,7 +19,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         [ValidatePattern(@"\A[A-Za-z0-9][A-Za-z0-9._-]*\z")]
         public string Zone { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(Zone, "Remove PVE SDN Zone"))
                 return;

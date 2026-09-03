@@ -28,7 +28,7 @@ namespace PSProxmoxVE.Cmdlets.Firewall
         [Parameter(Mandatory = false, HelpMessage = "Updated comment for the alias.")]
         public string? Comment { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var level = Level;
             if (!FirewallScope.TryValidate(level, Node, VmId, null, out var scopeErrorId, out var scopeMessage))

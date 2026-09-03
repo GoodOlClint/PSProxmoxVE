@@ -29,7 +29,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
         [Parameter(Mandatory = false, HelpMessage = "Filter by content type (e.g. iso, vztmpl, backup).")]
         public string? ContentType { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
 

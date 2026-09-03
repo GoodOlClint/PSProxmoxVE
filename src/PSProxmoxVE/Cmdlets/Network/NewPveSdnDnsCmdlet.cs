@@ -40,7 +40,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = false, HelpMessage = "The TTL (time-to-live) for DNS records.")]
         public int? Ttl { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"SDN DNS '{Dns}'", "Create PVE SDN DNS"))
                 return;

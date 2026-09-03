@@ -67,7 +67,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
         [ValidateRange(0, int.MaxValue)]
         public int? TimeoutSeconds { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var fileName = System.IO.Path.GetFileName(Path);
             if (!ShouldProcess($"{Node}/{Storage}/{fileName}", $"Upload file (content={ContentType})"))

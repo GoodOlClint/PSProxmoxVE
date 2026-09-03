@@ -19,7 +19,7 @@ namespace PSProxmoxVE.Cmdlets.HA
             HelpMessage = "HA rule ID to delete.")]
         public string Rule { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
             RequireVersion(session, "HA Rules", 9, 0);

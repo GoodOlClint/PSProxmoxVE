@@ -31,7 +31,7 @@ namespace PSProxmoxVE.Cmdlets.Nodes
         [Parameter(Mandatory = false, HelpMessage = "Force stop VMs without waiting for graceful shutdown.")]
         public SwitchParameter ForceStop { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(Node, "Stop all VMs"))
                 return;

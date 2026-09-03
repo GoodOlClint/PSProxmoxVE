@@ -18,7 +18,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The controller identifier to remove.")]
         public string Controller { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"SDN Controller '{Controller}'", "Remove PVE SDN Controller"))
                 return;

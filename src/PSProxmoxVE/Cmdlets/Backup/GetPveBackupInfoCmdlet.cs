@@ -15,7 +15,7 @@ namespace PSProxmoxVE.Cmdlets.Backup
     [OutputType(typeof(PSObject))]
     public sealed class GetPveBackupInfoCmdlet : PveCmdletBase
     {
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
             RequireVersion(session, "Backup compliance info", 7, 0);

@@ -70,7 +70,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
         [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var target = TargetNode ?? SourceNode;
             if (!ShouldProcess($"Container {VmId} on node '{SourceNode}' to new container on node '{target}'", "Copy-PveContainer"))

@@ -70,7 +70,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
         [Parameter(Mandatory = false, HelpMessage = "Wait for the import task to complete.")]
         public SwitchParameter Wait { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"VM {VmId} disk {Disk} on node '{Node}'", $"Import disk from '{Source}' to '{TargetStorage}'"))
                 return;

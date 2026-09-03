@@ -20,7 +20,7 @@ namespace PSProxmoxVE.Cmdlets.Cluster
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The cluster node name to remove.")]
         public string Node { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"node '{Node}'", "Remove from cluster configuration"))
                 return;

@@ -21,7 +21,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         [ValidateNotNullOrEmpty]
         public string Realm { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(Realm, "Remove PVE Domain"))
                 return;

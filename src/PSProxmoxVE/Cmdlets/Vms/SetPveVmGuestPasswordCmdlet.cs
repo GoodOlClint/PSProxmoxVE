@@ -44,7 +44,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
         [Parameter(Mandatory = false, HelpMessage = "Indicates the password is already crypted/hashed.")]
         public SwitchParameter Crypted { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"User '{Username}' on VM {VmId} (node '{Node}')", "Set-PveVmGuestPassword"))
                 return;

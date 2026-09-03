@@ -52,7 +52,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
         [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"VM {VmId} from node '{Node}' to node '{TargetNode}'", "Move-PveVm"))
                 return;

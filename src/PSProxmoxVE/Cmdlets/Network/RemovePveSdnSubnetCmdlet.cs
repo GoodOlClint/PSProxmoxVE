@@ -23,7 +23,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true, HelpMessage = "The subnet CIDR to remove.")]
         public string Subnet { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"Subnet {Subnet} on VNet {Vnet}", "Remove PVE SDN Subnet"))
                 return;

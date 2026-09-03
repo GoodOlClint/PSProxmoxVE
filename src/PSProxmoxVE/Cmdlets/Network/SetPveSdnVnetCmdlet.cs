@@ -35,7 +35,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = false, HelpMessage = "Enable VLAN-aware bridging.")]
         public SwitchParameter VlanAware { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(Vnet, "Set PVE SDN VNet"))
                 return;

@@ -26,7 +26,7 @@ namespace PSProxmoxVE.Cmdlets.Pools
         [Parameter(Mandatory = false, HelpMessage = "An optional comment or description for the pool.")]
         public string? Comment { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"pool '{PoolId}'", "New-PvePool"))
                 return;

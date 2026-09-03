@@ -27,7 +27,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         [Alias("EnabledOnly")]
         public SwitchParameter Enabled { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
 

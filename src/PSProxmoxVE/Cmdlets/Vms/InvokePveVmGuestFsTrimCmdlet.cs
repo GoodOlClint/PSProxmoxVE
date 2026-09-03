@@ -24,7 +24,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
         [ValidateRange(100, 999999999)]
         public int VmId { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"VM {VmId} on node '{Node}'", "Invoke-PveVmGuestFsTrim"))
                 return;

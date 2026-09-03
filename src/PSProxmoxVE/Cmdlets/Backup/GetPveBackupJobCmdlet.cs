@@ -21,7 +21,7 @@ namespace PSProxmoxVE.Cmdlets.Backup
         [Parameter(Mandatory = false, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The backup job ID.")]
         public string? Id { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
             var service = new BackupService();

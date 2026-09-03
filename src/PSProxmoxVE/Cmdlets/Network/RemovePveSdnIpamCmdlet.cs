@@ -18,7 +18,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The IPAM plugin identifier to remove.")]
         public string Ipam { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"SDN IPAM '{Ipam}'", "Remove PVE SDN IPAM"))
                 return;

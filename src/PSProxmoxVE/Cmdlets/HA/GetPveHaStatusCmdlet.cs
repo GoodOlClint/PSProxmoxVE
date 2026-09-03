@@ -15,7 +15,7 @@ namespace PSProxmoxVE.Cmdlets.HA
     [OutputType(typeof(PveHaStatus))]
     public sealed class GetPveHaStatusCmdlet : PveCmdletBase
     {
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
             var service = new HaService();

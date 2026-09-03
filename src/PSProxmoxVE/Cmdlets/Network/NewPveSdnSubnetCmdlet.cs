@@ -40,7 +40,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = false, HelpMessage = "DHCP range for automatic IP assignment.")]
         public string? DhcpRange { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"Subnet {Subnet} on VNet {Vnet}", "Create PVE SDN Subnet"))
                 return;

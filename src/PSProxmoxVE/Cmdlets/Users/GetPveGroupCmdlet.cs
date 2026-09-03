@@ -20,7 +20,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         [Parameter(Mandatory = false, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "Optional group ID to filter results.")]
         public string? GroupId { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
             var service = new UserService();

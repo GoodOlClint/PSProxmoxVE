@@ -12,7 +12,7 @@ namespace PSProxmoxVE.Cmdlets.Firewall
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The security group name to remove.")]
         public string Group { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"firewall security group '{Group}'", "Remove"))
                 return;

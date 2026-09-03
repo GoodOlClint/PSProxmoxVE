@@ -90,7 +90,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
         [ValidateRange(0, int.MaxValue)]
         public int? TimeoutSeconds { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             // Validate the OVA file exists
             if (!File.Exists(Path))

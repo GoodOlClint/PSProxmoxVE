@@ -20,7 +20,7 @@ namespace PSProxmoxVE.Cmdlets.HA
             HelpMessage = "HA rule ID. Omit to list all rules.")]
         public string? Rule { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
             RequireVersion(session, "HA Rules", 9, 0);

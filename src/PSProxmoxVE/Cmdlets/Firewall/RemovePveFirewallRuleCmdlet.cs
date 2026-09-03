@@ -26,7 +26,7 @@ namespace PSProxmoxVE.Cmdlets.Firewall
         [Parameter(Mandatory = true, HelpMessage = "The rule position to remove.")]
         public int Position { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var level = Level;
             if (!FirewallScope.TryValidate(level, Node, VmId, Group, out var scopeErrorId, out var scopeMessage))

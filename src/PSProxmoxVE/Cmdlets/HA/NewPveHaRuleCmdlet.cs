@@ -31,7 +31,7 @@ namespace PSProxmoxVE.Cmdlets.HA
         [Parameter(Mandatory = false, HelpMessage = "Additional rule properties.")]
         public System.Collections.Hashtable? Properties { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
             RequireVersion(session, "HA Rules", 9, 0);

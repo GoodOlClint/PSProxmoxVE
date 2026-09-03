@@ -22,7 +22,7 @@ namespace PSProxmoxVE.Cmdlets.Pools
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The pool ID to remove.")]
         public string PoolId { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"pool '{PoolId}'", "Remove-PvePool"))
                 return;

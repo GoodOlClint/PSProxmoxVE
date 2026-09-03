@@ -22,7 +22,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = true, Position = 1, HelpMessage = "The network interface name.")]
         public string Iface { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"{Iface} on {Node}", "Remove PVE Network Iface"))
                 return;

@@ -99,7 +99,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
         [Parameter(Mandatory = false, HelpMessage = "Comma-separated config keys to delete.")]
         public string? Delete { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"Container {VmId} on node '{Node}'", "Set-PveContainerConfig"))
                 return;

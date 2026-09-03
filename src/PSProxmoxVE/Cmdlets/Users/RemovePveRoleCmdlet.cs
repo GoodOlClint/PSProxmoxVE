@@ -18,7 +18,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The role identifier.")]
         public string RoleId { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(RoleId, "Remove PVE Role"))
                 return;

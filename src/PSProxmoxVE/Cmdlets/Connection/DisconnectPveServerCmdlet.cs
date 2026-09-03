@@ -16,7 +16,7 @@ namespace PSProxmoxVE.Cmdlets.Connection
     [Alias("dpve")]
     public sealed class DisconnectPveServerCmdlet : PveCmdletBase
     {
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             bool explicitSessionSupplied = MyInvocation.BoundParameters.ContainsKey(nameof(Session));
             var sessionToDisconnect = explicitSessionSupplied ? Session : ModuleState.ActiveSession;

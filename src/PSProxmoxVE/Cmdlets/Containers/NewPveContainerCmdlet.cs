@@ -125,7 +125,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
         [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             // Validate -RootFsSize before ShouldProcess so typos like "512M" are rejected
             // even with -WhatIf, and so the error is raised regardless of whether

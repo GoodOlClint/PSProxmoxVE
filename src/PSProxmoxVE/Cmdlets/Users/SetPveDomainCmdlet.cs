@@ -28,7 +28,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         [Parameter(Mandatory = false, HelpMessage = "Set as the default authentication domain.")]
         public SwitchParameter Default { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(Realm, "Set PVE Domain"))
                 return;

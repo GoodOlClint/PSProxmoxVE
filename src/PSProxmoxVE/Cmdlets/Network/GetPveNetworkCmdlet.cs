@@ -32,7 +32,7 @@ namespace PSProxmoxVE.Cmdlets.Network
                      "OVSPort", "OVSIntPort", "any_bridge", "any_local_bridge", IgnoreCase = true)]
         public string? Type { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
 

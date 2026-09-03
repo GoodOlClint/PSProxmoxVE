@@ -31,7 +31,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
         [ValidateNotNullOrEmpty]
         public string Volume { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(Volume, "Remove PVE Storage Content"))
                 return;

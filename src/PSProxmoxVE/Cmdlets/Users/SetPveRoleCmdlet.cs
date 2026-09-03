@@ -21,7 +21,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         [Parameter(Mandatory = true, Position = 1, HelpMessage = "Comma-separated list of privileges (e.g. 'VM.Audit,VM.Console').")]
         public string Privileges { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"role '{RoleId}'", "Set"))
                 return;

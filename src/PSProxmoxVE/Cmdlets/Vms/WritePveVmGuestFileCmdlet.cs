@@ -35,7 +35,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
         [Parameter(Mandatory = true, HelpMessage = "The content to write to the file.")]
         public string Content { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"File '{File}' on VM {VmId} (node '{Node}')", "Write-PveVmGuestFile"))
                 return;

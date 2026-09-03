@@ -65,7 +65,7 @@ namespace PSProxmoxVE.Cmdlets.Cluster
         [Parameter(Mandatory = false, HelpMessage = "Comma-separated list of settings to delete/reset.")]
         public string? Delete { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess("cluster options", "Set"))
                 return;

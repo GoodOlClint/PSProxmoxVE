@@ -49,7 +49,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         [Parameter(Mandatory = false, HelpMessage = "Account expiry as a Unix timestamp.")]
         public long? Expire { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(UserId, "Create PVE User"))
                 return;

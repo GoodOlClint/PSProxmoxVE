@@ -15,7 +15,7 @@ namespace PSProxmoxVE.Cmdlets.Cluster
     [OutputType(typeof(Dictionary<string, object>))]
     public sealed class GetPveClusterConfigCmdlet : PveCmdletBase
     {
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
             var service = new ClusterConfigService();

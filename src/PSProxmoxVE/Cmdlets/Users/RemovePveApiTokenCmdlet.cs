@@ -29,7 +29,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true, HelpMessage = "The API token identifier.")]
         public string TokenId { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
 

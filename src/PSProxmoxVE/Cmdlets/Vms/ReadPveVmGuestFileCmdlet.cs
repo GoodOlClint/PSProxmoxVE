@@ -30,7 +30,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
         [Parameter(Mandatory = true, HelpMessage = "The file path inside the guest to read.")]
         public string File { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
 

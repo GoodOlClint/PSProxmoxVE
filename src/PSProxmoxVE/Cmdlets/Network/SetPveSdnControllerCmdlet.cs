@@ -31,7 +31,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = false, HelpMessage = "The node this controller is configured on.")]
         public string? Node { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(Controller, "Set PVE SDN Controller"))
                 return;

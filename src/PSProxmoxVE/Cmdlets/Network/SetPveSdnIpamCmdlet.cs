@@ -31,7 +31,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = false, HelpMessage = "The section ID in the IPAM server.")]
         public int? Section { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(Ipam, "Set PVE SDN IPAM"))
                 return;

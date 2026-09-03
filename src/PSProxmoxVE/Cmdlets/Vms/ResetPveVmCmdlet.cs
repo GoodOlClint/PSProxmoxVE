@@ -43,7 +43,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
         [ValidateRange(1, 3600)]
         public int Timeout { get; set; } = 60;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"VM {VmId} on node '{Node}'", "Reset-PveVm"))
                 return;

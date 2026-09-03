@@ -39,7 +39,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = false, HelpMessage = "DHCP range for this subnet.")]
         public string? DhcpRange { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(Subnet, "Set PVE SDN Subnet"))
                 return;

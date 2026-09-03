@@ -49,7 +49,7 @@ namespace PSProxmoxVE.Cmdlets.Tasks
         [ValidateRange(1, 10000)]
         public int Limit { get; set; } = 50;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
             var service = new TaskService();

@@ -42,7 +42,7 @@ namespace PSProxmoxVE.Cmdlets.HA
         [Parameter(Mandatory = false, HelpMessage = "Description or comment.")]
         public string? Comment { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"HA resource '{Sid}'", "Create"))
                 return;

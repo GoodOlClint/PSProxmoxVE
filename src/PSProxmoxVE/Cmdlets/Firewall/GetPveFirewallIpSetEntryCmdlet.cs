@@ -22,7 +22,7 @@ namespace PSProxmoxVE.Cmdlets.Firewall
         [Parameter(Mandatory = true, HelpMessage = "The IP set name.")]
         public string Name { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var level = Level;
             if (!FirewallScope.TryValidate(level, Node, VmId, null, out var scopeErrorId, out var scopeMessage))

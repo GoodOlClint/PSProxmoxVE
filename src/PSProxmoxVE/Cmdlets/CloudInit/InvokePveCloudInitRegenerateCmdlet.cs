@@ -30,7 +30,7 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
         [Parameter(HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"VM {VmId} on {Node}", "Regenerate PVE Cloud-Init Drive"))
                 return;

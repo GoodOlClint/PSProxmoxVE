@@ -46,7 +46,7 @@ namespace PSProxmoxVE.Cmdlets.Cluster
         [ValidateRange(1, 3600)]
         public int Timeout { get; set; } = 60;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"cluster '{ClusterName}'", "Create new cluster"))
                 return;

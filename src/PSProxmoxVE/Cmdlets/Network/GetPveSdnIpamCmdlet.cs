@@ -20,7 +20,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = false, Position = 0, HelpMessage = "Filter by IPAM plugin identifier.")]
         public string? Ipam { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
             RequireVersion(session, "SDN IPAM/DNS/Controller", 6, 2, 8, 1);

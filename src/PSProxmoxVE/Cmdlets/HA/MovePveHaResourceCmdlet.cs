@@ -30,7 +30,7 @@ namespace PSProxmoxVE.Cmdlets.HA
         [ValidateSet("Migrate", "Relocate")]
         public string Mode { get; set; } = "Migrate";
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"HA resource '{Sid}' to node '{Node}'", $"{Mode}"))
                 return;

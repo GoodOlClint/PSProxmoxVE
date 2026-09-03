@@ -21,7 +21,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
         [ValidatePattern(@"\A[A-Za-z0-9][A-Za-z0-9._-]*\z")]
         public string Storage { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(Storage, "Remove PVE Storage"))
                 return;

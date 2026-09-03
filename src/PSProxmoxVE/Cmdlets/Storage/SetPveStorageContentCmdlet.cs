@@ -34,7 +34,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
         [Parameter(Mandatory = false, HelpMessage = "Notes or description for the volume.")]
         public string? Notes { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(Volume, "Set PVE Storage Content"))
                 return;

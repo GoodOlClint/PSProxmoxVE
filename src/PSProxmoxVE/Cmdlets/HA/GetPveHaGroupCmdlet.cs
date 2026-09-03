@@ -20,7 +20,7 @@ namespace PSProxmoxVE.Cmdlets.HA
             HelpMessage = "HA group name. Omit to list all groups.")]
         public string? Group { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
             var service = new HaService();

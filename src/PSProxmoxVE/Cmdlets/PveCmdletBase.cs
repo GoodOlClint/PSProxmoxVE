@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Management.Automation;
 using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Client;
+using PSProxmoxVE.Core.Errors;
 using PSProxmoxVE.Core.Exceptions;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
@@ -22,6 +23,60 @@ namespace PSProxmoxVE.Cmdlets
         /// </summary>
         [Parameter(Mandatory = false)]
         public PveSession? Session { get; set; }
+
+        /// <summary>
+        /// Runs <see cref="ProcessPveRecord"/> and reports any module exception that escapes it
+        /// as a mapped terminating error, so a 403, a 404 and an unreachable server are
+        /// distinguishable by <c>$_.CategoryInfo</c> and <c>$_.FullyQualifiedErrorId</c>.
+        /// </summary>
+        protected sealed override void ProcessRecord()
+        {
+            try
+            {
+                ProcessPveRecord();
+            }
+            catch (Exception ex) when (PveErrorMapper.IsRecognized(ex))
+            {
+                ThrowTerminatingError(ToPveErrorRecord(ex, null));
+            }
+        }
+
+        /// <summary>The cmdlet's per-record work. Overrides <see cref="ProcessRecord"/>'s body.</summary>
+        protected abstract void ProcessPveRecord();
+
+        /// <summary>
+        /// Builds the <see cref="ErrorRecord"/> for <paramref name="exception"/>, classifying it
+        /// with <see cref="PveErrorMapper"/>.
+        /// </summary>
+        /// <param name="exception">The failure to report.</param>
+        /// <param name="target">
+        /// The object the failure is about. When null, the target is derived from the exception
+        /// (the API resource, or the task UPID).
+        /// </param>
+        /// <returns>The error record to write or throw.</returns>
+        protected ErrorRecord ToPveErrorRecord(Exception exception, object? target)
+        {
+            var descriptor = PveErrorMapper.Describe(exception);
+            return new ErrorRecord(
+                exception,
+                descriptor.ErrorId,
+                ToErrorCategory(descriptor.Kind),
+                target ?? descriptor.Target);
+        }
+
+        private static ErrorCategory ToErrorCategory(PveErrorKind kind) => kind switch
+        {
+            PveErrorKind.PermissionDenied => ErrorCategory.PermissionDenied,
+            PveErrorKind.AuthenticationError => ErrorCategory.AuthenticationError,
+            PveErrorKind.ObjectNotFound => ErrorCategory.ObjectNotFound,
+            PveErrorKind.InvalidArgument => ErrorCategory.InvalidArgument,
+            PveErrorKind.OperationTimeout => ErrorCategory.OperationTimeout,
+            PveErrorKind.ConnectionError => ErrorCategory.ConnectionError,
+            PveErrorKind.ResourceUnavailable => ErrorCategory.ResourceUnavailable,
+            PveErrorKind.InvalidOperation => ErrorCategory.InvalidOperation,
+            PveErrorKind.OperationStopped => ErrorCategory.OperationStopped,
+            _ => ErrorCategory.NotSpecified,
+        };
 
         /// <summary>
         /// Returns the session to use for this cmdlet.
@@ -74,10 +129,8 @@ namespace PSProxmoxVE.Cmdlets
             // Hard fail: endpoint does not exist
             if (!version.IsAtLeast(introducedMajor, introducedMinor))
             {
-                ThrowTerminatingError(new ErrorRecord(
+                ThrowTerminatingError(ToPveErrorRecord(
                     new PveVersionException(introducedMajor, introducedMinor, version),
-                    "PveVersionTooOld",
-                    ErrorCategory.InvalidOperation,
                     null));
                 return;
             }

@@ -31,7 +31,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = false, HelpMessage = "DNS zone name for registration.")]
         public string? DnsZone { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(Zone, "Set PVE SDN Zone"))
                 return;

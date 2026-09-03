@@ -69,7 +69,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = false, HelpMessage = "Comments or notes for this interface.")]
         public string? Comments { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"{Iface} on {Node}", "Create PVE Network Iface"))
                 return;

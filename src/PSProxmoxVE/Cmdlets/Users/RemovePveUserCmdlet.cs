@@ -17,7 +17,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The user ID in user@realm format.")]
         public string UserId { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(UserId, "Remove PVE User"))
                 return;
