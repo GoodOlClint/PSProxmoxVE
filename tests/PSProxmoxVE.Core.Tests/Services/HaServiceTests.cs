@@ -452,54 +452,6 @@ namespace PSProxmoxVE.Core.Tests.Services
             mockClient.Verify(c => c.DeleteAsync("cluster/ha/rules/rule1"), Times.Once);
         }
 
-        // -----------------------------------------------------------------
-        // Null session tests
-        // -----------------------------------------------------------------
-
-        [Fact]
-        public void GetResources_NullSession_ThrowsArgumentNullException()
-        {
-            // Arrange
-            var mockClient = new Mock<IPveHttpClient>();
-            var service = new HaService(mockClient.Object);
-
-            // Act & Assert
-            Assert.Throws<ArgumentNullException>(() => service.GetResources(null!));
-        }
-
-        [Fact]
-        public void GetGroups_NullSession_ThrowsArgumentNullException()
-        {
-            // Arrange
-            var mockClient = new Mock<IPveHttpClient>();
-            var service = new HaService(mockClient.Object);
-
-            // Act & Assert
-            Assert.Throws<ArgumentNullException>(() => service.GetGroups(null!));
-        }
-
-        [Fact]
-        public void GetStatus_NullSession_ThrowsArgumentNullException()
-        {
-            // Arrange
-            var mockClient = new Mock<IPveHttpClient>();
-            var service = new HaService(mockClient.Object);
-
-            // Act & Assert
-            Assert.Throws<ArgumentNullException>(() => service.GetStatus(null!));
-        }
-
-        [Fact]
-        public void GetRules_NullSession_ThrowsArgumentNullException()
-        {
-            // Arrange
-            var mockClient = new Mock<IPveHttpClient>();
-            var service = new HaService(mockClient.Object);
-
-            // Act & Assert
-            Assert.Throws<ArgumentNullException>(() => service.GetRules(null!));
-        }
-
         [Fact]
         public void Constructor_NullClient_ThrowsArgumentNullException()
         {

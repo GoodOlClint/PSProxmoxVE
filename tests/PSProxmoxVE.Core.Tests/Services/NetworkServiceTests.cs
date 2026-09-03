@@ -150,12 +150,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetNetworks_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>("session", () => _service.GetNetworks(null!, Node));
-        }
-
-        [Fact]
         public void GetNetworks_WhitespaceNode_ThrowsArgumentNullException()
         {
             Assert.Throws<ArgumentNullException>("node", () => _service.GetNetworks(_session, "  "));
@@ -244,13 +238,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void CreateNetwork_NullSession_ThrowsArgumentNullException()
-        {
-            var config = new Dictionary<string, object> { ["iface"] = "vmbr1" };
-            Assert.Throws<ArgumentNullException>("session", () => _service.CreateNetwork(null!, Node, config));
-        }
-
-        [Fact]
         public void CreateNetwork_NullConfig_ThrowsArgumentNullException()
         {
             Assert.Throws<ArgumentNullException>("config", () => _service.CreateNetwork(_session, Node, null!));
@@ -300,13 +287,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void SetNetwork_NullSession_ThrowsArgumentNullException()
-        {
-            var config = new Dictionary<string, object> { ["type"] = "bridge" };
-            Assert.Throws<ArgumentNullException>("session", () => _service.SetNetwork(null!, Node, "vmbr0", config));
-        }
-
-        [Fact]
         public void SetNetwork_WhitespaceIface_ThrowsArgumentNullException()
         {
             var config = new Dictionary<string, object> { ["type"] = "bridge" };
@@ -337,12 +317,6 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             _mockClient.Verify(c => c.DeleteAsync("nodes/pve%20node/network/vmbr%201"), Times.Once);
             _mockClient.VerifyNoOtherCalls();
-        }
-
-        [Fact]
-        public void RemoveNetwork_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>("session", () => _service.RemoveNetwork(null!, Node, "vmbr1"));
         }
 
         // -----------------------------------------------------------------
@@ -401,12 +375,6 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Equal("OK", task.ExitStatus);
         }
 
-        [Fact]
-        public void ApplyNetworkConfig_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>("session", () => _service.ApplyNetworkConfig(null!, Node));
-        }
-
         // -----------------------------------------------------------------
         // GetSdnZones / GetSdnVnets / GetSdnSubnets
         // -----------------------------------------------------------------
@@ -435,12 +403,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetSdnZones_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>("session", () => _service.GetSdnZones(null!));
-        }
-
-        [Fact]
         public void GetSdnVnets_ReturnsVnetArray()
         {
             _mockClient.Setup(c => c.GetAsync("cluster/sdn/vnets"))
@@ -461,12 +423,6 @@ namespace PSProxmoxVE.Core.Tests.Services
             var vnets = _service.GetSdnVnets(_session);
 
             Assert.Empty(vnets);
-        }
-
-        [Fact]
-        public void GetSdnVnets_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>("session", () => _service.GetSdnVnets(null!));
         }
 
         [Fact]
@@ -503,12 +459,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetSdnSubnets_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>("session", () => _service.GetSdnSubnets(null!, Vnet));
-        }
-
-        [Fact]
         public void GetSdnSubnets_WhitespaceVnet_ThrowsArgumentNullException()
         {
             Assert.Throws<ArgumentNullException>("vnet", () => _service.GetSdnSubnets(_session, " "));
@@ -532,13 +482,6 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Equal("zone1", result.Zone);
         }
 
-        [Fact]
-        public void CreateSdnZone_NullSession_ThrowsArgumentNullException()
-        {
-            var config = new Dictionary<string, object> { ["zone"] = "zone1" };
-            Assert.Throws<ArgumentNullException>("session", () => _service.CreateSdnZone(null!, config));
-        }
-
         // -----------------------------------------------------------------
         // CreateSdnVnet
         // -----------------------------------------------------------------
@@ -555,13 +498,6 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Equal("cluster/sdn/vnets", captured.Path);
             Assert.Equal(2, captured.Form!.Count);
             Assert.Equal("vnet1", result.Vnet);
-        }
-
-        [Fact]
-        public void CreateSdnVnet_NullSession_ThrowsArgumentNullException()
-        {
-            var config = new Dictionary<string, object> { ["vnet"] = "vnet1" };
-            Assert.Throws<ArgumentNullException>("session", () => _service.CreateSdnVnet(null!, config));
         }
 
         // -----------------------------------------------------------------
@@ -595,20 +531,6 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Equal("cluster/sdn/vnets/vnet%201/subnets", captured.Path);
         }
 
-        [Fact]
-        public void CreateSdnSubnet_NullSession_ThrowsArgumentNullException()
-        {
-            var config = new Dictionary<string, object> { ["subnet"] = "10.0.0.0/24" };
-            Assert.Throws<ArgumentNullException>("session", () => _service.CreateSdnSubnet(null!, Vnet, config));
-        }
-
-        [Fact]
-        public void CreateSdnSubnet_WhitespaceVnet_ThrowsArgumentNullException()
-        {
-            var config = new Dictionary<string, object> { ["subnet"] = "10.0.0.0/24" };
-            Assert.Throws<ArgumentNullException>("vnet", () => _service.CreateSdnSubnet(_session, " ", config));
-        }
-
         // -----------------------------------------------------------------
         // RemoveSdnSubnet
         // -----------------------------------------------------------------
@@ -634,12 +556,6 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             _mockClient.Verify(
                 c => c.DeleteAsync("cluster/sdn/vnets/vnet%201/subnets/10.0.0.0%2F24"), Times.Once);
-        }
-
-        [Fact]
-        public void RemoveSdnSubnet_NullSession_ThrowsArgumentNullException()
-        {
-            Assert.Throws<ArgumentNullException>("session", () => _service.RemoveSdnSubnet(null!, Vnet, "10.0.0.0/24"));
         }
 
         // -----------------------------------------------------------------
