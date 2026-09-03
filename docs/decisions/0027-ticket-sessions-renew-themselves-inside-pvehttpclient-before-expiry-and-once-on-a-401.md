@@ -1,6 +1,6 @@
 # ADR 0027 — Ticket sessions renew themselves inside PveHttpClient before expiry and once on a 401
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-03
 - **Deciders:** operator + agent
 - **Context source:** issue #143; the 2026-09-02 whole-repo review; wave 4 of the remediation
@@ -11,7 +11,7 @@
 
 An earlier note (recorded before this ADR system existed) put the fix in `TaskService.WaitForTask`, because the cluster-join cmdlet had grown a bespoke 401 retry loop and the next long wait would grow another. Since [ADR 0021](0021-integration-tests-prove-server-semantics-payloads-are-proven-offline.md) and #151, every service call goes through `PveServiceBase.Invoke`, which builds one `PveHttpClient` per call, and `WaitForTask` holds one client for the whole wait. The client is now the single place every request passes through.
 
-PVE's ticket endpoint accepts a still-valid ticket in place of the password. The published spec for `POST /access/ticket` describes the `password` parameter as "The secret password. This can also be a valid ticket." ([pve9 OpenAPI at 1530d5a, byte offset 4446761 in the one-line file](https://github.com/GoodOlClint/Proxmox_API/blob/1530d5a0b0dbf248159e7265acc617d22c200888/pve/openapi/pve-openapi.pve9.json#L1)). A ticket session can therefore renew itself without holding the password, as long as it renews while the current ticket is still alive.
+PVE's ticket endpoint accepts a still-valid ticket in place of the password. The published spec for `POST /access/ticket` describes the `password` parameter as "The secret password. This can also be a valid ticket." ([pve9 OpenAPI at 1530d5a, UTF-8 byte offset 4449033 of the `"password"` key in the one-line file](https://github.com/GoodOlClint/Proxmox_API/blob/1530d5a0b0dbf248159e7265acc617d22c200888/pve/openapi/pve-openapi.pve9.json#L1)). A ticket session can therefore renew itself without holding the password, as long as it renews while the current ticket is still alive.
 
 ## Decision
 
