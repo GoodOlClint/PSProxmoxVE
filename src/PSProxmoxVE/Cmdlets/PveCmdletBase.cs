@@ -80,13 +80,13 @@ namespace PSProxmoxVE.Cmdlets
 
         /// <summary>
         /// Returns the session to use for this cmdlet.
-        /// Resolution order: -Session parameter → ModuleState.ActiveSession.
+        /// Resolution order: -Session parameter → the runspace's module session.
         /// Throws <see cref="PveNotConnectedException"/> if no session is available,
         /// or <see cref="PveSessionExpiredException"/> if the session ticket has expired.
         /// </summary>
         protected PveSession GetSession()
         {
-            var session = Session ?? ModuleState.ActiveSession;
+            var session = Session ?? ModuleState.GetActiveSession(this);
 
             if (session is null)
                 throw new PveNotConnectedException();

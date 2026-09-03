@@ -44,19 +44,18 @@ Describe 'Disconnect-PveServer' {
 
     Context 'Active session lifecycle' {
         BeforeAll {
-            $script:PveSessionType = [PSProxmoxVE.Core.Authentication.PveSession]
-            $script:ModuleStateType = [System.AppDomain]::CurrentDomain.GetAssemblies() |
-                Where-Object { $_.GetName().Name -eq 'PSProxmoxVE' } |
-                ForEach-Object { $_.GetType('PSProxmoxVE.ModuleState') } |
-                Select-Object -First 1
-            $script:ModuleStateType | Should -Not -BeNullOrEmpty
+            $script:Module = Get-Module PSProxmoxVE
+            $script:Module | Should -Not -BeNullOrEmpty
 
-            $script:ActiveSessionProperty = $script:ModuleStateType.GetProperty(
-                'ActiveSession',
-                [System.Reflection.BindingFlags]'NonPublic, Static')
-            $script:ActiveSessionProperty | Should -Not -BeNullOrEmpty
+            $script:SetActiveSession = {
+                param($Value)
+                $script:Module.SessionState.PSVariable.Set('PSProxmoxVE.ActiveSession', $Value)
+            }
+            $script:GetActiveSession = {
+                $script:Module.SessionState.PSVariable.GetValue('PSProxmoxVE.ActiveSession')
+            }
 
-            $script:SessionCtor = $script:PveSessionType.GetConstructor(
+            $script:SessionCtor = [PSProxmoxVE.Core.Authentication.PveSession].GetConstructor(
                 [System.Reflection.BindingFlags]'NonPublic, Instance',
                 $null,
                 [type[]]@([string], [int], [bool], [string]),
@@ -65,7 +64,7 @@ Describe 'Disconnect-PveServer' {
         }
 
         AfterEach {
-            $script:ActiveSessionProperty.SetValue($null, $null)
+            & $script:SetActiveSession $null
         }
 
         It 'Should report "no session" when nothing is active' {
@@ -75,11 +74,11 @@ Describe 'Disconnect-PveServer' {
 
         It 'Should clear the active session and warn on a second disconnect' {
             $activeSession = $script:SessionCtor.Invoke(@('active.example', 8006, $false, 'activetoken'))
-            $script:ActiveSessionProperty.SetValue($null, $activeSession)
+            & $script:SetActiveSession $activeSession
 
             Disconnect-PveServer -Confirm:$false -WarningVariable w -WarningAction SilentlyContinue
             $w | Should -BeNullOrEmpty
-            $script:ActiveSessionProperty.GetValue($null) | Should -BeNullOrEmpty
+            & $script:GetActiveSession | Should -BeNullOrEmpty
 
             Disconnect-PveServer -Confirm:$false -WarningVariable w2 -WarningAction SilentlyContinue
             $w2[0] | Should -Match 'No active Proxmox VE session'
@@ -87,33 +86,41 @@ Describe 'Disconnect-PveServer' {
 
         It 'Should warn when disconnecting an explicit non-active session, and leave the active session untouched' {
             $activeSession = $script:SessionCtor.Invoke(@('active.example', 8006, $false, 'activetoken'))
-            $script:ActiveSessionProperty.SetValue($null, $activeSession)
+            & $script:SetActiveSession $activeSession
             $mismatchedSession = $script:SessionCtor.Invoke(@('other.example', 8006, $false, 'othertoken'))
 
             Disconnect-PveServer -Session $mismatchedSession -Confirm:$false -WarningVariable w -WarningAction SilentlyContinue
 
             $w[0] | Should -Match 'not the module-level session'
             $w[0] | Should -Match 'Remove-PveApiToken'
-            [object]::ReferenceEquals($script:ActiveSessionProperty.GetValue($null), $activeSession) | Should -BeTrue
+            [object]::ReferenceEquals((& $script:GetActiveSession), $activeSession) | Should -BeTrue
         }
 
         It 'Should disconnect when -Session matches the active session' {
             $activeSession = $script:SessionCtor.Invoke(@('active.example', 8006, $false, 'activetoken'))
-            $script:ActiveSessionProperty.SetValue($null, $activeSession)
+            & $script:SetActiveSession $activeSession
 
             Disconnect-PveServer -Session $activeSession -Confirm:$false -WarningVariable w -WarningAction SilentlyContinue
 
             $w | Should -BeNullOrEmpty
-            $script:ActiveSessionProperty.GetValue($null) | Should -BeNullOrEmpty
+            & $script:GetActiveSession | Should -BeNullOrEmpty
         }
 
         It 'Should not clear the active session under -WhatIf' {
             $activeSession = $script:SessionCtor.Invoke(@('active.example', 8006, $false, 'activetoken'))
-            $script:ActiveSessionProperty.SetValue($null, $activeSession)
+            & $script:SetActiveSession $activeSession
 
             Disconnect-PveServer -WhatIf -ErrorAction Stop
 
-            [object]::ReferenceEquals($script:ActiveSessionProperty.GetValue($null), $activeSession) | Should -BeTrue
+            [object]::ReferenceEquals((& $script:GetActiveSession), $activeSession) | Should -BeTrue
+        }
+
+        It 'Should see the session Test-PveConnection sees' {
+            $activeSession = $script:SessionCtor.Invoke(@('active.example', 8006, $false, 'activetoken'))
+            & $script:SetActiveSession $activeSession
+
+            Test-PveConnection | Should -BeTrue
+            [object]::ReferenceEquals((Test-PveConnection -Detailed), $activeSession) | Should -BeTrue
         }
     }
 }

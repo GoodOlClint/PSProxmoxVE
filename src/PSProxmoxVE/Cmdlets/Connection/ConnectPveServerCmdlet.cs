@@ -137,7 +137,7 @@ namespace PSProxmoxVE.Cmdlets.Connection
                     return;
             }
 
-            ModuleState.ActiveSession = session;
+            ModuleState.SetActiveSession(this, session);
 
             if (SkipCertificateCheck.IsPresent)
                 WriteWarning("TLS certificate validation is disabled for this session. Connections are susceptible to man-in-the-middle attacks. Use only in trusted networks or test environments.");
