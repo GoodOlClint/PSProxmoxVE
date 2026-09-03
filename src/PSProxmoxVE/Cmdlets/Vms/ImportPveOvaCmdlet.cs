@@ -4,6 +4,7 @@ using System.IO;
 using System.Management.Automation;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
+using PSProxmoxVE.Core.Utilities;
 
 namespace PSProxmoxVE.Cmdlets.Vms
 {
@@ -108,7 +109,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
             OvfMetadata metadata;
             try
             {
-                metadata = OvfMetadata.FromOva(Path);
+                metadata = OvfReader.ReadOva(Path);
             }
             catch (Exception ex)
             {
