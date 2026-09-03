@@ -138,10 +138,10 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetNodeConfig_ReturnsDictionary()
+        public void GetNodeConfig_ReturnsTypedModelWithUnknownKeyInAdditionalProperties()
         {
             // Arrange
-            var json = @"{""data"": {""description"": ""Primary node"", ""wakeonlan"": ""AA:BB:CC:DD:EE:FF""}}";
+            var json = @"{""data"": {""description"": ""Primary node"", ""wakeonlan"": ""AA:BB:CC:DD:EE:FF"", ""acmedomain0"": ""example.com,plugin=dns""}}";
             var mockClient = new Mock<IPveHttpClient>();
             mockClient.Setup(c => c.GetAsync("nodes/pve1/config")).ReturnsAsync(json);
             var service = new NodeService(mockClient.Object);
@@ -151,9 +151,9 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Assert
             Assert.NotNull(config);
-            Assert.IsType<Dictionary<string, object?>>(config);
-            Assert.Equal("Primary node", config["description"]?.ToString());
-            Assert.Equal("AA:BB:CC:DD:EE:FF", config["wakeonlan"]?.ToString());
+            Assert.Equal("Primary node", config.Description);
+            Assert.Equal("AA:BB:CC:DD:EE:FF", config.WakeOnLan);
+            Assert.Equal("example.com,plugin=dns", config.AdditionalProperties["acmedomain0"]);
             mockClient.Verify(c => c.GetAsync("nodes/pve1/config"), Times.Once);
         }
 
@@ -184,10 +184,10 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetNodeDns_ReturnsDictionary()
+        public void GetNodeDns_ReturnsTypedModelWithUnknownKeyInAdditionalProperties()
         {
             // Arrange
-            var json = @"{""data"": {""dns1"": ""8.8.8.8"", ""dns2"": ""8.8.4.4"", ""search"": ""example.com""}}";
+            var json = @"{""data"": {""dns1"": ""8.8.8.8"", ""dns2"": ""8.8.4.4"", ""search"": ""example.com"", ""dns4"": ""1.1.1.1""}}";
             var mockClient = new Mock<IPveHttpClient>();
             mockClient.Setup(c => c.GetAsync("nodes/pve1/dns")).ReturnsAsync(json);
             var service = new NodeService(mockClient.Object);
@@ -197,10 +197,10 @@ namespace PSProxmoxVE.Core.Tests.Services
 
             // Assert
             Assert.NotNull(dns);
-            Assert.IsType<Dictionary<string, object?>>(dns);
-            Assert.Equal("8.8.8.8", dns["dns1"]?.ToString());
-            Assert.Equal("8.8.4.4", dns["dns2"]?.ToString());
-            Assert.Equal("example.com", dns["search"]?.ToString());
+            Assert.Equal("8.8.8.8", dns.Dns1);
+            Assert.Equal("8.8.4.4", dns.Dns2);
+            Assert.Equal("example.com", dns.Search);
+            Assert.Equal("1.1.1.1", dns.AdditionalProperties["dns4"]);
             mockClient.Verify(c => c.GetAsync("nodes/pve1/dns"), Times.Once);
         }
 

@@ -139,7 +139,7 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Returns the list of guests not covered by any backup job.
         /// </summary>
-        public List<Dictionary<string, object?>> GetNotBackedUp(PveSession session)
+        public List<PveBackupInfo> GetNotBackedUp(PveSession session)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
 
@@ -148,7 +148,7 @@ namespace PSProxmoxVE.Core.Services
                 var response = client.GetAsync("cluster/backup-info/not-backed-up")
                     .GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
-                return JsonHelper.ToListOfDictionaries(data as JArray);
+                return data?.ToObject<List<PveBackupInfo>>() ?? new List<PveBackupInfo>();
             });
         }
     }

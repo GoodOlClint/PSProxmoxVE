@@ -143,5 +143,32 @@ namespace PSProxmoxVE.Core.Tests.Models
             Assert.Null(entries[1].Nodes);
             Assert.Null(entries[1].Quorate);
         }
+
+        [Fact]
+        public void PveClusterConfigEntry_Deserialize_HasNameFromLinksTemplate()
+        {
+            // GET /cluster/config is a directory index: the item schema documents
+            // no named fields, but the endpoint's "links" metadata gives the
+            // child-URL template as "{name}", so every entry carries a "name" key.
+            var json = @"{""data"": [{""name"": ""nodes""}, {""name"": ""totem""}]}";
+            var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
+            var entries = data.ToObject<System.Collections.Generic.List<PveClusterConfigEntry>>();
+            Assert.NotNull(entries);
+            Assert.Equal(2, entries!.Count);
+            Assert.Equal("nodes", entries[0].Name);
+            Assert.Equal("totem", entries[1].Name);
+        }
+
+        [Fact]
+        public void PveClusterConfigEntry_UnmappedKey_LandsInAdditionalProperties()
+        {
+            var json = @"{""data"": [{""name"": ""nodes"", ""extra"": ""x""}]}";
+            var data = JObject.Parse(json)["data"];
+            var entries = data!.ToObject<System.Collections.Generic.List<PveClusterConfigEntry>>();
+            Assert.NotNull(entries);
+            Assert.Equal("x", entries![0].AdditionalProperties["extra"]);
+            Assert.False(entries[0].AdditionalProperties.ContainsKey("name"));
+        }
     }
 }

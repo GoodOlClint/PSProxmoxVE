@@ -2088,7 +2088,7 @@
     <command:returnValues>
       <command:returnValue>
         <dev:type>
-          <maml:name>System.Management.Automation.PSObject</maml:name>
+          <maml:name>PSProxmoxVE.Core.Models.Backup.PveBackupInfo</maml:name>
         </dev:type>
         <maml:description>
           <maml:para></maml:para>
@@ -2476,7 +2476,7 @@
     <command:returnValues>
       <command:returnValue>
         <dev:type>
-          <maml:name>System.Collections.Generic.Dictionary`2[[System.String, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[System.Object, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]</maml:name>
+          <maml:name>PSProxmoxVE.Core.Models.Cluster.PveClusterConfigEntry</maml:name>
         </dev:type>
         <maml:description>
           <maml:para></maml:para>
@@ -6478,7 +6478,7 @@
     <command:returnValues>
       <command:returnValue>
         <dev:type>
-          <maml:name>System.Management.Automation.PSObject</maml:name>
+          <maml:name>PSProxmoxVE.Core.Models.Nodes.PveNodeConfig</maml:name>
         </dev:type>
         <maml:description>
           <maml:para></maml:para>
@@ -6605,7 +6605,7 @@
     <command:returnValues>
       <command:returnValue>
         <dev:type>
-          <maml:name>System.Management.Automation.PSObject</maml:name>
+          <maml:name>PSProxmoxVE.Core.Models.Nodes.PveNodeDns</maml:name>
         </dev:type>
         <maml:description>
           <maml:para></maml:para>

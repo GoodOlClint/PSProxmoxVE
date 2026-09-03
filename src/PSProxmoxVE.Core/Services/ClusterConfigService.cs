@@ -6,7 +6,6 @@ using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Exceptions;
 using PSProxmoxVE.Core.Models.Cluster;
-using PSProxmoxVE.Core.Utilities;
 
 namespace PSProxmoxVE.Core.Services
 {
@@ -39,10 +38,11 @@ namespace PSProxmoxVE.Core.Services
         }
 
         /// <summary>
-        /// Returns the cluster configuration directory (GET /cluster/config).
-        /// The response is a mixed structure returned as a Dictionary.
+        /// Returns the cluster configuration directory (GET /cluster/config). The
+        /// endpoint is a directory index: an array of entries (name: "nodes",
+        /// "totem", "qdevice", "join", "apiversion"), not a single object.
         /// </summary>
-        public Dictionary<string, object?> GetClusterConfig(PveSession session)
+        public List<PveClusterConfigEntry> GetClusterConfig(PveSession session)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
 
@@ -50,7 +50,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.GetAsync("cluster/config").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
-                return data is JObject obj ? JsonHelper.ToDictionary(obj) : new Dictionary<string, object?>();
+                return data?.ToObject<List<PveClusterConfigEntry>>() ?? new List<PveClusterConfigEntry>();
             });
         }
 

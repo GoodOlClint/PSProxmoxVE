@@ -285,12 +285,12 @@ namespace PSProxmoxVE.Core.Tests.Services
         // ---------------------------------------------------------------
 
         [Fact]
-        public void GetNotBackedUp_ReturnsListOfDictionaries()
+        public void GetNotBackedUp_ReturnsTypedEntriesWithUnknownKeyInAdditionalProperties()
         {
             // Arrange
             var json = @"{
                 ""data"": [
-                    { ""vmid"": 100, ""name"": ""webserver"", ""type"": ""qemu"" },
+                    { ""vmid"": 100, ""name"": ""webserver"", ""type"": ""qemu"", ""comment"": ""prod"" },
                     { ""vmid"": 200, ""name"": ""database"", ""type"": ""lxc"" }
                 ]
             }";
@@ -304,10 +304,11 @@ namespace PSProxmoxVE.Core.Tests.Services
             var result = service.GetNotBackedUp(CreateSession());
 
             // Assert
-            Assert.IsType<List<Dictionary<string, object?>>>(result);
             Assert.Equal(2, result.Count);
-            Assert.Equal(100L, result[0]["vmid"]);
-            Assert.Equal("webserver", result[0]["name"]);
+            Assert.Equal(100, result[0].VmId);
+            Assert.Equal("webserver", result[0].Name);
+            Assert.Equal("qemu", result[0].Type);
+            Assert.Equal("prod", result[0].AdditionalProperties["comment"]);
         }
 
         [Fact]

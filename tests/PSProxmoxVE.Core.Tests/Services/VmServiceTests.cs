@@ -114,6 +114,48 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
+        public void GetGuestExecStatus_ReturnsTypedModelWithUnknownKeyInAdditionalProperties()
+        {
+            var json = @"{""data"": {
+                ""exited"": true,
+                ""exitcode"": 0,
+                ""out-data"": ""aGVsbG8="",
+                ""err-data"": """",
+                ""newfield"": ""future""
+            }}";
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient.Setup(c => c.GetAsync($"nodes/{TestNode}/qemu/{TestVmId}/agent/exec-status?pid=4242"))
+                .ReturnsAsync(json);
+
+            var service = new VmService(mockClient.Object);
+            var status = service.GetGuestExecStatus(CreateSession(), TestNode, TestVmId, 4242);
+
+            Assert.True(status.Exited);
+            Assert.Equal(0, status.ExitCode);
+            Assert.Equal("aGVsbG8=", status.OutData);
+            Assert.Equal(string.Empty, status.ErrData);
+            Assert.Equal("future", status.AdditionalProperties["newfield"]);
+        }
+
+        [Fact]
+        public void GetGuestExecStatus_ExitedAsString_StillPollsToCompletion()
+        {
+            // PVE has been observed sending "exited" as the string "1"/"0" as well
+            // as a JSON boolean or integer; the poll loop in InvokePveVmGuestExecCmdlet
+            // must not throw on this shape.
+            var json = @"{""data"": {""exited"": ""1"", ""exitcode"": 0}}";
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient.Setup(c => c.GetAsync($"nodes/{TestNode}/qemu/{TestVmId}/agent/exec-status?pid=99"))
+                .ReturnsAsync(json);
+
+            var service = new VmService(mockClient.Object);
+            var status = service.GetGuestExecStatus(CreateSession(), TestNode, TestVmId, 99);
+
+            Assert.True(status.Exited);
+            Assert.Equal(0, status.ExitCode);
+        }
+
+        [Fact]
         public void RebootVm_PostsToTheNativeRebootEndpoint()
         {
             string? resource = null;

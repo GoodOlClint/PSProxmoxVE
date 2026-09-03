@@ -1415,5 +1415,31 @@
       </TableControl>
     </View>
 
+    <!-- PSProxmoxVE.Core.Models.Cluster.PveClusterConfigEntry -->
+    <View>
+      <Name>PSProxmoxVE.Core.Models.Cluster.PveClusterConfigEntry</Name>
+      <ViewSelectedBy>
+        <TypeName>PSProxmoxVE.Core.Models.Cluster.PveClusterConfigEntry</TypeName>
+      </ViewSelectedBy>
+      <TableControl>
+        <TableHeaders>
+          <TableColumnHeader>
+            <Label>Name</Label>
+            <Width>20</Width>
+            <Alignment>Left</Alignment>
+          </TableColumnHeader>
+        </TableHeaders>
+        <TableRowEntries>
+          <TableRowEntry>
+            <TableColumnItems>
+              <TableColumnItem>
+                <PropertyName>Name</PropertyName>
+              </TableColumnItem>
+            </TableColumnItems>
+          </TableRowEntry>
+        </TableRowEntries>
+      </TableControl>
+    </View>
+
   </ViewDefinitions>
 </Configuration>

@@ -122,5 +122,33 @@ namespace PSProxmoxVE.Core.Tests.Models
             Assert.Null(jobs[1].Node);
             Assert.Null(jobs[1].Exclude);
         }
+
+        [Fact]
+        public void PveBackupInfo_Deserialize_HasDocumentedFields()
+        {
+            var json = @"{""data"": [
+                { ""vmid"": 100, ""name"": ""webserver"", ""type"": ""qemu"" }
+            ]}";
+            var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
+            var items = data.ToObject<PveBackupInfo[]>();
+            Assert.NotNull(items);
+            Assert.Equal(100, items[0].VmId);
+            Assert.Equal("webserver", items[0].Name);
+            Assert.Equal("qemu", items[0].Type);
+        }
+
+        [Fact]
+        public void PveBackupInfo_UnmappedKey_LandsInAdditionalProperties()
+        {
+            var json = @"{""data"": [
+                { ""vmid"": 200, ""name"": ""db"", ""type"": ""lxc"", ""comment"": ""prod"" }
+            ]}";
+            var data = JObject.Parse(json)["data"];
+            var items = data!.ToObject<PveBackupInfo[]>();
+            Assert.NotNull(items);
+            Assert.Equal("prod", items![0].AdditionalProperties["comment"]);
+            Assert.False(items[0].AdditionalProperties.ContainsKey("vmid"));
+        }
     }
 }

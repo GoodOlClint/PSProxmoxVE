@@ -71,7 +71,7 @@ namespace PSProxmoxVE.Core.Services
         /// </summary>
         /// <param name="session">The authenticated PVE session.</param>
         /// <param name="node">The cluster node name.</param>
-        public Dictionary<string, object?> GetNodeConfig(PveSession session, string node)
+        public PveNodeConfig GetNodeConfig(PveSession session, string node)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
@@ -80,7 +80,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/config").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
-                return JsonHelper.ToDictionary(data as JObject);
+                return data?.ToObject<PveNodeConfig>() ?? new PveNodeConfig();
             });
         }
 
@@ -107,7 +107,7 @@ namespace PSProxmoxVE.Core.Services
         /// </summary>
         /// <param name="session">The authenticated PVE session.</param>
         /// <param name="node">The cluster node name.</param>
-        public Dictionary<string, object?> GetNodeDns(PveSession session, string node)
+        public PveNodeDns GetNodeDns(PveSession session, string node)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
@@ -116,7 +116,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/dns").GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
-                return JsonHelper.ToDictionary(data as JObject);
+                return data?.ToObject<PveNodeDns>() ?? new PveNodeDns();
             });
         }
 

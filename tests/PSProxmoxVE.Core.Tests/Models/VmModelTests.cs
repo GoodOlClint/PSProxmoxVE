@@ -225,5 +225,53 @@ namespace PSProxmoxVE.Core.Tests.Models
             Assert.False(config!.AdditionalProperties.ContainsKey("scsihw"));
             Assert.False(config.AdditionalProperties.ContainsKey("cores"));
         }
+
+        [Fact]
+        public void PveGuestExecStatus_Deserialize_HasDocumentedFields()
+        {
+            var json = @"{""data"": {
+                ""exited"": true,
+                ""exitcode"": 0,
+                ""out-data"": ""aGVsbG8="",
+                ""err-data"": """",
+                ""out-truncated"": false
+            }}";
+            var data = JObject.Parse(json)["data"];
+            Assert.NotNull(data);
+            var status = data.ToObject<PveGuestExecStatus>();
+            Assert.NotNull(status);
+            Assert.True(status.Exited);
+            Assert.Equal(0, status.ExitCode);
+            Assert.Equal("aGVsbG8=", status.OutData);
+            Assert.Equal(string.Empty, status.ErrData);
+            Assert.False(status.OutTruncated);
+        }
+
+        [Theory]
+        [InlineData("true", true)]
+        [InlineData("false", false)]
+        [InlineData("1", true)]
+        [InlineData("0", false)]
+        [InlineData("\"1\"", true)]
+        [InlineData("\"0\"", false)]
+        public void PveGuestExecStatus_Exited_ToleratesBooleanIntegerAndStringForms(string exitedLiteral, bool expected)
+        {
+            var json = $@"{{""data"": {{""exited"": {exitedLiteral}}}}}";
+            var data = JObject.Parse(json)["data"];
+            var status = data!.ToObject<PveGuestExecStatus>();
+            Assert.NotNull(status);
+            Assert.Equal(expected, status!.Exited);
+        }
+
+        [Fact]
+        public void PveGuestExecStatus_UnmappedKey_LandsInAdditionalProperties()
+        {
+            var json = @"{""data"": {""exited"": false, ""newfield"": ""future""}}";
+            var data = JObject.Parse(json)["data"];
+            var status = data!.ToObject<PveGuestExecStatus>();
+            Assert.NotNull(status);
+            Assert.Equal("future", status!.AdditionalProperties["newfield"]);
+            Assert.False(status.AdditionalProperties.ContainsKey("exited"));
+        }
     }
 }

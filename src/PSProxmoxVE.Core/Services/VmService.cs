@@ -605,7 +605,7 @@ namespace PSProxmoxVE.Core.Services
         /// <summary>
         /// Gets the status/result of a guest agent exec command by PID.
         /// </summary>
-        public Dictionary<string, object?> GetGuestExecStatus(PveSession session, string node, int vmid, int pid)
+        public PveGuestExecStatus GetGuestExecStatus(PveSession session, string node, int vmid, int pid)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
@@ -615,7 +615,7 @@ namespace PSProxmoxVE.Core.Services
                 var response = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/agent/exec-status?pid={pid}")
                     .GetAwaiter().GetResult();
                 var data = JObject.Parse(response)["data"];
-                return JsonHelper.ToDictionary(data as JObject);
+                return data?.ToObject<PveGuestExecStatus>() ?? new PveGuestExecStatus();
             });
         }
 
