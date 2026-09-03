@@ -10,18 +10,6 @@ BeforeAll {
 }
 
 Describe 'New-PveContainer' {
-
-    Context 'Command existence' {
-        It 'Should be available after module import' {
-            Get-Command 'New-PveContainer' -ErrorAction SilentlyContinue |
-                Should -Not -BeNullOrEmpty
-        }
-
-        It 'Should be a CmdletInfo (binary cmdlet)' {
-            (Get-Command 'New-PveContainer').CommandType | Should -Be 'Cmdlet'
-        }
-    }
-
     Context 'ShouldProcess support' {
         BeforeAll {
             $script:Cmd = Get-Command 'New-PveContainer'

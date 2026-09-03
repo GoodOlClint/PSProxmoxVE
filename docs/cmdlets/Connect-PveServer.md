@@ -15,13 +15,13 @@ schema: 2.0.0
 ### Credential (Default)
 ```
 Connect-PveServer [-Server] <String> [-Port <Int32>] -Credential <PSCredential> [-SkipCertificateCheck]
- [-PassThru] [-ProgressAction <ActionPreference>] [<CommonParameters>]
+ [-TimeoutSeconds <Int32>] [-PassThru] [-Quiet] [-ProgressAction <ActionPreference>] [<CommonParameters>]
 ```
 
 ### ApiToken
 ```
-Connect-PveServer [-Server] <String> [-Port <Int32>] -ApiToken <String> [-SkipCertificateCheck] [-PassThru]
- [-ProgressAction <ActionPreference>] [<CommonParameters>]
+Connect-PveServer [-Server] <String> [-Port <Int32>] -ApiToken <String> [-SkipCertificateCheck]
+ [-TimeoutSeconds <Int32>] [-PassThru] [-Quiet] [-ProgressAction <ActionPreference>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -138,6 +138,36 @@ Accept wildcard characters: False
 Type: ActionPreference
 Parameter Sets: (All)
 Aliases: proga
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Quiet
+Do not output the session object to the pipeline.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -TimeoutSeconds
+HTTP timeout in seconds (0 = infinite). Default 100s.
+
+```yaml
+Type: Int32
+Parameter Sets: (All)
+Aliases:
 
 Required: False
 Position: Named

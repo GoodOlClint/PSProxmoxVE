@@ -10,18 +10,6 @@ BeforeAll {
 }
 
 Describe 'Test-PveConnection' {
-
-    Context 'Command existence' {
-        It 'Should be available after module import' {
-            Get-Command 'Test-PveConnection' -ErrorAction SilentlyContinue |
-                Should -Not -BeNullOrEmpty
-        }
-
-        It 'Should be a CmdletInfo (binary cmdlet)' {
-            (Get-Command 'Test-PveConnection').CommandType | Should -Be 'Cmdlet'
-        }
-    }
-
     Context 'Parameter metadata' {
         BeforeAll {
             $script:Cmd = Get-Command 'Test-PveConnection'

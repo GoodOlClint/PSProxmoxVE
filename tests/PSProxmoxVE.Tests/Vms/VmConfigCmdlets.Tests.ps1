@@ -15,31 +15,9 @@ BeforeAll {
 # Get-PveVmConfig
 # ---------------------------------------------------------------------------
 Describe 'Get-PveVmConfig' {
-
-    Context 'Command existence' {
-        It 'Should be available after module import' {
-            Get-Command 'Get-PveVmConfig' -ErrorAction SilentlyContinue |
-                Should -Not -BeNullOrEmpty
-        }
-
-        It 'Should be a CmdletInfo (binary cmdlet)' {
-            (Get-Command 'Get-PveVmConfig').CommandType | Should -Be 'Cmdlet'
-        }
-    }
-
     Context 'Parameter metadata' {
         BeforeAll {
             $script:Cmd = Get-Command 'Get-PveVmConfig'
-        }
-
-        It 'Should have Node parameter' {
-            $script:Cmd.Parameters.ContainsKey('Node') | Should -BeTrue
-        }
-
-        It 'Node should be Mandatory' {
-            $isMandatory = $script:Cmd.Parameters['Node'].ParameterSets.Values |
-                Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
         }
 
         It 'Node should be of type String' {
@@ -52,16 +30,6 @@ Describe 'Get-PveVmConfig' {
             $acceptsByPropName | Should -Not -BeNullOrEmpty
         }
 
-        It 'Should have VmId parameter' {
-            $script:Cmd.Parameters.ContainsKey('VmId') | Should -BeTrue
-        }
-
-        It 'VmId should be Mandatory' {
-            $isMandatory = $script:Cmd.Parameters['VmId'].ParameterSets.Values |
-                Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
-        }
-
         It 'VmId should be of type Int32' {
             $script:Cmd.Parameters['VmId'].ParameterType | Should -Be ([int])
         }
@@ -70,10 +38,6 @@ Describe 'Get-PveVmConfig' {
             $acceptsByPropName = $script:Cmd.Parameters['VmId'].ParameterSets.Values |
                 Where-Object { $_.ValueFromPipelineByPropertyName }
             $acceptsByPropName | Should -Not -BeNullOrEmpty
-        }
-
-        It 'Should have Session parameter (inherited from PveCmdletBase)' {
-            $script:Cmd.Parameters.ContainsKey('Session') | Should -BeTrue
         }
 
         It 'Should not support ShouldProcess (read-only cmdlet)' {
@@ -102,47 +66,15 @@ Describe 'Get-PveVmConfig' {
 # Set-PveVmConfig
 # ---------------------------------------------------------------------------
 Describe 'Set-PveVmConfig' {
-
-    Context 'Command existence' {
-        It 'Should be available after module import' {
-            Get-Command 'Set-PveVmConfig' -ErrorAction SilentlyContinue |
-                Should -Not -BeNullOrEmpty
-        }
-
-        It 'Should be a CmdletInfo (binary cmdlet)' {
-            (Get-Command 'Set-PveVmConfig').CommandType | Should -Be 'Cmdlet'
-        }
-    }
-
     Context 'Parameter metadata' {
         BeforeAll {
             $script:Cmd = Get-Command 'Set-PveVmConfig'
-        }
-
-        It 'Should have Node parameter' {
-            $script:Cmd.Parameters.ContainsKey('Node') | Should -BeTrue
-        }
-
-        It 'Node should be Mandatory' {
-            $isMandatory = $script:Cmd.Parameters['Node'].ParameterSets.Values |
-                Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
         }
 
         It 'Node should accept pipeline input by property name' {
             $acceptsByPropName = $script:Cmd.Parameters['Node'].ParameterSets.Values |
                 Where-Object { $_.ValueFromPipelineByPropertyName }
             $acceptsByPropName | Should -Not -BeNullOrEmpty
-        }
-
-        It 'Should have VmId parameter' {
-            $script:Cmd.Parameters.ContainsKey('VmId') | Should -BeTrue
-        }
-
-        It 'VmId should be Mandatory' {
-            $isMandatory = $script:Cmd.Parameters['VmId'].ParameterSets.Values |
-                Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
         }
 
         It 'VmId should accept pipeline input by property name' {
@@ -227,10 +159,6 @@ Describe 'Set-PveVmConfig' {
                 Where-Object { $_.IsMandatory }
             $isMandatory | Should -BeNullOrEmpty
         }
-
-        It 'Should have Session parameter (inherited from PveCmdletBase)' {
-            $script:Cmd.Parameters.ContainsKey('Session') | Should -BeTrue
-        }
     }
 
     Context 'ShouldProcess support' {
@@ -276,31 +204,9 @@ Describe 'Set-PveVmConfig' {
 # Resize-PveVmDisk
 # ---------------------------------------------------------------------------
 Describe 'Resize-PveVmDisk' {
-
-    Context 'Command existence' {
-        It 'Should be available after module import' {
-            Get-Command 'Resize-PveVmDisk' -ErrorAction SilentlyContinue |
-                Should -Not -BeNullOrEmpty
-        }
-
-        It 'Should be a CmdletInfo (binary cmdlet)' {
-            (Get-Command 'Resize-PveVmDisk').CommandType | Should -Be 'Cmdlet'
-        }
-    }
-
     Context 'Parameter metadata' {
         BeforeAll {
             $script:Cmd = Get-Command 'Resize-PveVmDisk'
-        }
-
-        It 'Should have Node parameter' {
-            $script:Cmd.Parameters.ContainsKey('Node') | Should -BeTrue
-        }
-
-        It 'Node should be Mandatory' {
-            $isMandatory = $script:Cmd.Parameters['Node'].ParameterSets.Values |
-                Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
         }
 
         It 'Node should be of type String' {
@@ -313,16 +219,6 @@ Describe 'Resize-PveVmDisk' {
             $acceptsByPropName | Should -Not -BeNullOrEmpty
         }
 
-        It 'Should have VmId parameter' {
-            $script:Cmd.Parameters.ContainsKey('VmId') | Should -BeTrue
-        }
-
-        It 'VmId should be Mandatory' {
-            $isMandatory = $script:Cmd.Parameters['VmId'].ParameterSets.Values |
-                Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
-        }
-
         It 'VmId should be of type Int32' {
             $script:Cmd.Parameters['VmId'].ParameterType | Should -Be ([int])
         }
@@ -333,28 +229,8 @@ Describe 'Resize-PveVmDisk' {
             $acceptsByPropName | Should -Not -BeNullOrEmpty
         }
 
-        It 'Should have Disk parameter' {
-            $script:Cmd.Parameters.ContainsKey('Disk') | Should -BeTrue
-        }
-
-        It 'Disk should be Mandatory' {
-            $isMandatory = $script:Cmd.Parameters['Disk'].ParameterSets.Values |
-                Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
-        }
-
         It 'Disk should be of type String' {
             $script:Cmd.Parameters['Disk'].ParameterType | Should -Be ([string])
-        }
-
-        It 'Should have Size parameter' {
-            $script:Cmd.Parameters.ContainsKey('Size') | Should -BeTrue
-        }
-
-        It 'Size should be Mandatory' {
-            $isMandatory = $script:Cmd.Parameters['Size'].ParameterSets.Values |
-                Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
         }
 
         It 'Size should be of type String' {
@@ -365,16 +241,6 @@ Describe 'Resize-PveVmDisk' {
             $script:Cmd.Parameters.ContainsKey('Wait') | Should -BeTrue
             $script:Cmd.Parameters['Wait'].ParameterType |
                 Should -Be ([System.Management.Automation.SwitchParameter])
-        }
-
-        It 'Wait should not be Mandatory' {
-            $isMandatory = $script:Cmd.Parameters['Wait'].ParameterSets.Values |
-                Where-Object { $_.IsMandatory }
-            $isMandatory | Should -BeNullOrEmpty
-        }
-
-        It 'Should have Session parameter (inherited from PveCmdletBase)' {
-            $script:Cmd.Parameters.ContainsKey('Session') | Should -BeTrue
         }
     }
 

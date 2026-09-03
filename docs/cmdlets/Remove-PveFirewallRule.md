@@ -13,7 +13,7 @@ Removes a firewall rule.
 ## SYNTAX
 
 ```
-Remove-PveFirewallRule [-Level] <String> [-Node <String>] [-VmId <Int32>] -Position <Int32>
+Remove-PveFirewallRule [-Level] <String> [-Node <String>] [-VmId <Int32>] [-Group <String>] -Position <Int32>
  [-Session <PveSession>] [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
@@ -142,6 +142,21 @@ Accept wildcard characters: False
 Type: ActionPreference
 Parameter Sets: (All)
 Aliases: proga
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -Group
+The security group name. Required when Level is Group.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
 
 Required: False
 Position: Named

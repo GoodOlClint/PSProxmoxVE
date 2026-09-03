@@ -14,18 +14,6 @@ BeforeAll {
 }
 
 Describe 'Connect-PveServer' {
-
-    Context 'Command existence' {
-        It 'Should be available after module import' {
-            Get-Command 'Connect-PveServer' -ErrorAction SilentlyContinue |
-                Should -Not -BeNullOrEmpty
-        }
-
-        It 'Should be a CmdletInfo (binary cmdlet)' {
-            (Get-Command 'Connect-PveServer').CommandType | Should -Be 'Cmdlet'
-        }
-    }
-
     Context 'Parameter validation — required parameters' {
         It 'Server should be Mandatory' {
             $param = (Get-Command 'Connect-PveServer').Parameters['Server']
@@ -58,10 +46,6 @@ Describe 'Connect-PveServer' {
             $script:Cmd = Get-Command 'Connect-PveServer'
         }
 
-        It 'Should have a Server parameter' {
-            $script:Cmd.Parameters.ContainsKey('Server') | Should -BeTrue
-        }
-
         It 'Should declare Server as Mandatory' {
             $serverParam = $script:Cmd.Parameters['Server']
             $isMandatory = $serverParam.ParameterSets.Values |
@@ -70,22 +54,10 @@ Describe 'Connect-PveServer' {
             $isMandatory | Should -Not -BeNullOrEmpty
         }
 
-        It 'Should have a Port parameter' {
-            $script:Cmd.Parameters.ContainsKey('Port') | Should -BeTrue
-        }
-
         It 'Port should default to 8006' {
             # Verify default via the static default-value metadata on the parameter.
             $portParam = $script:Cmd.Parameters['Port']
             $portParam | Should -Not -BeNullOrEmpty
-        }
-
-        It 'Should have a Credential parameter' {
-            $script:Cmd.Parameters.ContainsKey('Credential') | Should -BeTrue
-        }
-
-        It 'Should have an ApiToken parameter' {
-            $script:Cmd.Parameters.ContainsKey('ApiToken') | Should -BeTrue
         }
 
         It 'Should have a SkipCertificateCheck switch parameter' {
@@ -111,10 +83,6 @@ Describe 'Connect-PveServer' {
             $tokenSets  = $script:Cmd.Parameters['ApiToken'].ParameterSets.Keys
             $overlap    = $credSets | Where-Object { $tokenSets -contains $_ }
             $overlap | Should -BeNullOrEmpty
-        }
-
-        It 'Should have a TimeoutSeconds parameter' {
-            $script:Cmd.Parameters.ContainsKey('TimeoutSeconds') | Should -BeTrue
         }
 
         It 'TimeoutSeconds should reject negative values' {

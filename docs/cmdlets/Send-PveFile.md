@@ -14,7 +14,7 @@ Uploads a local file to a Proxmox VE storage.
 
 ```
 Send-PveFile [-Node] <String> [-Storage] <String> [-Path] <String> [[-ContentType] <String>]
- [-Checksum <String>] [-ChecksumAlgorithm <String>] [-Wait] [-Session <PveSession>]
+ [-Checksum <String>] [-ChecksumAlgorithm <String>] [-Wait] [-TimeoutSeconds <Int32>] [-Session <PveSession>]
  [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
@@ -189,6 +189,21 @@ Accept wildcard characters: False
 Type: ActionPreference
 Parameter Sets: (All)
 Aliases: proga
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -TimeoutSeconds
+HTTP timeout in seconds (0 = infinite). Defaults to 1800 (30 min).
+
+```yaml
+Type: Int32
+Parameter Sets: (All)
+Aliases:
 
 Required: False
 Position: Named

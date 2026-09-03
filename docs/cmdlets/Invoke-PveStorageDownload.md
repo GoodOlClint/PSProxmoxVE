@@ -14,8 +14,8 @@ schema: 2.0.0
 
 ```
 Invoke-PveStorageDownload [-Node] <String> [-Storage] <String> [-Url] <String> [-Filename] <String>
- [-ContentType <String>] [-Wait] [-Session <PveSession>] [-ProgressAction <ActionPreference>] [-WhatIf]
- [-Confirm] [<CommonParameters>]
+ [-ContentType <String>] [-Wait] [-TimeoutSeconds <Int32>] [-Session <PveSession>]
+ [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -177,6 +177,21 @@ Accept wildcard characters: False
 Type: ActionPreference
 Parameter Sets: (All)
 Aliases: proga
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -TimeoutSeconds
+HTTP timeout in seconds (0 = infinite). Defaults to 1800 (30 min).
+
+```yaml
+Type: Int32
+Parameter Sets: (All)
+Aliases:
 
 Required: False
 Position: Named

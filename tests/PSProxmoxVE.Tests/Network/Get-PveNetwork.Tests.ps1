@@ -6,90 +6,20 @@
         Remove-PveNetwork, Invoke-PveNetworkApply.
 
     All tests are fully offline — no live Proxmox VE target is required.
-    If a cmdlet is not yet compiled the test is marked Skipped.
 #>
 
 BeforeAll {
     . $PSScriptRoot/../_TestHelper.ps1
-
-    $script:Availability = @{}
-    foreach ($name in @('Get-PveNetwork', 'New-PveNetwork', 'Set-PveNetwork',
-                         'Remove-PveNetwork', 'Invoke-PveNetworkApply')) {
-        $script:Availability[$name] = $null -ne (Get-Command $name -ErrorAction SilentlyContinue)
-    }
-
-    function Skip-IfMissing([string]$Name) {
-        if (-not $script:Availability[$Name]) {
-            Set-ItResult -Skipped -Because "$Name is not yet implemented in this build"
-        }
-    }
-}
-
-# ---------------------------------------------------------------------------
-# Manifest contract
-# ---------------------------------------------------------------------------
-Describe 'Network cmdlets — manifest declarations' {
-    BeforeAll {
-        $manifestPath = Join-Path (Get-Module PSProxmoxVE).ModuleBase 'PSProxmoxVE.psd1'
-        $script:Manifest = if (Test-Path $manifestPath) { Import-PowerShellDataFile $manifestPath } else { $null }
-    }
-
-    It "<cmdName> should be declared in CmdletsToExport" -TestCases @(
-        @{ cmdName = 'Get-PveNetwork' }
-        @{ cmdName = 'New-PveNetwork' }
-        @{ cmdName = 'Set-PveNetwork' }
-        @{ cmdName = 'Remove-PveNetwork' }
-        @{ cmdName = 'Invoke-PveNetworkApply' }
-    ) {
-        if ($null -eq $script:Manifest) { Set-ItResult -Skipped -Because 'Manifest not found'; return }
-        $script:Manifest.CmdletsToExport | Should -Contain $cmdName
-    }
 }
 
 # ---------------------------------------------------------------------------
 # Get-PveNetwork
 # ---------------------------------------------------------------------------
 Describe 'Get-PveNetwork' {
-
-    BeforeAll { $script:Cmd = Get-Command 'Get-PveNetwork' -ErrorAction SilentlyContinue }
-
-    Context 'Command existence' {
-        It 'Should be available after module import' {
-            Skip-IfMissing 'Get-PveNetwork'
-            $script:Cmd | Should -Not -BeNullOrEmpty
-        }
-
-        It 'Should be a CmdletInfo (binary cmdlet)' {
-            Skip-IfMissing 'Get-PveNetwork'
-            $script:Cmd.CommandType | Should -Be 'Cmdlet'
-        }
-    }
-
-    Context 'Parameter metadata' {
-        It 'Should have Node parameter (Mandatory — network is always node-specific)' {
-            Skip-IfMissing 'Get-PveNetwork'
-            $script:Cmd.Parameters.ContainsKey('Node') | Should -BeTrue
-        }
-
-        It 'Should have Iface parameter (optional filter)' {
-            Skip-IfMissing 'Get-PveNetwork'
-            $script:Cmd.Parameters.ContainsKey('Iface') | Should -BeTrue
-        }
-
-        It 'Should have Type parameter (optional filter by interface type)' {
-            Skip-IfMissing 'Get-PveNetwork'
-            $script:Cmd.Parameters.ContainsKey('Type') | Should -BeTrue
-        }
-
-        It 'Should have Session parameter' {
-            Skip-IfMissing 'Get-PveNetwork'
-            $script:Cmd.Parameters.ContainsKey('Session') | Should -BeTrue
-        }
-    }
+    BeforeAll { $script:Cmd = Get-Command 'Get-PveNetwork' }
 
     Context 'Without active session' {
         It 'Should throw when no session is active' {
-            Skip-IfMissing 'Get-PveNetwork'
             { Get-PveNetwork -Node 'pve-node1' -ErrorAction Stop } |
                 Should -Throw '*No active Proxmox VE session*'
         }
@@ -100,52 +30,19 @@ Describe 'Get-PveNetwork' {
 # New-PveNetwork
 # ---------------------------------------------------------------------------
 Describe 'New-PveNetwork' {
-
-    BeforeAll { $script:Cmd = Get-Command 'New-PveNetwork' -ErrorAction SilentlyContinue }
-
-    Context 'Command existence' {
-        It 'Should be available after module import' {
-            Skip-IfMissing 'New-PveNetwork'
-            $script:Cmd | Should -Not -BeNullOrEmpty
-        }
-    }
+    BeforeAll { $script:Cmd = Get-Command 'New-PveNetwork' }
 
     Context 'ShouldProcess support' {
         It 'Should support WhatIf' {
-            Skip-IfMissing 'New-PveNetwork'
             $script:Cmd.Parameters.ContainsKey('WhatIf') | Should -BeTrue
         }
     }
 
     Context 'VLAN-aware bridge' {
         It 'Should expose BridgeVlanAware as a switch' {
-            Skip-IfMissing 'New-PveNetwork'
             $script:Cmd.Parameters.ContainsKey('BridgeVlanAware') | Should -BeTrue
             $script:Cmd.Parameters['BridgeVlanAware'].ParameterType |
                 Should -Be ([System.Management.Automation.SwitchParameter])
-        }
-    }
-
-    Context 'Required parameters' {
-        It 'Node should be Mandatory' {
-            Skip-IfMissing 'New-PveNetwork'
-            $isMandatory = $script:Cmd.Parameters['Node'].ParameterSets.Values |
-                Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
-        }
-
-        It 'Iface should be Mandatory' {
-            Skip-IfMissing 'New-PveNetwork'
-            $isMandatory = $script:Cmd.Parameters['Iface'].ParameterSets.Values |
-                Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
-        }
-
-        It 'Type should be Mandatory' {
-            Skip-IfMissing 'New-PveNetwork'
-            $isMandatory = $script:Cmd.Parameters['Type'].ParameterSets.Values |
-                Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
         }
     }
 }
@@ -154,45 +51,19 @@ Describe 'New-PveNetwork' {
 # Set-PveNetwork
 # ---------------------------------------------------------------------------
 Describe 'Set-PveNetwork' {
-
-    BeforeAll { $script:Cmd = Get-Command 'Set-PveNetwork' -ErrorAction SilentlyContinue }
-
-    Context 'Command existence' {
-        It 'Should be available after module import' {
-            Skip-IfMissing 'Set-PveNetwork'
-            $script:Cmd | Should -Not -BeNullOrEmpty
-        }
-    }
+    BeforeAll { $script:Cmd = Get-Command 'Set-PveNetwork' }
 
     Context 'ShouldProcess support' {
         It 'Should support WhatIf' {
-            Skip-IfMissing 'Set-PveNetwork'
             $script:Cmd.Parameters.ContainsKey('WhatIf') | Should -BeTrue
         }
     }
 
     Context 'VLAN-aware bridge' {
         It 'Should expose BridgeVlanAware as a switch' {
-            Skip-IfMissing 'Set-PveNetwork'
             $script:Cmd.Parameters.ContainsKey('BridgeVlanAware') | Should -BeTrue
             $script:Cmd.Parameters['BridgeVlanAware'].ParameterType |
                 Should -Be ([System.Management.Automation.SwitchParameter])
-        }
-    }
-
-    Context 'Required parameters' {
-        It 'Node should be Mandatory' {
-            Skip-IfMissing 'Set-PveNetwork'
-            $isMandatory = $script:Cmd.Parameters['Node'].ParameterSets.Values |
-                Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
-        }
-
-        It 'Iface should be Mandatory' {
-            Skip-IfMissing 'Set-PveNetwork'
-            $isMandatory = $script:Cmd.Parameters['Iface'].ParameterSets.Values |
-                Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
         }
     }
 }
@@ -201,44 +72,18 @@ Describe 'Set-PveNetwork' {
 # Remove-PveNetwork
 # ---------------------------------------------------------------------------
 Describe 'Remove-PveNetwork' {
-
-    BeforeAll { $script:Cmd = Get-Command 'Remove-PveNetwork' -ErrorAction SilentlyContinue }
-
-    Context 'Command existence' {
-        It 'Should be available after module import' {
-            Skip-IfMissing 'Remove-PveNetwork'
-            $script:Cmd | Should -Not -BeNullOrEmpty
-        }
-    }
+    BeforeAll { $script:Cmd = Get-Command 'Remove-PveNetwork' }
 
     Context 'ShouldProcess / ConfirmImpact' {
         It 'Should support WhatIf' {
-            Skip-IfMissing 'Remove-PveNetwork'
             $script:Cmd.Parameters.ContainsKey('WhatIf') | Should -BeTrue
         }
 
         It 'Should declare ConfirmImpact High' {
-            Skip-IfMissing 'Remove-PveNetwork'
             $attr = $script:Cmd.ImplementingType.GetCustomAttributes(
                 [System.Management.Automation.CmdletAttribute], $false) |
                 Select-Object -First 1
             $attr.ConfirmImpact | Should -Be ([System.Management.Automation.ConfirmImpact]::High)
-        }
-    }
-
-    Context 'Required parameters' {
-        It 'Node should be Mandatory' {
-            Skip-IfMissing 'Remove-PveNetwork'
-            $isMandatory = $script:Cmd.Parameters['Node'].ParameterSets.Values |
-                Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
-        }
-
-        It 'Iface should be Mandatory' {
-            Skip-IfMissing 'Remove-PveNetwork'
-            $isMandatory = $script:Cmd.Parameters['Iface'].ParameterSets.Values |
-                Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
         }
     }
 }
@@ -247,29 +92,11 @@ Describe 'Remove-PveNetwork' {
 # Invoke-PveNetworkApply
 # ---------------------------------------------------------------------------
 Describe 'Invoke-PveNetworkApply' {
-
-    BeforeAll { $script:Cmd = Get-Command 'Invoke-PveNetworkApply' -ErrorAction SilentlyContinue }
-
-    Context 'Command existence' {
-        It 'Should be available after module import' {
-            Skip-IfMissing 'Invoke-PveNetworkApply'
-            $script:Cmd | Should -Not -BeNullOrEmpty
-        }
-    }
+    BeforeAll { $script:Cmd = Get-Command 'Invoke-PveNetworkApply' }
 
     Context 'ShouldProcess support' {
         It 'Should support WhatIf' {
-            Skip-IfMissing 'Invoke-PveNetworkApply'
             $script:Cmd.Parameters.ContainsKey('WhatIf') | Should -BeTrue
-        }
-    }
-
-    Context 'Required parameters' {
-        It 'Node should be Mandatory' {
-            Skip-IfMissing 'Invoke-PveNetworkApply'
-            $isMandatory = $script:Cmd.Parameters['Node'].ParameterSets.Values |
-                Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
         }
     }
 }

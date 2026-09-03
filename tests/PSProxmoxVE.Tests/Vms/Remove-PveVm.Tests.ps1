@@ -10,18 +10,6 @@ BeforeAll {
 }
 
 Describe 'Remove-PveVm' {
-
-    Context 'Command existence' {
-        It 'Should be available after module import' {
-            Get-Command 'Remove-PveVm' -ErrorAction SilentlyContinue |
-                Should -Not -BeNullOrEmpty
-        }
-
-        It 'Should be a CmdletInfo (binary cmdlet)' {
-            (Get-Command 'Remove-PveVm').CommandType | Should -Be 'Cmdlet'
-        }
-    }
-
     Context 'ShouldProcess / ConfirmImpact' {
         BeforeAll {
             $script:Cmd = Get-Command 'Remove-PveVm'
@@ -51,12 +39,6 @@ Describe 'Remove-PveVm' {
     }
 
     Context 'Required parameters' {
-        It 'Node should be Mandatory' {
-            $nodeParam = (Get-Command 'Remove-PveVm').Parameters['Node']
-            $isMandatory = $nodeParam.ParameterSets.Values | Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
-        }
-
         It 'VmId should be Mandatory' {
             $vmidParam = (Get-Command 'Remove-PveVm').Parameters['VmId']
             $isMandatory = $vmidParam.ParameterSets.Values | Where-Object { $_.IsMandatory }

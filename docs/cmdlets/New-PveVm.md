@@ -15,9 +15,10 @@ schema: 2.0.0
 ```
 New-PveVm [-Node] <String> [-VmId <Int32>] [-Name <String>] [-Memory <Int32>] [-Cores <Int32>]
  [-Sockets <Int32>] [-CpuType <String>] [-Bios <String>] [-Machine <String>] [-DiskSize <String>]
- [-DiskStorage <String>] [-DiskFormat <String>] [-Network <String>] [-Bridge <String>] [-OsType <String>]
- [-Start] [-Wait] [-Session <PveSession>] [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm]
- [<CommonParameters>]
+ [-DiskStorage <String>] [-DiskFormat <String>] [-DiskBus <String>] [-ScsiHardware <String>] [-DiskIoThread]
+ [-DiskAio <String>] [-DiskSsd] [-DiskDiscard] [-DiskCache <String>] [-Network <String>] [-Bridge <String>]
+ [-OsType <String>] [-Start] [-Wait] [-Session <PveSession>] [-ProgressAction <ActionPreference>] [-WhatIf]
+ [-Confirm] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -349,6 +350,111 @@ Accept wildcard characters: False
 Type: ActionPreference
 Parameter Sets: (All)
 Aliases: proga
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -DiskAio
+Async IO mode: native, threads, io_uring.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -DiskBus
+Primary disk bus: virtio (default), scsi, sata, ide.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -DiskCache
+Disk cache mode: none, writethrough, writeback, directsync, unsafe.
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -DiskDiscard
+Enable discard/TRIM passthrough (discard=on).
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -DiskIoThread
+Enable a dedicated IO thread (iothread=1).
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -DiskSsd
+Mark the primary disk as SSD (ssd=1).
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -ScsiHardware
+SCSI controller model (e.g. virtio-scsi-single).
+
+```yaml
+Type: String
+Parameter Sets: (All)
+Aliases:
 
 Required: False
 Position: Named
