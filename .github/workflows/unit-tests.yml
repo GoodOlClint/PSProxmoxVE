@@ -169,6 +169,43 @@ jobs:
           name: pester-results-${{ matrix.os }}-ps${{ matrix.ps_version }}
           path: TestResults/
 
+  # ── Generated help matches the source ───────────────────────────────
+  # docs/cmdlets/ and the MAML are outputs of generate-help.ps1, but no
+  # workflow ran it, so cmdlets shipped undocumented until someone noticed:
+  # at #153 the module had 194 cmdlets and 169 help entries, and the stale
+  # MAML went out in every PSGallery release.
+  help-current:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Regenerate help
+        shell: pwsh
+        run: ./generate-help.ps1
+
+      # platyPS rewrites every file it touches with CRLF, so compare content,
+      # not line endings. Untracked files count: a new cmdlet's stub is
+      # exactly the miss this job exists to catch.
+      - name: Fail if the generated help is out of date
+        shell: bash
+        run: |
+          paths='docs/cmdlets src/PSProxmoxVE/PSProxmoxVE.dll-Help.xml'
+          git ls-files -z -- $paths | xargs -0 -r perl -pi -e 's/\r\n/\n/g'
+          if [ -n "$(git status --porcelain -- $paths)" ]; then
+            echo "::error::generated help is out of date - run ./generate-help.ps1 and commit the result"
+            git status --porcelain -- $paths
+            git diff --stat -- $paths
+            exit 1
+          fi
+
   # ── CI infrastructure shell self-checks ─────────────────────────────
   # These guard the provisioning and reporting scripts, whose real exercise is
   # a ~45-minute nested-PVE run. They stub ssh/gh/git and finish in seconds, so
