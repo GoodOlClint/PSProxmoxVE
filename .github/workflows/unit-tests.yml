@@ -191,18 +191,18 @@ jobs:
         shell: pwsh
         run: ./generate-help.ps1
 
-      # platyPS rewrites every file it touches with CRLF, so compare content,
+      # platyPS writes CRLF into every file it produces, so compare content,
       # not line endings. Untracked files count: a new cmdlet's stub is
       # exactly the miss this job exists to catch.
       - name: Fail if the generated help is out of date
         shell: bash
         run: |
-          paths='docs/cmdlets src/PSProxmoxVE/PSProxmoxVE.dll-Help.xml'
-          git ls-files -z -- $paths | xargs -0 -r perl -pi -e 's/\r\n/\n/g'
-          if [ -n "$(git status --porcelain -- $paths)" ]; then
+          paths=(docs/cmdlets src/PSProxmoxVE/PSProxmoxVE.dll-Help.xml)
+          find "${paths[@]}" -type f -print0 | xargs -0 -r perl -pi -e 's/\r\n/\n/g'
+          if [ -n "$(git status --porcelain -- "${paths[@]}")" ]; then
             echo "::error::generated help is out of date - run ./generate-help.ps1 and commit the result"
-            git status --porcelain -- $paths
-            git diff --stat -- $paths
+            git status --porcelain -- "${paths[@]}"
+            git diff --stat -- "${paths[@]}"
             exit 1
           fi
 
