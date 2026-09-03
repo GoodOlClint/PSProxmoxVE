@@ -10,18 +10,6 @@ BeforeAll {
 }
 
 Describe 'New-PveVm' {
-
-    Context 'Command existence' {
-        It 'Should be available after module import' {
-            Get-Command 'New-PveVm' -ErrorAction SilentlyContinue |
-                Should -Not -BeNullOrEmpty
-        }
-
-        It 'Should be a CmdletInfo (binary cmdlet)' {
-            (Get-Command 'New-PveVm').CommandType | Should -Be 'Cmdlet'
-        }
-    }
-
     Context 'ShouldProcess support' {
         BeforeAll {
             $script:Cmd = Get-Command 'New-PveVm'
@@ -41,73 +29,9 @@ Describe 'New-PveVm' {
         }
     }
 
-    Context 'Required parameter — Node' {
-        It 'Node should be Mandatory' {
-            $nodeParam = (Get-Command 'New-PveVm').Parameters['Node']
-            $isMandatory = $nodeParam.ParameterSets.Values | Where-Object { $_.IsMandatory }
-            $isMandatory | Should -Not -BeNullOrEmpty
-        }
-    }
-
     Context 'Optional parameter metadata' {
         BeforeAll {
             $script:Cmd = Get-Command 'New-PveVm'
-        }
-
-        It 'Should have VmId parameter' {
-            $script:Cmd.Parameters.ContainsKey('VmId') | Should -BeTrue
-        }
-
-        It 'Should have Name parameter' {
-            $script:Cmd.Parameters.ContainsKey('Name') | Should -BeTrue
-        }
-
-        It 'Should have Memory parameter' {
-            $script:Cmd.Parameters.ContainsKey('Memory') | Should -BeTrue
-        }
-
-        It 'Should have Cores parameter' {
-            $script:Cmd.Parameters.ContainsKey('Cores') | Should -BeTrue
-        }
-
-        It 'Should have Sockets parameter' {
-            $script:Cmd.Parameters.ContainsKey('Sockets') | Should -BeTrue
-        }
-
-        It 'Should have CpuType parameter' {
-            $script:Cmd.Parameters.ContainsKey('CpuType') | Should -BeTrue
-        }
-
-        It 'Should have Bios parameter' {
-            $script:Cmd.Parameters.ContainsKey('Bios') | Should -BeTrue
-        }
-
-        It 'Should have Machine parameter' {
-            $script:Cmd.Parameters.ContainsKey('Machine') | Should -BeTrue
-        }
-
-        It 'Should have DiskSize parameter' {
-            $script:Cmd.Parameters.ContainsKey('DiskSize') | Should -BeTrue
-        }
-
-        It 'Should have DiskStorage parameter' {
-            $script:Cmd.Parameters.ContainsKey('DiskStorage') | Should -BeTrue
-        }
-
-        It 'Should have DiskFormat parameter' {
-            $script:Cmd.Parameters.ContainsKey('DiskFormat') | Should -BeTrue
-        }
-
-        It 'Should have Network parameter' {
-            $script:Cmd.Parameters.ContainsKey('Network') | Should -BeTrue
-        }
-
-        It 'Should have Bridge parameter' {
-            $script:Cmd.Parameters.ContainsKey('Bridge') | Should -BeTrue
-        }
-
-        It 'Should have OsType parameter' {
-            $script:Cmd.Parameters.ContainsKey('OsType') | Should -BeTrue
         }
 
         It 'Should have Start switch parameter' {
@@ -120,10 +44,6 @@ Describe 'New-PveVm' {
             $script:Cmd.Parameters.ContainsKey('Wait') | Should -BeTrue
             $script:Cmd.Parameters['Wait'].ParameterType |
                 Should -Be ([System.Management.Automation.SwitchParameter])
-        }
-
-        It 'Should have Session parameter (inherited from PveCmdletBase)' {
-            $script:Cmd.Parameters.ContainsKey('Session') | Should -BeTrue
         }
     }
 

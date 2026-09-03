@@ -15,9 +15,8 @@ schema: 2.0.0
 ```
 New-PveNetwork [-Node] <String> [-Iface] <String> [-Type] <String> [-Address <String>] [-Netmask <String>]
  [-Gateway <String>] [-BridgeVlanAware] [-BridgePorts <String>] [-BondSlaves <String>] [-VlanId <Int32>]
- [-Mtu <Int32>]
- [-Autostart] [-Comments <String>] [-Session <PveSession>] [-ProgressAction <ActionPreference>] [-WhatIf]
- [-Confirm] [<CommonParameters>]
+ [-Mtu <Int32>] [-Autostart] [-Comments <String>] [-Session <PveSession>] [-ProgressAction <ActionPreference>]
+ [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -75,22 +74,6 @@ Aliases:
 Required: False
 Position: Named
 Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -BridgeVlanAware
-
-Enable VLAN-aware bridging (802.1Q) on this bridge. Applies to `bridge` type interfaces only.
-
-```yaml
-Type: SwitchParameter
-Parameter Sets: (All)
-Aliases:
-
-Required: False
-Position: Named
-Default value: False
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
@@ -289,6 +272,22 @@ Aliases: proga
 Required: False
 Position: Named
 Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -BridgeVlanAware
+
+Enable VLAN-aware bridging (802.1Q) on this bridge. Applies to `bridge` type interfaces only.
+
+```yaml
+Type: SwitchParameter
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: Named
+Default value: False
 Accept pipeline input: False
 Accept wildcard characters: False
 ```

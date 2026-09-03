@@ -14,7 +14,7 @@ Imports an OVA file into a Proxmox VE virtual machine.
 
 ```
 Import-PveOva [-Node] <String> [-Storage] <String> [-Path] <String> -TargetStorage <String> [-VmId <Int32>]
- [-Name <String>] [-Memory <Int32>] [-Cores <Int32>] [-Wait] [-Session <PveSession>]
+ [-Name <String>] [-Memory <Int32>] [-Cores <Int32>] [-Wait] [-TimeoutSeconds <Int32>] [-Session <PveSession>]
  [-ProgressAction <ActionPreference>] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
@@ -219,6 +219,21 @@ Accept wildcard characters: False
 Type: ActionPreference
 Parameter Sets: (All)
 Aliases: proga
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -TimeoutSeconds
+HTTP timeout in seconds (0 = infinite). Defaults to 1800 (30 min).
+
+```yaml
+Type: Int32
+Parameter Sets: (All)
+Aliases:
 
 Required: False
 Position: Named

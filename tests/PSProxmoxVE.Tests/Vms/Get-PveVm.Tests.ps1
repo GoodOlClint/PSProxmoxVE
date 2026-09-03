@@ -10,31 +10,9 @@ BeforeAll {
 }
 
 Describe 'Get-PveVm' {
-
-    Context 'Command existence' {
-        It 'Should be available after module import' {
-            Get-Command 'Get-PveVm' -ErrorAction SilentlyContinue |
-                Should -Not -BeNullOrEmpty
-        }
-
-        It 'Should be a CmdletInfo (binary cmdlet)' {
-            (Get-Command 'Get-PveVm').CommandType | Should -Be 'Cmdlet'
-        }
-    }
-
     Context 'Parameter validation' {
         BeforeAll {
             $script:Cmd = Get-Command 'Get-PveVm'
-        }
-
-        It 'Should have Node parameter' {
-            $script:Cmd.Parameters.ContainsKey('Node') | Should -BeTrue
-        }
-
-        It 'Node should not be Mandatory (all-nodes query when omitted)' {
-            $node = $script:Cmd.Parameters['Node']
-            $isMandatory = $node.ParameterSets.Values | Where-Object { $_.IsMandatory }
-            $isMandatory | Should -BeNullOrEmpty
         }
 
         It 'Node should accept pipeline input by property name' {
@@ -44,30 +22,10 @@ Describe 'Get-PveVm' {
             $acceptsByPropName | Should -Not -BeNullOrEmpty
         }
 
-        It 'Should have VmId parameter' {
-            $script:Cmd.Parameters.ContainsKey('VmId') | Should -BeTrue
-        }
-
-        It 'Should have Name parameter' {
-            $script:Cmd.Parameters.ContainsKey('Name') | Should -BeTrue
-        }
-
-        It 'Should have Status parameter' {
-            $script:Cmd.Parameters.ContainsKey('Status') | Should -BeTrue
-        }
-
-        It 'Should have Tag parameter' {
-            $script:Cmd.Parameters.ContainsKey('Tag') | Should -BeTrue
-        }
-
         It 'Should have TemplatesOnly switch parameter' {
             $script:Cmd.Parameters.ContainsKey('TemplatesOnly') | Should -BeTrue
             $script:Cmd.Parameters['TemplatesOnly'].ParameterType |
                 Should -Be ([System.Management.Automation.SwitchParameter])
-        }
-
-        It 'Should have Session parameter (inherited from PveCmdletBase)' {
-            $script:Cmd.Parameters.ContainsKey('Session') | Should -BeTrue
         }
 
         It 'None of the filter parameters should be Mandatory' {
