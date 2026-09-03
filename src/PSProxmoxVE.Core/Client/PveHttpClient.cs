@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Authentication;
@@ -28,10 +29,12 @@ namespace PSProxmoxVE.Core.Client
 
         private readonly TimeSpan _guestLockRetryWindow;
         private readonly Func<TimeSpan, Task> _guestLockRetryDelay;
+        private readonly Func<DateTime> _utcNow;
 
         private const string ApiTokenPrefix = "PVEAPIToken=";
         private const string AuthCookieName = "PVEAuthCookie=";
         private const string CsrfHeaderName = "CSRFPreventionToken";
+        private const string TicketResource = "access/ticket";
 
         /// <summary>
         /// Creates an HTTP client authenticated with the specified PVE session.
@@ -82,18 +85,24 @@ namespace PSProxmoxVE.Core.Client
         ///   Cache to take the handler from when <paramref name="handler"/> is null. Null uses
         ///   <see cref="PveHandlerCache.Shared"/>, the same as the public constructor.
         /// </param>
+        /// <param name="utcNow">
+        ///   Clock the ticket half-life check reads. Null uses <see cref="DateTime.UtcNow"/>,
+        ///   the same as the public constructor.
+        /// </param>
         internal PveHttpClient(
             PveSession session,
             TimeSpan? timeoutOverride,
             TimeSpan? guestLockRetryWindow,
             HttpMessageHandler? handler,
             Func<TimeSpan, Task>? guestLockRetryDelay = null,
-            PveHandlerCache? handlerCache = null)
+            PveHandlerCache? handlerCache = null,
+            Func<DateTime>? utcNow = null)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
             _baseUrl = session.BaseUrl;
             _guestLockRetryWindow = guestLockRetryWindow ?? GuestLockRetry.DefaultWindow;
             _guestLockRetryDelay = guestLockRetryDelay ?? Task.Delay;
+            _utcNow = utcNow ?? (() => DateTime.UtcNow);
 
             var ownsHandler = handler != null;
             _handler = handler ?? (handlerCache ?? PveHandlerCache.Shared)
@@ -121,6 +130,7 @@ namespace PSProxmoxVE.Core.Client
             _baseUrl = $"https://{hostname}:{port}";
             _guestLockRetryWindow = GuestLockRetry.DefaultWindow;
             _guestLockRetryDelay = Task.Delay;
+            _utcNow = () => DateTime.UtcNow;
 
             _handler = PveHandlerCache.Shared.Get(hostname, port, skipCertificateCheck);
             _httpClient = new HttpClient(_handler, disposeHandler: false);
@@ -140,7 +150,7 @@ namespace PSProxmoxVE.Core.Client
         /// <returns>Raw JSON response body</returns>
         public async Task<string> GetAsync(string resource)
         {
-            return await SendAsync(() => BuildRequest(HttpMethod.Get, resource), resource, "GET")
+            return await SendAsync(ticket => BuildRequest(HttpMethod.Get, resource, ticket), resource, "GET")
                 .ConfigureAwait(false);
         }
 
@@ -150,9 +160,9 @@ namespace PSProxmoxVE.Core.Client
         /// <returns>Raw JSON response body</returns>
         public async Task<string> PostAsync(string resource, Dictionary<string, string>? data = null)
         {
-            return await SendAsync(() =>
+            return await SendAsync(ticket =>
             {
-                var request = BuildRequest(HttpMethod.Post, resource, mutating: true);
+                var request = BuildRequest(HttpMethod.Post, resource, ticket, mutating: true);
                 if (data != null)
                     request.Content = BuildFormContent(data);
                 return request;
@@ -169,9 +179,9 @@ namespace PSProxmoxVE.Core.Client
         public async Task<string> PostAsync(string resource, IEnumerable<KeyValuePair<string, string>> data)
         {
             if (data == null) throw new ArgumentNullException(nameof(data));
-            return await SendAsync(() =>
+            return await SendAsync(ticket =>
             {
-                var request = BuildRequest(HttpMethod.Post, resource, mutating: true);
+                var request = BuildRequest(HttpMethod.Post, resource, ticket, mutating: true);
                 request.Content = BuildFormContent(data);
                 return request;
             }, resource, "POST").ConfigureAwait(false);
@@ -183,9 +193,9 @@ namespace PSProxmoxVE.Core.Client
         /// <returns>Raw JSON response body</returns>
         public async Task<string> PutAsync(string resource, Dictionary<string, string>? data = null)
         {
-            return await SendAsync(() =>
+            return await SendAsync(ticket =>
             {
-                var request = BuildRequest(HttpMethod.Put, resource, mutating: true);
+                var request = BuildRequest(HttpMethod.Put, resource, ticket, mutating: true);
                 if (data != null)
                     request.Content = BuildFormContent(data);
                 return request;
@@ -197,7 +207,7 @@ namespace PSProxmoxVE.Core.Client
         /// <returns>Raw JSON response body</returns>
         public async Task<string> DeleteAsync(string resource)
         {
-            return await SendAsync(() => BuildRequest(HttpMethod.Delete, resource, mutating: true), resource, "DELETE")
+            return await SendAsync(ticket => BuildRequest(HttpMethod.Delete, resource, ticket, mutating: true), resource, "DELETE")
                 .ConfigureAwait(false);
         }
 
@@ -354,6 +364,8 @@ namespace PSProxmoxVE.Core.Client
                 multipart.Add(csPart);
             }
 
+            var ticket = await CurrentTicketAsync().ConfigureAwait(false);
+
             // File part — StreamContent does not add Content-Transfer-Encoding.
             var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read,
                 bufferSize: 4 * 1024 * 1024, useAsync: true);
@@ -374,7 +386,7 @@ namespace PSProxmoxVE.Core.Client
                 fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/octet-stream");
                 multipart.Add(fileContent);
 
-                var request = BuildRequest(HttpMethod.Post, resource, mutating: true);
+                var request = BuildRequest(HttpMethod.Post, resource, ticket, mutating: true);
                 request.Content = multipart;
 
                 return await SendOnceAsync(request, resource, "POST").ConfigureAwait(false);
@@ -389,7 +401,12 @@ namespace PSProxmoxVE.Core.Client
         // Private helpers
         // -------------------------------------------------------------------------
 
-        private HttpRequestMessage BuildRequest(HttpMethod method, string resource, bool mutating = false)
+        /// <summary>
+        /// Builds a request signed with <paramref name="ticket"/> on a ticket-mode session, or
+        /// with the API token otherwise. The ticket is passed in rather than read from the
+        /// session so the caller knows which ticket the request carried when it comes back 401.
+        /// </summary>
+        private HttpRequestMessage BuildRequest(HttpMethod method, string resource, PveSession.TicketState? ticket, bool mutating = false)
         {
             var url = _baseUrl + resource;
             var request = new HttpRequestMessage(method, url);
@@ -401,12 +418,11 @@ namespace PSProxmoxVE.Core.Client
             {
                 request.Headers.TryAddWithoutValidation("Authorization", $"{ApiTokenPrefix}{_session.ApiToken}");
             }
-            else
+            else if (ticket != null)
             {
-                // Ticket auth
-                request.Headers.Add("Cookie", $"{AuthCookieName}{_session.Ticket}");
-                if (mutating && !string.IsNullOrEmpty(_session.CsrfToken))
-                    request.Headers.Add(CsrfHeaderName, _session.CsrfToken);
+                request.Headers.Add("Cookie", $"{AuthCookieName}{ticket.Ticket}");
+                if (mutating && !string.IsNullOrEmpty(ticket.CsrfToken))
+                    request.Headers.Add(CsrfHeaderName, ticket.CsrfToken);
             }
 
             return request;
@@ -414,40 +430,152 @@ namespace PSProxmoxVE.Core.Client
 
         /// <summary>
         /// Sends a request, rebuilding it from <paramref name="buildRequest"/> for each attempt
-        /// while PVE rejects it for a guest's config flock. An <see cref="HttpRequestMessage"/>
+        /// while PVE rejects it for a guest's config flock, and once more after a ticket renewal
+        /// when a ticket-mode session is rejected with 401. An <see cref="HttpRequestMessage"/>
         /// cannot be resent, which is why this takes a factory rather than a request.
         /// </summary>
-        private Task<string> SendAsync(Func<HttpRequestMessage> buildRequest, string resource, string httpMethod) =>
+        private Task<string> SendAsync(Func<PveSession.TicketState?, HttpRequestMessage> buildRequest, string resource, string httpMethod) =>
             GuestLockRetry.ExecuteAsync(
-                () => SendOnceAsync(buildRequest(), resource, httpMethod), _guestLockRetryWindow, _guestLockRetryDelay);
+                () => SendRenewingAsync(buildRequest, resource, httpMethod), _guestLockRetryWindow, _guestLockRetryDelay);
 
-        private async Task<string> SendOnceAsync(HttpRequestMessage request, string resource, string httpMethod)
+        private async Task<string> SendRenewingAsync(Func<PveSession.TicketState?, HttpRequestMessage> buildRequest, string resource, string httpMethod)
+        {
+            var ticket = await CurrentTicketAsync().ConfigureAwait(false);
+            try
+            {
+                return await SendOnceAsync(buildRequest(ticket), resource, httpMethod).ConfigureAwait(false);
+            }
+            catch (PveApiException ex) when (ticket != null && ex.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                var renewed = await RenewTicketAsync(ticket, ex).ConfigureAwait(false);
+                try
+                {
+                    return await SendOnceAsync(buildRequest(renewed), resource, httpMethod).ConfigureAwait(false);
+                }
+                catch (PveApiException again) when (again.StatusCode == HttpStatusCode.Unauthorized)
+                {
+                    throw new PveSessionExpiredException("The renewed ticket was rejected too.", again);
+                }
+            }
+        }
+
+        /// <summary>
+        /// The ticket a request should carry now: null for a bare client or an API token session,
+        /// otherwise the session's current ticket, renewed first if it is past half its lifetime.
+        /// A ticket past its full lifetime has nothing left to trade, so it is not sent anywhere.
+        /// </summary>
+        private async Task<PveSession.TicketState?> CurrentTicketAsync()
+        {
+            if (_session == null || _session.AuthMode != PveAuthMode.Ticket)
+                return null;
+
+            var ticket = _session.ReadTicket()!;
+            var now = _utcNow();
+            if (now < ticket.RenewAfter)
+                return ticket;
+            if (now >= ticket.Expiry)
+                throw new PveSessionExpiredException();
+
+            return await RenewTicketAsync(ticket, rejection: null).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Trades <paramref name="stale"/> for a fresh ticket by posting it as the password to
+        /// <c>/access/ticket</c>, and installs the result on the session. Concurrent callers on
+        /// the same session share one POST and its outcome, success or failure; a caller whose
+        /// ticket was already replaced gets the replacement without any POST.
+        /// </summary>
+        /// <param name="stale">The ticket the caller holds and wants replaced.</param>
+        /// <param name="rejection">
+        ///   The 401 that prompted this renewal, when reactive. A failed reactive renewal throws
+        ///   <see cref="PveSessionExpiredException"/> around it. A failed proactive renewal does
+        ///   so only when the ticket endpoint itself answers 401 or the ticket has meanwhile
+        ///   expired; any other failure says nothing about the ticket, which is still valid, so
+        ///   the caller keeps using it.
+        /// </param>
+        private async Task<PveSession.TicketState> RenewTicketAsync(PveSession.TicketState stale, PveApiException? rejection)
+        {
+            var session = _session!;
+            var renewal = session.JoinOrClaimRenewal(stale, out var claimed);
+            if (claimed != null)
+            {
+                try
+                {
+                    session.CompleteRenewal(claimed, await PostTicketRenewalAsync(session, stale).ConfigureAwait(false));
+                }
+                catch (Exception ex) when (ex is not OutOfMemoryException and not StackOverflowException)
+                {
+                    session.FailRenewal(claimed, ex);
+                }
+            }
+
+            try
+            {
+                return await renewal.ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is PveApiException or Newtonsoft.Json.JsonException or InvalidOperationException)
+            {
+                if (rejection != null)
+                    throw new PveSessionExpiredException($"Ticket renewal failed: {ex.Message}", rejection);
+                if (ex is PveApiException api && api.StatusCode == HttpStatusCode.Unauthorized)
+                    throw new PveSessionExpiredException(ex);
+                if (_utcNow() < stale.Expiry)
+                    return stale;
+                throw new PveSessionExpiredException($"Ticket renewal failed: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// The renewal POST itself. It goes straight to <see cref="SendOnceAsync"/> so it carries
+        /// no cookie and cannot recurse into renewal or the guest-lock retry, and it is bounded by
+        /// the session's own timeout rather than this client's, which an upload may have set to
+        /// infinite.
+        /// </summary>
+        private async Task<PveSession.TicketState> PostTicketRenewalAsync(PveSession session, PveSession.TicketState stale)
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, _baseUrl + TicketResource);
+            request.Content = BuildFormContent(new Dictionary<string, string>
+            {
+                ["username"] = session.Username!,
+                ["password"] = stale.Ticket,
+            });
+
+            var issuedAt = _utcNow();
+            var body = await SendOnceAsync(request, TicketResource, "POST", session.Timeout).ConfigureAwait(false);
+            return PveSession.TicketState.FromTicketResponse(body, issuedAt);
+        }
+
+        private async Task<string> SendOnceAsync(HttpRequestMessage request, string resource, string httpMethod, TimeSpan? timeout = null)
         {
             HttpResponseMessage response;
             string body;
-            try
+            using (var cts = timeout.HasValue ? new CancellationTokenSource(timeout.Value) : null)
             {
-                response = await _httpClient.SendAsync(request).ConfigureAwait(false);
-                body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            }
-            catch (TaskCanceledException ex)
-            {
-                // PveHttpClient.SendAsync passes no CancellationToken to HttpClient.SendAsync,
-                // so a TaskCanceledException reaching here can only be HttpClient.Timeout
-                // firing — on .NET Framework, on .NET Core, and on .NET 5+ (where it also
-                // carries a TimeoutException inner). Wrap it uniformly across frameworks.
-                var seconds = _httpClient.Timeout == System.Threading.Timeout.InfiniteTimeSpan
-                    ? "infinite"
-                    : _httpClient.Timeout.TotalSeconds.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + "s";
-                throw new PveApiException(HttpStatusCode.RequestTimeout,
-                    $"Request timed out after {seconds}.", resource, httpMethod, ex);
-            }
-            catch (HttpRequestException ex)
-            {
-                // Covers both a failed connection and a stream drop mid-body-read, so every
-                // HttpRequestException PveHttpClient can throw arrives as PveApiException.
-                throw new PveApiException(HttpStatusCode.ServiceUnavailable,
-                    ex.Message, resource, httpMethod, ex);
+                try
+                {
+                    response = await _httpClient.SendAsync(request, cts?.Token ?? CancellationToken.None).ConfigureAwait(false);
+                    body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                }
+                catch (TaskCanceledException ex)
+                {
+                    // The only token ever handed to HttpClient.SendAsync is the per-call timeout
+                    // above, so a TaskCanceledException reaching here is always a timeout — that
+                    // one or HttpClient.Timeout — on .NET Framework, on .NET Core, and on .NET 5+
+                    // (where it also carries a TimeoutException inner). Wrap it uniformly.
+                    var limit = timeout ?? _httpClient.Timeout;
+                    var seconds = limit == System.Threading.Timeout.InfiniteTimeSpan
+                        ? "infinite"
+                        : limit.TotalSeconds.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "s";
+                    throw new PveApiException(HttpStatusCode.RequestTimeout,
+                        $"Request timed out after {seconds}.", resource, httpMethod, ex);
+                }
+                catch (HttpRequestException ex)
+                {
+                    // Covers both a failed connection and a stream drop mid-body-read, so every
+                    // HttpRequestException PveHttpClient can throw arrives as PveApiException.
+                    throw new PveApiException(HttpStatusCode.ServiceUnavailable,
+                        ex.Message, resource, httpMethod, ex);
+                }
             }
 
             if (!response.IsSuccessStatusCode)

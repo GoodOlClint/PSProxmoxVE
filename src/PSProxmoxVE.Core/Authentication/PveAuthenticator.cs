@@ -56,17 +56,9 @@ namespace PSProxmoxVE.Core.Authentication
                 responseBody = httpClient.Post("/api2/json/access/ticket", formData);
             }
 
-            var json = JObject.Parse(responseBody);
-            var data = json["data"] ?? throw new InvalidOperationException("Response did not contain a 'data' field.");
+            var ticket = PveSession.TicketState.FromTicketResponse(responseBody, DateTime.UtcNow);
 
-            var ticket = data["ticket"]?.Value<string>()
-                ?? throw new InvalidOperationException("Response did not contain a ticket.");
-            var csrfToken = data["CSRFPreventionToken"]?.Value<string>()
-                ?? throw new InvalidOperationException("Response did not contain a CSRFPreventionToken.");
-
-            var ticketExpiry = DateTime.UtcNow.AddHours(2);
-
-            var session = new PveSession(hostname, port, skipCertificateCheck, ticket, csrfToken, ticketExpiry);
+            var session = new PveSession(hostname, port, skipCertificateCheck, username, ticket.Ticket, ticket.CsrfToken, ticket.Expiry);
             if (timeout.HasValue)
                 session.Timeout = timeout.Value;
 
