@@ -1,7 +1,6 @@
 using System.Management.Automation;
-using Newtonsoft.Json.Linq;
-using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Network;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Network
 {
@@ -28,18 +27,13 @@ namespace PSProxmoxVE.Cmdlets.Network
         {
             var session = GetSession();
             RequireVersion(session, "SDN", 6, 2, 8, 0);
-            using var client = new PveHttpClient(session);
 
             WriteVerbose($"Getting SDN subnets for VNet '{Vnet}'...");
-            var json = client.GetAsync($"cluster/sdn/vnets/{System.Uri.EscapeDataString(Vnet)}/subnets")
-                .GetAwaiter().GetResult();
-            var root = JObject.Parse(json);
-            var data = root["data"] as JArray ?? new JArray();
+            var service = new NetworkService();
+            var subnets = service.GetSdnSubnets(session, Vnet);
 
-            foreach (var item in data)
+            foreach (var subnet in subnets)
             {
-                var subnet = item.ToObject<PveSdnSubnet>()!;
-
                 if (!string.IsNullOrEmpty(Subnet) &&
                     !string.Equals(subnet.Subnet, Subnet, System.StringComparison.OrdinalIgnoreCase))
                     continue;

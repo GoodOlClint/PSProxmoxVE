@@ -1,8 +1,6 @@
-using System;
 using System.Management.Automation;
-using Newtonsoft.Json.Linq;
-using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Network;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Network
 {
@@ -37,20 +35,13 @@ namespace PSProxmoxVE.Cmdlets.Network
         protected override void ProcessRecord()
         {
             var session = GetSession();
-            using var client = new PveHttpClient(session);
 
             WriteVerbose($"Getting network interfaces on node '{Node}'...");
-            var resource = $"nodes/{Uri.EscapeDataString(Node)}/network";
-            if (!string.IsNullOrEmpty(Type))
-                resource += $"?type={Uri.EscapeDataString(Type)}";
+            var service = new NetworkService();
+            var networks = service.GetNetworks(session, Node, Type);
 
-            var json = client.GetAsync(resource).GetAwaiter().GetResult();
-            var root = JObject.Parse(json);
-            var data = root["data"] as JArray ?? new JArray();
-
-            foreach (var item in data)
+            foreach (var network in networks)
             {
-                var network = item.ToObject<PveNetwork>()!;
                 network.Node = Node;
                 if (!string.IsNullOrEmpty(Iface) &&
                     !string.Equals(network.Iface, Iface, System.StringComparison.OrdinalIgnoreCase))

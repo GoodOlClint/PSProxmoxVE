@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Management.Automation;
-using PSProxmoxVE.Core.Client;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Network
 {
@@ -16,6 +16,7 @@ namespace PSProxmoxVE.Cmdlets.Network
     {
         /// <summary>The zone identifier (alphanumeric, hyphens allowed).</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The SDN zone name.")]
+        [ValidatePattern(@"\A[A-Za-z0-9][A-Za-z0-9._-]*\z")]
         public string Zone { get; set; } = string.Empty;
 
         /// <summary>The zone type.</summary>
@@ -58,10 +59,9 @@ namespace PSProxmoxVE.Cmdlets.Network
 
             var session = GetSession();
             RequireVersion(session, "SDN", 6, 2, 8, 0);
-            using var client = new PveHttpClient(session);
 
             WriteVerbose($"Creating SDN zone '{Zone}'...");
-            var data = new Dictionary<string, string>
+            var data = new Dictionary<string, object>
             {
                 ["zone"] = Zone,
                 ["type"] = Type
@@ -75,7 +75,8 @@ namespace PSProxmoxVE.Cmdlets.Network
             if (!string.IsNullOrEmpty(DnsZone))    data["dnszone"]    = DnsZone!;
             if (!string.IsNullOrEmpty(Ipam))       data["ipam"]       = Ipam!;
 
-            client.PostAsync("cluster/sdn/zones", data).GetAwaiter().GetResult();
+            var service = new NetworkService();
+            service.CreateSdnZone(session, data);
         }
     }
 }
