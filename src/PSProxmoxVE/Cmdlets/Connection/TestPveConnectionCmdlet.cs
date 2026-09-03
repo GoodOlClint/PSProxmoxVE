@@ -24,7 +24,7 @@ namespace PSProxmoxVE.Cmdlets.Connection
 
         protected override void ProcessRecord()
         {
-            var session = ModuleState.ActiveSession;
+            var session = ModuleState.GetActiveSession(this);
             var isConnected = session is not null && !session.IsExpired;
 
             if (Detailed.IsPresent)

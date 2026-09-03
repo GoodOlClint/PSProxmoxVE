@@ -19,7 +19,8 @@ namespace PSProxmoxVE.Cmdlets.Connection
         protected override void ProcessPveRecord()
         {
             bool explicitSessionSupplied = MyInvocation.BoundParameters.ContainsKey(nameof(Session));
-            var sessionToDisconnect = explicitSessionSupplied ? Session : ModuleState.ActiveSession;
+            var moduleSession = ModuleState.GetActiveSession(this);
+            var sessionToDisconnect = explicitSessionSupplied ? Session : moduleSession;
 
             if (sessionToDisconnect is null)
             {
@@ -27,7 +28,7 @@ namespace PSProxmoxVE.Cmdlets.Connection
                 return;
             }
 
-            if (!ReferenceEquals(sessionToDisconnect, ModuleState.ActiveSession))
+            if (!ReferenceEquals(sessionToDisconnect, moduleSession))
             {
                 var lifecycle = sessionToDisconnect.AuthMode == PveAuthMode.ApiToken
                     ? "API tokens do not expire; revoke it with Remove-PveApiToken if it is no longer needed."
@@ -39,7 +40,7 @@ namespace PSProxmoxVE.Cmdlets.Connection
             if (!ShouldProcess($"{sessionToDisconnect.Hostname}:{sessionToDisconnect.Port}", "Disconnect"))
                 return;
 
-            ModuleState.ActiveSession = null;
+            ModuleState.SetActiveSession(this, null);
             WriteVerbose($"Disconnected from {sessionToDisconnect.Hostname}:{sessionToDisconnect.Port}.");
         }
     }
