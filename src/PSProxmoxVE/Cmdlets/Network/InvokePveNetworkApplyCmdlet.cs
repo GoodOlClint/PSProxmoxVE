@@ -1,7 +1,4 @@
-using System;
 using System.Management.Automation;
-using Newtonsoft.Json.Linq;
-using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
 
@@ -33,19 +30,15 @@ namespace PSProxmoxVE.Cmdlets.Network
                 return;
 
             var session = GetSession();
-            using var client = new PveHttpClient(session);
 
             WriteVerbose($"Applying network configuration on node '{Node}'...");
-            var json = client.PutAsync($"nodes/{Uri.EscapeDataString(Node)}/network").GetAwaiter().GetResult();
-            var root = JObject.Parse(json);
-            var upid = root["data"]?.ToString() ?? string.Empty;
+            var service = new NetworkService();
+            var task = service.ApplyNetworkConfig(session, Node);
 
-            var task = new PveTask { Upid = upid, Node = Node, Status = "running" };
-
-            if (Wait.IsPresent && !string.IsNullOrEmpty(upid))
+            if (Wait.IsPresent && !string.IsNullOrEmpty(task.Upid))
             {
                 var taskService = new TaskService();
-                task = taskService.WaitForTask(session, Node, upid);
+                task = taskService.WaitForTask(session, Node, task.Upid);
             }
 
             WriteObject(task);

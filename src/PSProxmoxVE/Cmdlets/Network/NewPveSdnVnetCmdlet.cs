@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Management.Automation;
-using PSProxmoxVE.Core.Client;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Network
 {
@@ -16,10 +16,12 @@ namespace PSProxmoxVE.Cmdlets.Network
     {
         /// <summary>The VNet identifier (alphanumeric, up to 8 characters).</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The SDN VNet name.")]
+        [ValidatePattern(@"\A[A-Za-z0-9][A-Za-z0-9._-]*\z")]
         public string Vnet { get; set; } = string.Empty;
 
         /// <summary>The SDN zone this VNet belongs to.</summary>
         [Parameter(Mandatory = true, Position = 1, HelpMessage = "The SDN zone name.")]
+        [ValidatePattern(@"\A[A-Za-z0-9][A-Za-z0-9._-]*\z")]
         public string Zone { get; set; } = string.Empty;
 
         /// <summary>VLAN tag for VLAN-type zones.</summary>
@@ -41,10 +43,9 @@ namespace PSProxmoxVE.Cmdlets.Network
 
             var session = GetSession();
             RequireVersion(session, "SDN", 6, 2, 8, 0);
-            using var client = new PveHttpClient(session);
 
             WriteVerbose($"Creating SDN VNet '{Vnet}'...");
-            var data = new Dictionary<string, string>
+            var data = new Dictionary<string, object>
             {
                 ["vnet"] = Vnet,
                 ["zone"] = Zone
@@ -54,7 +55,8 @@ namespace PSProxmoxVE.Cmdlets.Network
             if (!string.IsNullOrEmpty(Alias))   data["alias"]     = Alias!;
             if (VlanAware.IsPresent)             data["vlanaware"] = "1";
 
-            client.PostAsync("cluster/sdn/vnets", data).GetAwaiter().GetResult();
+            var service = new NetworkService();
+            service.CreateSdnVnet(session, data);
         }
     }
 }

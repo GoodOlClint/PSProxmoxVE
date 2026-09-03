@@ -1,5 +1,5 @@
 using System.Management.Automation;
-using PSProxmoxVE.Core.Client;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Network
 {
@@ -16,6 +16,7 @@ namespace PSProxmoxVE.Cmdlets.Network
     {
         /// <summary>The SDN VNet containing the subnet.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The SDN VNet name.")]
+        [ValidatePattern(@"\A[A-Za-z0-9][A-Za-z0-9._-]*\z")]
         public string Vnet { get; set; } = string.Empty;
 
         /// <summary>The subnet CIDR to remove (e.g. "10.0.0.0/24").</summary>
@@ -29,12 +30,10 @@ namespace PSProxmoxVE.Cmdlets.Network
 
             var session = GetSession();
             RequireVersion(session, "SDN", 6, 2, 8, 0);
-            using var client = new PveHttpClient(session);
 
             WriteVerbose($"Removing SDN subnet '{Subnet}' from VNet '{Vnet}'...");
-            client.DeleteAsync(
-                $"cluster/sdn/vnets/{System.Uri.EscapeDataString(Vnet)}/subnets/{System.Uri.EscapeDataString(Subnet)}")
-                .GetAwaiter().GetResult();
+            var service = new NetworkService();
+            service.RemoveSdnSubnet(session, Vnet, Subnet);
         }
     }
 }

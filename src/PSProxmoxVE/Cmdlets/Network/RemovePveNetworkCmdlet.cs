@@ -1,6 +1,5 @@
-using System;
 using System.Management.Automation;
-using PSProxmoxVE.Core.Client;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Network
 {
@@ -29,10 +28,10 @@ namespace PSProxmoxVE.Cmdlets.Network
                 return;
 
             var session = GetSession();
-            using var client = new PveHttpClient(session);
 
-            WriteVerbose($"Removing network interface '{Iface}' on node '{Node}'...");
-            client.DeleteAsync($"nodes/{Uri.EscapeDataString(Node)}/network/{Uri.EscapeDataString(Iface)}").GetAwaiter().GetResult();
+            WriteVerbose($"Removing network interface '{Iface}' from node '{Node}'...");
+            var service = new NetworkService();
+            service.RemoveNetwork(session, Node, Iface);
         }
     }
 }

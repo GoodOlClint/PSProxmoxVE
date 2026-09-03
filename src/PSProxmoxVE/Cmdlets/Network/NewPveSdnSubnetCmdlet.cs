@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Management.Automation;
-using PSProxmoxVE.Core.Client;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Network
 {
@@ -17,6 +17,7 @@ namespace PSProxmoxVE.Cmdlets.Network
     {
         /// <summary>The SDN VNet to add the subnet to.</summary>
         [Parameter(Mandatory = true, Position = 0, HelpMessage = "The SDN VNet name.")]
+        [ValidatePattern(@"\A[A-Za-z0-9][A-Za-z0-9._-]*\z")]
         public string Vnet { get; set; } = string.Empty;
 
         /// <summary>The subnet CIDR notation (e.g. "10.0.0.0/24").</summary>
@@ -54,10 +55,8 @@ namespace PSProxmoxVE.Cmdlets.Network
                     + $"Connected server is PVE {session.ServerVersion}. The parameter will be sent but may be ignored.");
             }
 
-            using var client = new PveHttpClient(session);
-
             WriteVerbose($"Creating SDN subnet '{Subnet}' on VNet '{Vnet}'...");
-            var data = new Dictionary<string, string>
+            var data = new Dictionary<string, object>
             {
                 ["subnet"] = Subnet,
                 ["type"] = "subnet"
@@ -68,9 +67,8 @@ namespace PSProxmoxVE.Cmdlets.Network
             if (!string.IsNullOrEmpty(DnsZonePrefix))  data["dnszoneprefix"]  = DnsZonePrefix!;
             if (!string.IsNullOrEmpty(DhcpRange))      data["dhcp-range"]     = DhcpRange!;
 
-            client.PostAsync(
-                $"cluster/sdn/vnets/{System.Uri.EscapeDataString(Vnet)}/subnets", data)
-                .GetAwaiter().GetResult();
+            var service = new NetworkService();
+            service.CreateSdnSubnet(session, Vnet, data);
         }
     }
 }
