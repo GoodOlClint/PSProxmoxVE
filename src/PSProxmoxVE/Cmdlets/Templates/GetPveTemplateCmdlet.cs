@@ -1,8 +1,6 @@
-using System;
 using System.Management.Automation;
-using Newtonsoft.Json.Linq;
-using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Vms;
+using PSProxmoxVE.Core.Services;
 
 namespace PSProxmoxVE.Cmdlets.Templates
 {
@@ -28,57 +26,33 @@ namespace PSProxmoxVE.Cmdlets.Templates
         protected override void ProcessRecord()
         {
             var session = GetSession();
-            using var client = new PveHttpClient(session);
+            var service = new TemplateService();
 
             WriteVerbose("Getting templates...");
-            var nodesToQuery = new System.Collections.Generic.List<string>();
+            var queryNode = string.IsNullOrEmpty(Node) ? null : Node;
+            var templates = service.GetTemplates(session, queryNode,
+                onNodeSkipped: (nodeName, ex) => WriteWarning($"Skipping node '{nodeName}': {ex.Message}"));
 
-            if (!string.IsNullOrEmpty(Node))
+            foreach (var vm in templates)
             {
-                nodesToQuery.Add(Node!);
-            }
-            else
-            {
-                var nodesJson = client.GetAsync("nodes").GetAwaiter().GetResult();
-                var nodesRoot = JObject.Parse(nodesJson);
-                var nodesData = nodesRoot["data"] as JArray ?? new JArray();
-                foreach (var n in nodesData)
-                    nodesToQuery.Add(n["node"]?.ToString() ?? string.Empty);
-            }
+                if (vm.Node == null && queryNode != null) vm.Node = queryNode;
 
-            foreach (var node in nodesToQuery)
-            {
-                if (string.IsNullOrEmpty(node)) continue;
-
-                var json = client.GetAsync($"nodes/{Uri.EscapeDataString(node)}/qemu").GetAwaiter().GetResult();
-                var root = JObject.Parse(json);
-                var data = root["data"] as JArray ?? new JArray();
-
-                foreach (var item in data)
+                if (!string.IsNullOrEmpty(Name) && vm.Name != null)
                 {
-                    var vm = item.ToObject<PveVm>()!;
-                    if (vm.Node == null) vm.Node = node;
-
-                    // Only return templates
-                    if (vm.Template != 1) continue;
-
-                    if (!string.IsNullOrEmpty(Name) && vm.Name != null)
+                    var pattern = Name!.Replace("*", "");
+                    if (Name.Contains("*"))
                     {
-                        var pattern = Name!.Replace("*", "");
-                        if (Name.Contains("*"))
-                        {
-                            if (vm.Name.IndexOf(pattern, System.StringComparison.OrdinalIgnoreCase) < 0)
-                                continue;
-                        }
-                        else
-                        {
-                            if (!string.Equals(vm.Name, Name, System.StringComparison.OrdinalIgnoreCase))
-                                continue;
-                        }
+                        if (vm.Name.IndexOf(pattern, System.StringComparison.OrdinalIgnoreCase) < 0)
+                            continue;
                     }
-
-                    WriteObject(vm);
+                    else
+                    {
+                        if (!string.Equals(vm.Name, Name, System.StringComparison.OrdinalIgnoreCase))
+                            continue;
+                    }
                 }
+
+                WriteObject(vm);
             }
         }
     }

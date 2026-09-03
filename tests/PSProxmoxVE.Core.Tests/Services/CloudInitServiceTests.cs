@@ -156,5 +156,54 @@ namespace PSProxmoxVE.Core.Tests.Services
         {
             Assert.Throws<ArgumentNullException>(() => new CloudInitService(null!));
         }
+
+        [Fact]
+        public void GetFullVmConfig_ReturnsFullConfig_IncludingCloudInitAndOtherFields()
+        {
+            // Arrange
+            var json = @"{""data"": {
+                ""ciuser"": ""ubuntu"",
+                ""ipconfig0"": ""ip=dhcp"",
+                ""cores"": 4,
+                ""memory"": 8192
+            }}";
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient.Setup(c => c.GetAsync("nodes/pve1/qemu/100/config")).ReturnsAsync(json);
+            var service = new CloudInitService(mockClient.Object);
+
+            // Act
+            var config = service.GetFullVmConfig(CreateSession(), "pve1", 100);
+
+            // Assert — cloud-init fields and every other config field are both present
+            Assert.Equal("ubuntu", config.CiUser);
+            Assert.Equal("ip=dhcp", config.IpConfig0);
+            Assert.Equal(4, config.Cores);
+            Assert.Equal(8192, config.Memory);
+            mockClient.Verify(c => c.GetAsync("nodes/pve1/qemu/100/config"), Times.Once);
+        }
+
+        [Fact]
+        public void GetFullVmConfig_EscapesNodeInPath()
+        {
+            // Arrange
+            var json = @"{""data"": {}}";
+            var mockClient = new Mock<IPveHttpClient>();
+            mockClient.Setup(c => c.GetAsync("nodes/pve%20node/qemu/100/config")).ReturnsAsync(json);
+            var service = new CloudInitService(mockClient.Object);
+
+            // Act
+            service.GetFullVmConfig(CreateSession(), "pve node", 100);
+
+            // Assert
+            mockClient.Verify(c => c.GetAsync("nodes/pve%20node/qemu/100/config"), Times.Once);
+        }
+
+        [Fact]
+        public void GetFullVmConfig_NullSession_ThrowsArgumentNullException()
+        {
+            var service = new CloudInitService(new Mock<IPveHttpClient>().Object);
+
+            Assert.Throws<ArgumentNullException>(() => service.GetFullVmConfig(null!, "pve1", 100));
+        }
     }
 }

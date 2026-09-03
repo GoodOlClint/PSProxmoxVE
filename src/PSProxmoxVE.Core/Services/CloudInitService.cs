@@ -22,16 +22,40 @@ namespace PSProxmoxVE.Core.Services
             "nameserver", "searchdomain", "cicustom"
         };
 
+        private readonly VmService _vmService;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="CloudInitService"/> class.
         /// </summary>
-        public CloudInitService() { }
+        public CloudInitService()
+        {
+            _vmService = new VmService();
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CloudInitService"/> class with an injected HTTP client.
         /// </summary>
         /// <param name="client">The HTTP client to use for API calls. The caller owns its lifetime.</param>
-        public CloudInitService(IPveHttpClient client) : base(client) { }
+        public CloudInitService(IPveHttpClient client) : base(client)
+        {
+            _vmService = new VmService(client);
+        }
+
+        /// <summary>
+        /// Returns the full VM configuration (delegates to <see cref="VmService.GetVmConfig"/>).
+        /// Cloud-Init fields (ciuser, ipconfig*, etc.) are present as ordinary properties of
+        /// the returned config alongside every other setting.
+        /// </summary>
+        /// <param name="session">The authenticated PVE session.</param>
+        /// <param name="node">The cluster node name.</param>
+        /// <param name="vmid">The VM ID.</param>
+        public PveVmConfig GetFullVmConfig(PveSession session, string node, int vmid)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
+
+            return _vmService.GetVmConfig(session, node, vmid);
+        }
 
         /// <summary>
         /// Retrieves the Cloud-Init specific configuration fields for a VM.
