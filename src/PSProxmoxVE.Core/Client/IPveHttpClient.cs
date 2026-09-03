@@ -35,12 +35,6 @@ namespace PSProxmoxVE.Core.Client
         /// <summary>Synchronous wrapper for <see cref="PostAsync(string, Dictionary{string, string})"/>.</summary>
         string Post(string resource, Dictionary<string, string>? data = null);
 
-        /// <summary>Synchronous wrapper for <see cref="PutAsync"/>.</summary>
-        string Put(string resource, Dictionary<string, string>? data = null);
-
-        /// <summary>Synchronous wrapper for <see cref="DeleteAsync"/>.</summary>
-        string Delete(string resource);
-
         /// <summary>
         /// Uploads a file to a Proxmox VE storage endpoint using MultipartFormDataContent.
         /// </summary>
