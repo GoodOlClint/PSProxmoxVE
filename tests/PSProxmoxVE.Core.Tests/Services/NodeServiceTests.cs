@@ -250,6 +250,7 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.NotNull(task);
             Assert.Contains("startall", task.Upid);
             Assert.Equal("pve1", task.Node);
+            Assert.Equal("running", task.Status);
             mockClient.Verify(c => c.PostAsync(
                 "nodes/pve1/startall",
                 It.IsAny<Dictionary<string, string>>()),
@@ -275,6 +276,7 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.NotNull(task);
             Assert.Contains("stopall", task.Upid);
             Assert.Equal("pve1", task.Node);
+            Assert.Equal("running", task.Status);
             mockClient.Verify(c => c.PostAsync(
                 "nodes/pve1/stopall",
                 It.IsAny<Dictionary<string, string>>()),

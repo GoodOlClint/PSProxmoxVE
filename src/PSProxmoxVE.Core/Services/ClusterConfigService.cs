@@ -19,16 +19,24 @@ namespace PSProxmoxVE.Core.Services
         private static readonly TimeSpan DefaultQuorumTimeout = TimeSpan.FromSeconds(60);
         private static readonly TimeSpan QuorumPollInterval = TimeSpan.FromSeconds(2);
 
+        private readonly ClusterService _clusterService;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterConfigService"/> class.
         /// </summary>
-        public ClusterConfigService() { }
+        public ClusterConfigService()
+        {
+            _clusterService = new ClusterService();
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterConfigService"/> class with an injected HTTP client.
         /// </summary>
         /// <param name="client">The HTTP client to use for API calls. The caller owns its lifetime.</param>
-        public ClusterConfigService(IPveHttpClient client) : base(client) { }
+        public ClusterConfigService(IPveHttpClient client) : base(client)
+        {
+            _clusterService = new ClusterService(client);
+        }
 
         /// <summary>
         /// Returns the cluster configuration directory (GET /cluster/config).
@@ -298,22 +306,6 @@ namespace PSProxmoxVE.Core.Services
         }
 
         /// <summary>
-        /// Returns the current cluster status (GET /cluster/status).
-        /// Delegates to the same endpoint as <see cref="ClusterService.GetClusterStatus"/>.
-        /// </summary>
-        public PveClusterStatus[] GetClusterStatus(PveSession session)
-        {
-            if (session == null) throw new ArgumentNullException(nameof(session));
-
-            return Invoke(session, client =>
-            {
-                var response = client.GetAsync("cluster/status").GetAwaiter().GetResult();
-                var data = JObject.Parse(response)["data"];
-                return data?.ToObject<PveClusterStatus[]>() ?? Array.Empty<PveClusterStatus>();
-            });
-        }
-
-        /// <summary>
         /// Blocks until the cluster reports quorum (GET /cluster/status, quorate = 1).
         /// </summary>
         /// <param name="session">The authenticated PVE session.</param>
@@ -335,7 +327,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 try
                 {
-                    foreach (var entry in GetClusterStatus(session))
+                    foreach (var entry in _clusterService.GetClusterStatus(session))
                     {
                         if (string.Equals(entry.Type, "cluster", StringComparison.OrdinalIgnoreCase)
                             && entry.Quorate == 1)

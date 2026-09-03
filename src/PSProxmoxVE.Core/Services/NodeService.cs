@@ -153,7 +153,7 @@ namespace PSProxmoxVE.Core.Services
             return Invoke(session, client =>
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/startall", formData).GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -172,7 +172,7 @@ namespace PSProxmoxVE.Core.Services
             return Invoke(session, client =>
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/stopall", formData).GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -192,21 +192,6 @@ namespace PSProxmoxVE.Core.Services
                     throw new InvalidOperationException("Failed to retrieve PVE version from API response.");
                 return PveVersion.Parse(versionStr!);
             });
-        }
-
-        // -------------------------------------------------------------------------
-        // Private helpers
-        // -------------------------------------------------------------------------
-
-        private static PveTask ParseTask(string response, string node)
-        {
-            var data = JObject.Parse(response)["data"];
-            if (data?.Type == JTokenType.String)
-                return new PveTask { Upid = data.ToString(), Node = node };
-
-            var task = data?.ToObject<PveTask>() ?? new PveTask();
-            task.Node = node;
-            return task;
         }
     }
 }

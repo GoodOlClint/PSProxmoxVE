@@ -130,6 +130,7 @@ namespace PSProxmoxVE.Core.Tests.Services
             // config lock; the native endpoint keeps the whole restart server-side.
             Assert.Equal($"nodes/{TestNode}/qemu/{TestVmId}/status/reboot", resource);
             Assert.Contains("qmreboot", task.Upid);
+            Assert.Equal("running", task.Status);
         }
 
         [Fact]

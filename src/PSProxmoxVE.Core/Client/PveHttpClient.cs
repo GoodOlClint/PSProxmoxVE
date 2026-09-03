@@ -20,9 +20,7 @@ namespace PSProxmoxVE.Core.Client
     /// </summary>
     public class PveHttpClient : IPveHttpClient
     {
-#pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type
         private readonly PveSession? _session;
-#pragma warning restore CS8625
         private readonly string _baseUrl;
         private readonly HttpClient _httpClient;
         private readonly HttpMessageHandler _handler;
@@ -266,14 +264,6 @@ namespace PSProxmoxVE.Core.Client
         public string Post(string resource, Dictionary<string, string>? data = null) =>
             PostAsync(resource, data).GetAwaiter().GetResult();
 
-        /// <summary>Synchronous wrapper for <see cref="PutAsync"/>.</summary>
-        public string Put(string resource, Dictionary<string, string>? data = null) =>
-            PutAsync(resource, data).GetAwaiter().GetResult();
-
-        /// <summary>Synchronous wrapper for <see cref="DeleteAsync"/>.</summary>
-        public string Delete(string resource) =>
-            DeleteAsync(resource).GetAwaiter().GetResult();
-
         // -------------------------------------------------------------------------
         // ISO / file upload
         // -------------------------------------------------------------------------
@@ -434,9 +424,11 @@ namespace PSProxmoxVE.Core.Client
         private async Task<string> SendOnceAsync(HttpRequestMessage request, string resource, string httpMethod)
         {
             HttpResponseMessage response;
+            string body;
             try
             {
                 response = await _httpClient.SendAsync(request).ConfigureAwait(false);
+                body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             }
             catch (TaskCanceledException ex)
             {
@@ -452,11 +444,11 @@ namespace PSProxmoxVE.Core.Client
             }
             catch (HttpRequestException ex)
             {
+                // Covers both a failed connection and a stream drop mid-body-read, so every
+                // HttpRequestException PveHttpClient can throw arrives as PveApiException.
                 throw new PveApiException(HttpStatusCode.ServiceUnavailable,
                     ex.Message, resource, httpMethod, ex);
             }
-
-            var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
