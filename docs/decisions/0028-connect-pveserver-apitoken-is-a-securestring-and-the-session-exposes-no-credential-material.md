@@ -1,6 +1,6 @@
 # ADR 0028 — Connect-PveServer -ApiToken is a SecureString and the session exposes no credential material
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-03
 - **Deciders:** operator + agent
 - **Context source:** issue #147; the 2026-09-02 whole-repo review; wave 4 of the remediation
