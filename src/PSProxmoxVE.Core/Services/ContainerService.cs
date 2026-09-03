@@ -97,22 +97,6 @@ namespace PSProxmoxVE.Core.Services
         }
 
         /// <summary>
-        /// Returns a single container by its ID on the specified node.
-        /// </summary>
-        public PveContainer GetContainer(PveSession session, string node, int vmid)
-        {
-            if (session == null) throw new ArgumentNullException(nameof(session));
-            if (string.IsNullOrWhiteSpace(node)) throw new ArgumentNullException(nameof(node));
-
-            var containers = GetContainersOnNode(session, node);
-            var ct = containers.FirstOrDefault(c => c.VmId == vmid);
-            if (ct == null)
-                throw new InvalidOperationException($"Container {vmid} not found on node '{node}'.");
-            ct.Node ??= node;
-            return ct;
-        }
-
-        /// <summary>
         /// Returns the full configuration of a container.
         /// </summary>
         public PveContainerConfig GetContainerConfig(PveSession session, string node, int vmid)

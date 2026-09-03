@@ -44,27 +44,6 @@ namespace PSProxmoxVE.Core.Services
             });
         }
 
-        /// <summary>Returns a single user by their user ID (e.g. "admin@pam").</summary>
-        /// <param name="session">The authenticated PVE session.</param>
-        /// <param name="userId">The user ID in "username@realm" format.</param>
-        public PveUser GetUser(PveSession session, string userId)
-        {
-            if (session == null) throw new ArgumentNullException(nameof(session));
-            if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentNullException(nameof(userId));
-
-            return Invoke(session, client =>
-            {
-                var encodedId = Uri.EscapeDataString(userId);
-                var response = client.GetAsync($"access/users/{encodedId}").GetAwaiter().GetResult();
-                var data = JObject.Parse(response)["data"];
-                var user = data?.ToObject<PveUser>() ?? new PveUser();
-                // The single-user endpoint may not echo back the userid
-                if (string.IsNullOrEmpty(user.UserId))
-                    user.UserId = userId;
-                return user;
-            });
-        }
-
         /// <summary>
         /// Creates a new user account.
         /// </summary>

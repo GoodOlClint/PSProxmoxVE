@@ -230,51 +230,6 @@ namespace PSProxmoxVE.Core.Services
         }
 
         /// <summary>
-        /// Returns the Corosync totem configuration (GET /cluster/config/totem).
-        /// </summary>
-        public Dictionary<string, object?> GetTotem(PveSession session)
-        {
-            if (session == null) throw new ArgumentNullException(nameof(session));
-
-            return Invoke(session, client =>
-            {
-                var response = client.GetAsync("cluster/config/totem").GetAwaiter().GetResult();
-                var data = JObject.Parse(response)["data"];
-                return JsonHelper.ToDictionary(data as JObject);
-            });
-        }
-
-        /// <summary>
-        /// Returns the external quorum device (qdevice) status (GET /cluster/config/qdevice).
-        /// </summary>
-        public Dictionary<string, object?> GetQdevice(PveSession session)
-        {
-            if (session == null) throw new ArgumentNullException(nameof(session));
-
-            return Invoke(session, client =>
-            {
-                var response = client.GetAsync("cluster/config/qdevice").GetAwaiter().GetResult();
-                var data = JObject.Parse(response)["data"];
-                return JsonHelper.ToDictionary(data as JObject);
-            });
-        }
-
-        /// <summary>
-        /// Returns the cluster API version (GET /cluster/config/apiversion).
-        /// </summary>
-        public int GetApiVersion(PveSession session)
-        {
-            if (session == null) throw new ArgumentNullException(nameof(session));
-
-            return Invoke(session, client =>
-            {
-                var response = client.GetAsync("cluster/config/apiversion").GetAwaiter().GetResult();
-                var data = JObject.Parse(response)["data"];
-                return data?.ToObject<int>() ?? 0;
-            });
-        }
-
-        /// <summary>
         /// Returns the cluster-wide options (GET /cluster/options).
         /// </summary>
         public PveClusterOptions GetClusterOptions(PveSession session)

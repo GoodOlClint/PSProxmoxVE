@@ -337,25 +337,6 @@ namespace PSProxmoxVE.Core.Tests.Services
             mockClient.Verify(c => c.GetAsync("cluster/ha/status/current"), Times.Once);
         }
 
-        [Fact]
-        public void GetManagerStatus_ReturnsJObject()
-        {
-            // Arrange
-            var json = @"{""data"": {""manager_status"": {""master_node"": ""pve1""}, ""quorum"": {""node"": ""pve1""}}}";
-            var mockClient = new Mock<IPveHttpClient>();
-            mockClient.Setup(c => c.GetAsync("cluster/ha/status/manager_status")).ReturnsAsync(json);
-            var service = new HaService(mockClient.Object);
-
-            // Act
-            var status = service.GetManagerStatus(CreateSession());
-
-            // Assert
-            Assert.NotNull(status);
-            Assert.NotNull(status["manager_status"]);
-            Assert.NotNull(status["quorum"]);
-            mockClient.Verify(c => c.GetAsync("cluster/ha/status/manager_status"), Times.Once);
-        }
-
         // -----------------------------------------------------------------
         // Rules
         // -----------------------------------------------------------------

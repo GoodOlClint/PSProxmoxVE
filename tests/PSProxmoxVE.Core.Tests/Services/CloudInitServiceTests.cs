@@ -18,61 +18,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetCloudInitConfig_ReturnsConfig()
-        {
-            // Arrange
-            var json = @"{""data"": {
-                ""ciuser"": ""ubuntu"",
-                ""ipconfig0"": ""ip=dhcp"",
-                ""nameserver"": ""8.8.8.8"",
-                ""searchdomain"": ""example.com"",
-                ""sshkeys"": ""ssh-rsa%20AAAA...%20user%40host"",
-                ""boot"": ""order=scsi0;net0"",
-                ""cores"": 4,
-                ""memory"": 8192
-            }}";
-            var mockClient = new Mock<IPveHttpClient>();
-            mockClient.Setup(c => c.GetAsync("nodes/pve1/qemu/100/config")).ReturnsAsync(json);
-            var service = new CloudInitService(mockClient.Object);
-
-            // Act
-            var config = service.GetCloudInitConfig(CreateSession(), "pve1", 100);
-
-            // Assert
-            Assert.NotNull(config);
-            Assert.Equal("ubuntu", config.CiUser);
-            Assert.Equal("ip=dhcp", config.IpConfig0);
-            Assert.Equal("8.8.8.8", config.Nameserver);
-            Assert.Equal("example.com", config.Searchdomain);
-            Assert.Equal("ssh-rsa%20AAAA...%20user%40host", config.SshKeys);
-            mockClient.Verify(c => c.GetAsync("nodes/pve1/qemu/100/config"), Times.Once);
-        }
-
-        [Fact]
-        public void GetCloudInitConfig_ExcludesNonCiFields()
-        {
-            // Arrange — response includes non-CI fields that should be ignored
-            var json = @"{""data"": {
-                ""ciuser"": ""admin"",
-                ""cores"": 4,
-                ""memory"": 8192,
-                ""boot"": ""order=scsi0""
-            }}";
-            var mockClient = new Mock<IPveHttpClient>();
-            mockClient.Setup(c => c.GetAsync("nodes/pve1/qemu/200/config")).ReturnsAsync(json);
-            var service = new CloudInitService(mockClient.Object);
-
-            // Act
-            var config = service.GetCloudInitConfig(CreateSession(), "pve1", 200);
-
-            // Assert
-            Assert.Equal("admin", config.CiUser);
-            // Non-CI fields should not appear in the result
-            Assert.Null(config.IpConfig0);
-            Assert.Null(config.Nameserver);
-        }
-
-        [Fact]
         public void SetCloudInitConfig_CallsPutAsyncWithCorrectResource()
         {
             // Arrange

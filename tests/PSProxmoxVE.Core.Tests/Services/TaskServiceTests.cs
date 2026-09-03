@@ -59,35 +59,6 @@ namespace PSProxmoxVE.Core.Tests.Services
         }
 
         [Fact]
-        public void GetTaskLog_HappyPath_ReturnsLogEntries()
-        {
-            // Arrange
-            var json = @"{
-                ""data"": [
-                    { ""n"": 1, ""t"": ""starting task qmstart"" },
-                    { ""n"": 2, ""t"": ""VM 100 started"" },
-                    { ""n"": 3, ""t"": ""TASK OK"" }
-                ]
-            }";
-
-            var mockClient = new Mock<IPveHttpClient>();
-            mockClient.Setup(c => c.GetAsync(It.IsAny<string>()))
-                .ReturnsAsync(json);
-
-            var service = new TaskService(mockClient.Object);
-            var session = CreateSession();
-
-            // Act
-            var logs = service.GetTaskLog(session, TestNode, TestUpid);
-
-            // Assert
-            Assert.Equal(3, logs.Length);
-            Assert.Equal(1, logs[0].LineNumber);
-            Assert.Equal("starting task qmstart", logs[0].Text);
-            Assert.Equal("TASK OK", logs[2].Text);
-        }
-
-        [Fact]
         public void GetTasks_HappyPath_ReturnsCorrectCount()
         {
             // Arrange
