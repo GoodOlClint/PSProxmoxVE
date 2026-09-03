@@ -31,7 +31,7 @@ Describe 'OVA Import — Integration' -Tag 'Integration' {
                 return
             }
 
-            $metadata = [PSProxmoxVE.Core.Models.Vms.OvfMetadata]::FromOva($script:OvaPath)
+            $metadata = [PSProxmoxVE.Core.Utilities.OvfReader]::ReadOva($script:OvaPath)
             $metadata | Should -Not -BeNullOrEmpty
             $metadata.Name | Should -Not -BeNullOrEmpty
             $metadata.CpuCount | Should -BeGreaterThan 0
