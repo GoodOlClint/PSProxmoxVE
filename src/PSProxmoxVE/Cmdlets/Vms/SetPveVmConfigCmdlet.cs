@@ -105,7 +105,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
         [Parameter(Mandatory = false, HelpMessage = "Comma-separated config keys to delete.")]
         public string? Delete { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"VM {VmId} on node '{Node}'", "Set-PveVmConfig"))
                 return;

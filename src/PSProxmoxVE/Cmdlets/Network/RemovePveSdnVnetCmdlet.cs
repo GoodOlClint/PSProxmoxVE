@@ -18,7 +18,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         [ValidatePattern(@"\A[A-Za-z0-9][A-Za-z0-9._-]*\z")]
         public string Vnet { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(Vnet, "Remove PVE SDN VNet"))
                 return;

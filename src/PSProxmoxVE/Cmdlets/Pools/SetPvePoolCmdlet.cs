@@ -39,7 +39,7 @@ namespace PSProxmoxVE.Cmdlets.Pools
         [Parameter(Mandatory = false, HelpMessage = "Comma-separated list of members to remove.")]
         public string? Delete { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"pool '{PoolId}'", "Set-PvePool"))
                 return;

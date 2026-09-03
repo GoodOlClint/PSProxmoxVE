@@ -18,7 +18,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = false, Position = 0, HelpMessage = "The SDN zone name.")]
         public string? Zone { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
             RequireVersion(session, "SDN", 6, 2, 8, 0);

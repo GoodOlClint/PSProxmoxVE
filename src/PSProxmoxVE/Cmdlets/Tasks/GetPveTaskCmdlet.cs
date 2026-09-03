@@ -25,7 +25,7 @@ namespace PSProxmoxVE.Cmdlets.Tasks
         [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true, HelpMessage = "The task UPID.")]
         public string Upid { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
 

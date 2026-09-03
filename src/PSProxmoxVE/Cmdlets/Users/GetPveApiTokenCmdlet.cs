@@ -28,7 +28,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         [Parameter(Mandatory = false, Position = 1, HelpMessage = "The API token identifier.")]
         public string? TokenId { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
 

@@ -28,7 +28,7 @@ namespace PSProxmoxVE.Cmdlets.Tasks
         [Parameter(Mandatory = true, Position = 1, ValueFromPipelineByPropertyName = true, HelpMessage = "The task UPID.")]
         public string Upid { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"task '{Upid}' on node '{Node}'", "Stop-PveTask"))
                 return;

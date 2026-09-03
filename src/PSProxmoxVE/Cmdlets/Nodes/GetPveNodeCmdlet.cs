@@ -22,7 +22,7 @@ namespace PSProxmoxVE.Cmdlets.Nodes
         [ValidateNotNullOrEmpty]
         public string? Name { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
 

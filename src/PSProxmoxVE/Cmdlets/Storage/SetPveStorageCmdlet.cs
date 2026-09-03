@@ -38,7 +38,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
         [Parameter(Mandatory = false, HelpMessage = "Additional configuration parameters as a hashtable.")]
         public System.Collections.Hashtable? AdditionalConfig { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"storage '{Storage}'", "Set"))
                 return;

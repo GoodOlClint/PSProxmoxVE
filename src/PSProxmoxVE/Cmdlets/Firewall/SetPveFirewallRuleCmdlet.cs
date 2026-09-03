@@ -65,7 +65,7 @@ namespace PSProxmoxVE.Cmdlets.Firewall
         [Parameter(Mandatory = false, HelpMessage = "Network interface.")]
         public string? Iface { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var level = Level;
             if (!FirewallScope.TryValidate(level, Node, VmId, Group, out var scopeErrorId, out var scopeMessage))

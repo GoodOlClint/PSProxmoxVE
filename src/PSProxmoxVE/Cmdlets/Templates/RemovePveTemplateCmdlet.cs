@@ -34,7 +34,7 @@ namespace PSProxmoxVE.Cmdlets.Templates
         [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"Template {VmId} on {Node}", "Remove PVE Template (all disks will be deleted)"))
                 return;

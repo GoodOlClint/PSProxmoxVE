@@ -52,7 +52,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = false, HelpMessage = "IPAM plugin to use.")]
         public string? Ipam { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(Zone, "Create PVE SDN Zone"))
                 return;

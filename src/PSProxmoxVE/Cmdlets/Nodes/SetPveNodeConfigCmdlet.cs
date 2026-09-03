@@ -28,7 +28,7 @@ namespace PSProxmoxVE.Cmdlets.Nodes
         [Parameter(Mandatory = false, HelpMessage = "Wake-on-LAN configuration.")]
         public string? Wakeonlan { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(Node, "Set PVE Node Config"))
                 return;

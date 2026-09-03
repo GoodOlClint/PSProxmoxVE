@@ -22,7 +22,7 @@ namespace PSProxmoxVE.Cmdlets.Backup
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The backup job ID.")]
         public string Id { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"backup job '{Id}'", "Remove-PveBackupJob"))
                 return;

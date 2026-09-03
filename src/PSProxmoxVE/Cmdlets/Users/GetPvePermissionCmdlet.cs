@@ -25,7 +25,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         [Parameter(Mandatory = false, HelpMessage = "The user ID in user@realm format.")]
         public string? UserId { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
 

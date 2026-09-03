@@ -24,7 +24,7 @@ namespace PSProxmoxVE.Cmdlets.Firewall
         [Parameter(Mandatory = false, HelpMessage = "Optional IP set name to filter by.")]
         public string? Name { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var level = Level;
             if (!FirewallScope.TryValidate(level, Node, VmId, null, out var scopeErrorId, out var scopeMessage))

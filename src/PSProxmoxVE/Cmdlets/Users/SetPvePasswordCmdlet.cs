@@ -24,7 +24,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         [Parameter(Mandatory = true, Position = 1, HelpMessage = "The new password for the user.")]
         public System.Security.SecureString Password { get; set; } = new System.Security.SecureString();
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(UserId, "Set PVE Password"))
                 return;

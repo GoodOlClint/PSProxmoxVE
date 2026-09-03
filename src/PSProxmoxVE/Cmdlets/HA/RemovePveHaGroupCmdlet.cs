@@ -20,7 +20,7 @@ namespace PSProxmoxVE.Cmdlets.HA
             HelpMessage = "HA group name to delete.")]
         public string Group { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"HA group '{Group}'", "Delete"))
                 return;

@@ -37,7 +37,7 @@ namespace PSProxmoxVE.Cmdlets.Nodes
         [Parameter(Mandatory = false, HelpMessage = "Tertiary DNS server address.")]
         public string? Dns3 { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(Node, "Set PVE Node DNS"))
                 return;

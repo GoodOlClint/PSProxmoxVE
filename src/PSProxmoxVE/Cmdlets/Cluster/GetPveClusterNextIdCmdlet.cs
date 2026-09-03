@@ -19,7 +19,7 @@ namespace PSProxmoxVE.Cmdlets.Cluster
         [ValidateRange(100, 999999999)]
         public int? VmId { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
             var service = new ClusterConfigService();

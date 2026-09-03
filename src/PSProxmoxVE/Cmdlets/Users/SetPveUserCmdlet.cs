@@ -52,7 +52,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         [Parameter(Mandatory = false, HelpMessage = "Enable or disable the user account.")]
         public bool? Enable { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(UserId, "Set PVE User"))
                 return;

@@ -63,7 +63,7 @@ namespace PSProxmoxVE.Cmdlets.Backup
         [Parameter(Mandatory = false, HelpMessage = "Timeout in seconds for -Wait (default 3600).")]
         public int Timeout { get; set; } = 3600;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"VM {VmId} on node '{Node}'", "New-PveBackup"))
                 return;

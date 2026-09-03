@@ -20,7 +20,7 @@ namespace PSProxmoxVE.Cmdlets.HA
             HelpMessage = "Service ID (e.g. 'vm:100', 'ct:200').")]
         public string Sid { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"HA resource '{Sid}'", "Remove from HA management"))
                 return;

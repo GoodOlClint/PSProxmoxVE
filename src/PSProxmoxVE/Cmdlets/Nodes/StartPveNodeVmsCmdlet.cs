@@ -25,7 +25,7 @@ namespace PSProxmoxVE.Cmdlets.Nodes
         [Parameter(Mandatory = false, HelpMessage = "Comma-separated list of VM IDs to start.")]
         public string? VmIds { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(Node, "Start all VMs"))
                 return;

@@ -23,7 +23,7 @@ namespace PSProxmoxVE.Cmdlets.Templates
         [Parameter(Mandatory = false, HelpMessage = "Filter by template name (supports wildcards).")]
         public string? Name { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
             var service = new TemplateService();

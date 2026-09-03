@@ -52,7 +52,7 @@ namespace PSProxmoxVE.Cmdlets.Tasks
         [Parameter(Mandatory = false, HelpMessage = "How often to poll task status.")]
         public TimeSpan? PollInterval { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
             using var client = new PveHttpClient(session);

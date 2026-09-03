@@ -25,7 +25,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
         [ValidateNotNullOrEmpty]
         public string Storage { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
             var service = new StorageService();

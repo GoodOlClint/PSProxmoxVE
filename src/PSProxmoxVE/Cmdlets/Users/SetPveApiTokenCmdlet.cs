@@ -35,7 +35,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         [Parameter(Mandatory = false, HelpMessage = "Whether the token uses privilege separation.")]
         public SwitchParameter PrivilegeSeparation { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"API token '{UserId}!{TokenId}'", "Set"))
                 return;

@@ -25,7 +25,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         [Parameter(Mandatory = false, Position = 1, HelpMessage = "Comma-separated list of privileges.")]
         public string? Privileges { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(RoleId, "Create PVE Role"))
                 return;

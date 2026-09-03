@@ -44,7 +44,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
         [Parameter(Mandatory = true, HelpMessage = "New disk size (e.g. 50G or +5G to grow).")]
         public string Size { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"Disk '{Disk}' on container {VmId} (node '{Node}') to size '{Size}'", "Resize-PveContainerDisk"))
                 return;

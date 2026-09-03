@@ -36,7 +36,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = false, HelpMessage = "Enable VLAN awareness on this VNet.")]
         public SwitchParameter VlanAware { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"{Vnet} in zone {Zone}", "Create PVE SDN VNet"))
                 return;

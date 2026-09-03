@@ -19,7 +19,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         [Parameter(Mandatory = false, Position = 0, HelpMessage = "The role identifier.")]
         public string? RoleId { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
 

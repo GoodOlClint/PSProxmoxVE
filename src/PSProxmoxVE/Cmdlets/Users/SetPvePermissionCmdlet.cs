@@ -40,7 +40,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         [Parameter(Mandatory = false, HelpMessage = "Remove the ACL entry instead of adding it.")]
         public SwitchParameter Delete { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var action = Delete.IsPresent ? "Remove" : "Set";
             if (!ShouldProcess($"{Type} '{UgId}' at '{Path}'", $"{action} PVE Permission ({Role})"))

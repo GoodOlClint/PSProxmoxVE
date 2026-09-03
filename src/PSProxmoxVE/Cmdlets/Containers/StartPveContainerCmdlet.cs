@@ -41,7 +41,7 @@ namespace PSProxmoxVE.Cmdlets.Containers
         [ValidateRange(1, 3600)]
         public int Timeout { get; set; } = 60;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"Container {VmId} on node '{Node}'", "Start-PveContainer"))
                 return;

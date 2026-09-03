@@ -51,7 +51,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
         [ValidateRange(0, int.MaxValue)]
         public int? TimeoutSeconds { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"{Node}/{Storage}/{Filename}", $"Download from {Url}"))
                 return;

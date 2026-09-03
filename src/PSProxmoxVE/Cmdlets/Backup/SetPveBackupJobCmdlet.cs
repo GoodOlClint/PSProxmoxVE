@@ -96,7 +96,7 @@ namespace PSProxmoxVE.Cmdlets.Backup
         [Parameter(Mandatory = false, HelpMessage = "Prune-backups configuration string.")]
         public string? PruneBackups { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"backup job '{Id}'", "Set-PveBackupJob"))
                 return;

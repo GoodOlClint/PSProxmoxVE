@@ -25,7 +25,7 @@ namespace PSProxmoxVE.Cmdlets.Firewall
         [Parameter(Mandatory = true, HelpMessage = "The CIDR network address to remove.")]
         public string Cidr { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var level = Level;
             if (!FirewallScope.TryValidate(level, Node, VmId, null, out var scopeErrorId, out var scopeMessage))

@@ -185,7 +185,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
         [Parameter(Mandatory = false, HelpMessage = "Wait for the task to complete before returning.")]
         public SwitchParameter Wait { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             // Validate -DiskSize and disk-option combinations before ShouldProcess so
             // typos and invalid combos are rejected even with -WhatIf, and so the error

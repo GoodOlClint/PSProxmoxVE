@@ -25,7 +25,7 @@ namespace PSProxmoxVE.Cmdlets.CloudInit
         [ValidateRange(100, 999999999)]
         public int VmId { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
             RequireVersion(session, "Cloud-Init management", 7, 2);

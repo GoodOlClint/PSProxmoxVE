@@ -20,7 +20,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         [ValidateNotNullOrEmpty]
         public string GroupId { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(GroupId, "Remove PVE Group"))
                 return;

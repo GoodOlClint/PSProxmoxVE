@@ -46,7 +46,7 @@ namespace PSProxmoxVE.Cmdlets.Users
         [Parameter(Mandatory = false, HelpMessage = "Enable token privilege separation.")]
         public SwitchParameter PrivilegeSeparation { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var fullTokenId = $"{UserId}!{TokenId}";
             if (!ShouldProcess(fullTokenId, "Create PVE API Token"))

@@ -41,7 +41,7 @@ namespace PSProxmoxVE.Cmdlets.Storage
         [ValidateSet("raw", "qcow2", "vmdk", IgnoreCase = true)]
         public string? Format { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"{Filename} ({Size})", "New PVE Storage Disk"))
                 return;

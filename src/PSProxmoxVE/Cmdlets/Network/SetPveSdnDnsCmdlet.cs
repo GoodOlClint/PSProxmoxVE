@@ -35,7 +35,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = false, HelpMessage = "The TTL for DNS records.")]
         public int? Ttl { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess(Dns, "Set PVE SDN DNS"))
                 return;

@@ -61,7 +61,7 @@ namespace PSProxmoxVE.Cmdlets.Cluster
         private const int ReauthMaxAttempts = 10;
         private const int ReauthDelayMs = 3000;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"this node to cluster via '{Hostname}'", "Join cluster"))
                 return;

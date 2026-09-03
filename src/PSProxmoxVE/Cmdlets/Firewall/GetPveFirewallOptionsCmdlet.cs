@@ -19,7 +19,7 @@ namespace PSProxmoxVE.Cmdlets.Firewall
         [ValidateRange(100, 999999999)]
         public int? VmId { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var level = Level;
             if (!FirewallScope.TryValidate(level, Node, VmId, null, out var scopeErrorId, out var scopeMessage))

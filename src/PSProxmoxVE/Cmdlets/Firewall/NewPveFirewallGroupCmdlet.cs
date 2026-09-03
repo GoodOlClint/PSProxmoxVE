@@ -15,7 +15,7 @@ namespace PSProxmoxVE.Cmdlets.Firewall
         [Parameter(Mandatory = false, HelpMessage = "Optional comment for the security group.")]
         public string? Comment { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"firewall security group '{Group}'", "Create"))
                 return;

@@ -18,7 +18,7 @@ namespace PSProxmoxVE.Cmdlets.Network
         [Parameter(Mandatory = true, Position = 0, ValueFromPipelineByPropertyName = true, HelpMessage = "The DNS plugin identifier to remove.")]
         public string Dns { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"SDN DNS '{Dns}'", "Remove PVE SDN DNS"))
                 return;

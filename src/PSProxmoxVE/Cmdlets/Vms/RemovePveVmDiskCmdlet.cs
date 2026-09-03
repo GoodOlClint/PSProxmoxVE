@@ -41,7 +41,7 @@ namespace PSProxmoxVE.Cmdlets.Vms
         [Parameter(Mandatory = false, HelpMessage = "Force removal of disk images from storage.")]
         public SwitchParameter Force { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess($"Disks '{IdList}' on VM {VmId} (node '{Node}')", "Remove-PveVmDisk"))
                 return;

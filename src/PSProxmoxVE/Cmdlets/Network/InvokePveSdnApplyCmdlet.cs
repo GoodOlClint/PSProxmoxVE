@@ -14,7 +14,7 @@ namespace PSProxmoxVE.Cmdlets.Network
     [OutputType(typeof(void))]
     public sealed class InvokePveSdnApplyCmdlet : PveCmdletBase
     {
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             if (!ShouldProcess("SDN configuration", "Apply pending changes"))
                 return;

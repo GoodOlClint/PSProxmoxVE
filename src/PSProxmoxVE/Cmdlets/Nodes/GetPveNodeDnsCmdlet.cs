@@ -19,7 +19,7 @@ namespace PSProxmoxVE.Cmdlets.Nodes
         [ValidateNotNullOrEmpty]
         public string Node { get; set; } = string.Empty;
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
             var service = new NodeService();

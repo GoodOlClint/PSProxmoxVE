@@ -21,7 +21,7 @@ namespace PSProxmoxVE.Cmdlets.HA
             HelpMessage = "Service ID (e.g. 'vm:100', 'ct:200'). Omit to list all.")]
         public string? Sid { get; set; }
 
-        protected override void ProcessRecord()
+        protected override void ProcessPveRecord()
         {
             var session = GetSession();
             var service = new HaService();
