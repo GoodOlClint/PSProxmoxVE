@@ -1,8 +1,6 @@
 using System;
 using System.IO;
 using System.Management.Automation;
-using Newtonsoft.Json.Linq;
-using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
 
@@ -95,10 +93,8 @@ namespace PSProxmoxVE.Cmdlets.Storage
             {
                 timeout = TimeSpan.FromMinutes(30);
             }
-            using var client = new PveHttpClient(session, timeout);
 
             WriteVerbose($"Uploading {fileName} to {Node}/{Storage} (content={ContentType})...");
-            var resource = $"nodes/{Uri.EscapeDataString(Node)}/storage/{Uri.EscapeDataString(Storage)}/upload";
             var totalBytes = new System.IO.FileInfo(Path).Length;
 
             var activityId = 1;
@@ -111,18 +107,19 @@ namespace PSProxmoxVE.Cmdlets.Storage
             // callback directly would invoke it from the HTTP serialization thread
             // and cause PowerShell to throw an InvalidOperationException mid-upload.
             long progressBytes = 0;
+            var storageService = new StorageService();
             var uploadTask = System.Threading.Tasks.Task.Run(() =>
-                client.UploadFileAsync(
-                    resource,
+                storageService.UploadIso(
+                    session,
+                    Node,
+                    Storage,
                     Path,
-                    formFields: new System.Collections.Generic.Dictionary<string, string>
-                    {
-                        ["content"] = ContentType
-                    },
                     checksum: Checksum,
                     checksumAlgorithm: ChecksumAlgorithm,
                     progressCallback: (bytesSent, _) =>
-                        System.Threading.Interlocked.Exchange(ref progressBytes, bytesSent)));
+                        System.Threading.Interlocked.Exchange(ref progressBytes, bytesSent),
+                    timeout: timeout,
+                    contentType: ContentType));
 
             // Poll progress on the pipeline thread while the upload runs.
             while (!uploadTask.IsCompleted)
@@ -138,21 +135,13 @@ namespace PSProxmoxVE.Cmdlets.Storage
                 }
             }
 
-            var json = uploadTask.GetAwaiter().GetResult();
+            var task = uploadTask.GetAwaiter().GetResult();
 
             progressRecord.RecordType = ProgressRecordType.Completed;
             WriteProgress(progressRecord);
 
-            var root = JObject.Parse(json);
-            var upid = root["data"]?.ToString() ?? string.Empty;
-
-            var task = new PveTask { Upid = upid, Node = Node, Status = "running" };
-
-            if (Wait.IsPresent && !string.IsNullOrEmpty(upid))
-            {
-                var taskService = new TaskService();
-                task = taskService.WaitForTask(session, Node, upid);
-            }
+            if (Wait.IsPresent && !string.IsNullOrEmpty(task.Upid))
+                task = new TaskService().WaitForTask(session, Node, task.Upid);
 
             WriteObject(task);
         }

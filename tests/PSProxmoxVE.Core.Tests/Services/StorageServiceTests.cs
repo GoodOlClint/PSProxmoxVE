@@ -11,6 +11,69 @@ namespace PSProxmoxVE.Core.Tests.Services
 {
     public class StorageServiceTests
     {
+        private sealed class CapturedPost
+        {
+            public int Calls { get; set; }
+            public string? Path { get; set; }
+            public Dictionary<string, string>? Form { get; set; }
+        }
+
+        private static CapturedPost CapturePost(Mock<IPveHttpClient> mockClient, string json)
+        {
+            var captured = new CapturedPost();
+            mockClient.Setup(c => c.PostAsync(It.IsAny<string>(), It.IsAny<Dictionary<string, string>>()))
+                .Callback<string, Dictionary<string, string>?>((path, form) =>
+                {
+                    captured.Calls++;
+                    captured.Path = path;
+                    captured.Form = form;
+                })
+                .ReturnsAsync(json);
+            return captured;
+        }
+
+        private sealed class CapturedUpload
+        {
+            public int Calls { get; set; }
+            public string? Path { get; set; }
+            public Dictionary<string, string>? Fields { get; set; }
+        }
+
+        private static CapturedUpload CaptureUpload(Mock<IPveHttpClient> mockClient, string json)
+        {
+            var captured = new CapturedUpload();
+            mockClient.Setup(c => c.UploadFileAsync(
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Dictionary<string, string>>(),
+                    It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Action<long, long>>()))
+                .Callback<string, string, Dictionary<string, string>?, string?, string?, Action<long, long>?>(
+                    (path, _, fields, _, _, _) =>
+                    {
+                        captured.Calls++;
+                        captured.Path = path;
+                        captured.Fields = fields;
+                    })
+                .ReturnsAsync(json);
+            return captured;
+        }
+
+        /// <summary>Test seam that records the timeout override the base class receives for a call.</summary>
+        private sealed class TimeoutCapturingStorageService : StorageService
+        {
+            private readonly IPveHttpClient _client;
+            public TimeSpan? SeenTimeout;
+
+            public TimeoutCapturingStorageService(IPveHttpClient client)
+            {
+                _client = client;
+            }
+
+            internal override IPveHttpClient CreateClient(PveSession session, TimeSpan? timeoutOverride)
+            {
+                SeenTimeout = timeoutOverride;
+                return _client;
+            }
+        }
+
         private readonly Mock<IPveHttpClient> _mockClient;
         private readonly StorageService _service;
         private readonly PveSession _session;
@@ -177,6 +240,67 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Equal("nfs", result.Type);
             Assert.Equal("backup", result.Content);
             _mockClient.Verify(c => c.PostAsync("storage", It.IsAny<Dictionary<string, string>>()), Times.Once);
+        }
+
+        [Fact]
+        public void CreateStorage_SendsExactForm()
+        {
+            // Arrange
+            var captured = CapturePost(_mockClient, @"{""data"":{""storage"":""local"",""type"":""dir""}}");
+            var config = new Dictionary<string, object>
+            {
+                ["storage"] = "local",
+                ["type"] = "dir",
+                ["shared"] = "1"
+            };
+
+            // Act
+            _service.CreateStorage(_session, config);
+
+            // Assert
+            Assert.Equal(1, captured.Calls);
+            Assert.Equal("storage", captured.Path);
+            Assert.NotNull(captured.Form);
+            Assert.Equal("local", captured.Form!["storage"]);
+            Assert.Equal("dir", captured.Form["type"]);
+            Assert.Equal("1", captured.Form["shared"]);
+            Assert.Equal(3, captured.Form.Count);
+        }
+
+        [Fact]
+        public void CreateStorage_NonStringValues_AreStringified()
+        {
+            // Arrange
+            var captured = CapturePost(_mockClient, @"{""data"":{""storage"":""local"",""type"":""dir""}}");
+            var config = new Dictionary<string, object>
+            {
+                ["storage"] = "local",
+                ["shared"] = 1,
+                ["disable"] = true,
+                ["notes"] = null!
+            };
+
+            // Act
+            _service.CreateStorage(_session, config);
+
+            // Assert
+            Assert.NotNull(captured.Form);
+            Assert.Equal("1", captured.Form!["shared"]);
+            Assert.Equal("True", captured.Form["disable"]);
+            Assert.Equal(string.Empty, captured.Form["notes"]);
+        }
+
+        [Fact]
+        public void CreateStorage_EmptyResponseBody_ReturnsEmptyStorage()
+        {
+            // Arrange
+            CapturePost(_mockClient, string.Empty);
+
+            // Act
+            var result = _service.CreateStorage(_session, new Dictionary<string, object> { ["storage"] = "local" });
+
+            // Assert
+            Assert.Equal(string.Empty, result.Storage);
         }
 
         [Fact]
@@ -398,6 +522,88 @@ namespace PSProxmoxVE.Core.Tests.Services
             // Assert
             Assert.Contains("UPID:pve1", result.Upid);
             Assert.Equal("pve1", result.Node);
+            Assert.Equal("running", result.Status);
+        }
+
+        [Fact]
+        public void UploadIso_DefaultContentType_SendsIso()
+        {
+            // Arrange
+            var captured = CaptureUpload(_mockClient, @"{""data"":""UPID:pve1:000AAA:00000001:65F00000:upload:local:root@pam:""}");
+
+            // Act
+            _service.UploadIso(_session, "pve1", "local", "/tmp/debian-12.iso");
+
+            // Assert
+            Assert.Equal(1, captured.Calls);
+            Assert.Equal("nodes/pve1/storage/local/upload", captured.Path);
+            Assert.NotNull(captured.Fields);
+            Assert.Equal("iso", captured.Fields!["content"]);
+            Assert.Single(captured.Fields);
+        }
+
+        [Fact]
+        public void UploadIso_ExplicitContentType_SendsIt()
+        {
+            // Arrange
+            var captured = CaptureUpload(_mockClient, @"{""data"":""UPID:pve1:000AAA:00000001:65F00000:upload:local:root@pam:""}");
+
+            // Act
+            _service.UploadIso(_session, "pve1", "local", "/tmp/rootfs.tar.zst", contentType: "vztmpl");
+
+            // Assert
+            Assert.Equal(1, captured.Calls);
+            Assert.NotNull(captured.Fields);
+            Assert.Equal("vztmpl", captured.Fields!["content"]);
+            Assert.Single(captured.Fields);
+        }
+
+        [Fact]
+        public void UploadIso_EscapesNodeAndStorageInPath()
+        {
+            // Arrange
+            var captured = CaptureUpload(_mockClient, @"{""data"":""UPID:pve1:000AAA:00000001:65F00000:upload:local:root@pam:""}");
+
+            // Act
+            _service.UploadIso(_session, "pve node", "local storage", "/tmp/debian-12.iso");
+
+            // Assert
+            Assert.Equal("nodes/pve%20node/storage/local%20storage/upload", captured.Path);
+        }
+
+        [Fact]
+        public void UploadIso_WhitespaceContentType_ThrowsArgumentNullException()
+        {
+            Assert.Throws<ArgumentNullException>(() =>
+                _service.UploadIso(_session, "pve1", "local", "/tmp/test.iso", contentType: " "));
+        }
+
+        [Fact]
+        public void UploadIso_TimeoutOverride_PassesItToClientConstruction()
+        {
+            // Arrange
+            var captured = CaptureUpload(_mockClient, @"{""data"":""UPID:pve1:000AAA:00000001:65F00000:upload:local:root@pam:""}");
+            var service = new TimeoutCapturingStorageService(_mockClient.Object);
+
+            // Act
+            service.UploadIso(_session, "pve1", "local", "/tmp/debian-12.iso", timeout: TimeSpan.FromMinutes(45));
+
+            // Assert
+            Assert.Equal(TimeSpan.FromMinutes(45), service.SeenTimeout);
+        }
+
+        [Fact]
+        public void UploadIso_NoTimeout_DefaultsToThirtyMinutes()
+        {
+            // Arrange
+            CaptureUpload(_mockClient, @"{""data"":""UPID:pve1:000AAA:00000001:65F00000:upload:local:root@pam:""}");
+            var service = new TimeoutCapturingStorageService(_mockClient.Object);
+
+            // Act
+            service.UploadIso(_session, "pve1", "local", "/tmp/debian-12.iso");
+
+            // Assert
+            Assert.Equal(TimeSpan.FromMinutes(30), service.SeenTimeout);
         }
 
         [Fact]
@@ -434,6 +640,73 @@ namespace PSProxmoxVE.Core.Tests.Services
             // Assert
             Assert.Contains("UPID:pve1", result.Upid);
             Assert.Equal("pve1", result.Node);
+            Assert.Equal("running", result.Status);
+        }
+
+        [Fact]
+        public void DownloadUrl_SendsExactForm()
+        {
+            // Arrange
+            var captured = CapturePost(_mockClient, @"{""data"":""UPID:pve1:000BBB:00000002:65F00001:download:local:root@pam:""}");
+
+            // Act
+            _service.DownloadUrl(
+                _session, "pve1", "local",
+                "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img",
+                "noble-server-cloudimg-amd64.img", "iso");
+
+            // Assert
+            Assert.Equal(1, captured.Calls);
+            Assert.Equal("nodes/pve1/storage/local/download-url", captured.Path);
+            Assert.NotNull(captured.Form);
+            Assert.Equal("https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img", captured.Form!["url"]);
+            Assert.Equal("noble-server-cloudimg-amd64.img", captured.Form["filename"]);
+            Assert.Equal("iso", captured.Form["content"]);
+            Assert.Equal(3, captured.Form.Count);
+        }
+
+        [Fact]
+        public void DownloadUrl_EscapesNodeAndStorageInPath()
+        {
+            // Arrange
+            var captured = CapturePost(_mockClient, @"{""data"":""UPID:pve1:000BBB:00000002:65F00001:download:local:root@pam:""}");
+
+            // Act
+            _service.DownloadUrl(_session, "pve node", "local storage", "https://example.com/f.iso", "f.iso", "iso");
+
+            // Assert
+            Assert.Equal(1, captured.Calls);
+            Assert.Equal("nodes/pve%20node/storage/local%20storage/download-url", captured.Path);
+        }
+
+        [Fact]
+        public void DownloadUrl_TimeoutOverride_PassesItToClientConstruction()
+        {
+            // Arrange
+            var captured = CapturePost(_mockClient, @"{""data"":""UPID:pve1:000BBB:00000002:65F00001:download:local:root@pam:""}");
+            var service = new TimeoutCapturingStorageService(_mockClient.Object);
+
+            // Act
+            service.DownloadUrl(_session, "pve1", "local", "https://example.com/f.iso", "f.iso", "iso",
+                timeout: TimeSpan.FromMinutes(45));
+
+            // Assert
+            Assert.Equal(TimeSpan.FromMinutes(45), service.SeenTimeout);
+            Assert.Equal(1, captured.Calls);
+        }
+
+        [Fact]
+        public void DownloadUrl_NoTimeout_DefaultsToThirtyMinutes()
+        {
+            // Arrange
+            CapturePost(_mockClient, @"{""data"":""UPID:pve1:000BBB:00000002:65F00001:download:local:root@pam:""}");
+            var service = new TimeoutCapturingStorageService(_mockClient.Object);
+
+            // Act
+            service.DownloadUrl(_session, "pve1", "local", "https://example.com/f.iso", "f.iso", "iso");
+
+            // Assert
+            Assert.Equal(TimeSpan.FromMinutes(30), service.SeenTimeout);
         }
 
         [Fact]

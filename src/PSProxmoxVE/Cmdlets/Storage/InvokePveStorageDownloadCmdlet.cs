@@ -1,8 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.Management.Automation;
-using Newtonsoft.Json.Linq;
-using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
 
@@ -73,28 +70,12 @@ namespace PSProxmoxVE.Cmdlets.Storage
             {
                 timeout = TimeSpan.FromMinutes(30);
             }
-            using var client = new PveHttpClient(session, timeout);
 
             WriteVerbose($"Downloading '{Url}' to {Node}/{Storage}...");
-            var resource = $"nodes/{Uri.EscapeDataString(Node)}/storage/{Uri.EscapeDataString(Storage)}/download-url";
-            var data = new Dictionary<string, string>
-            {
-                ["url"]      = Url,
-                ["filename"] = Filename,
-                ["content"]  = ContentType
-            };
+            var task = new StorageService().DownloadUrl(session, Node, Storage, Url, Filename, ContentType, timeout);
 
-            var json = client.PostAsync(resource, data).GetAwaiter().GetResult();
-            var root = JObject.Parse(json);
-            var upid = root["data"]?.ToString() ?? string.Empty;
-
-            var task = new PveTask { Upid = upid, Node = Node, Status = "running" };
-
-            if (Wait.IsPresent && !string.IsNullOrEmpty(upid))
-            {
-                var taskService = new TaskService();
-                task = taskService.WaitForTask(session, Node, upid);
-            }
+            if (Wait.IsPresent && !string.IsNullOrEmpty(task.Upid))
+                task = new TaskService().WaitForTask(session, Node, task.Upid);
 
             WriteObject(task);
         }
