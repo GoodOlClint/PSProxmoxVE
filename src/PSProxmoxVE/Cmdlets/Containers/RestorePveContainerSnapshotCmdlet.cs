@@ -1,7 +1,4 @@
-using System;
 using System.Management.Automation;
-using Newtonsoft.Json.Linq;
-using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Vms;
 using PSProxmoxVE.Core.Services;
 
@@ -48,18 +45,13 @@ namespace PSProxmoxVE.Cmdlets.Containers
                 return;
 
             WriteVerbose($"Restoring snapshot '{Name}' on container {VmId}...");
-            using var client = new PveHttpClient(session);
+            var service = new ContainerService();
+            var task = service.RollbackContainerSnapshot(session, Node, VmId, Name);
 
-            var json = client.PostAsync($"nodes/{Uri.EscapeDataString(Node)}/lxc/{VmId}/snapshot/{Uri.EscapeDataString(Name)}/rollback").GetAwaiter().GetResult();
-            var root = JObject.Parse(json);
-            var upid = root["data"]?.ToString() ?? string.Empty;
-
-            var task = new PveTask { Upid = upid, Node = Node, Status = "running" };
-
-            if (Wait.IsPresent && !string.IsNullOrEmpty(upid))
+            if (Wait.IsPresent && !string.IsNullOrEmpty(task.Upid))
             {
                 var taskService = new TaskService();
-                task = taskService.WaitForTask(session, Node, upid);
+                task = taskService.WaitForTask(session, Node, task.Upid);
             }
 
             WriteObject(task);

@@ -513,7 +513,7 @@ namespace PSProxmoxVE.Core.Services
         {
             var data = JObject.Parse(response)["data"];
             if (data?.Type == JTokenType.String)
-                return new PveTask { Upid = data.ToString(), Node = node };
+                return new PveTask { Upid = data.ToString(), Node = node, Status = "running" };
 
             var task = data?.ToObject<PveTask>() ?? new PveTask();
             task.Node = node;
