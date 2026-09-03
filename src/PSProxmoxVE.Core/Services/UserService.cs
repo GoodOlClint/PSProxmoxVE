@@ -531,8 +531,8 @@ namespace PSProxmoxVE.Core.Services
         /// <param name="users">Comma-separated user IDs.</param>
         /// <param name="groups">Comma-separated group names.</param>
         /// <param name="tokens">Comma-separated API token IDs (user@realm!tokenid).</param>
-        /// <param name="propagate">Whether to propagate the permission to sub-paths.</param>
-        /// <param name="delete">If true, removes the specified ACL entries.</param>
+        /// <param name="propagate">Whether to propagate the permission to sub-paths; omitted when unset.</param>
+        /// <param name="delete">If true, removes the specified ACL entries; omitted when unset.</param>
         public void SetPermission(
             PveSession session,
             string path,
@@ -540,8 +540,8 @@ namespace PSProxmoxVE.Core.Services
             string? users = null,
             string? groups = null,
             string? tokens = null,
-            bool propagate = true,
-            bool delete = false)
+            bool? propagate = null,
+            bool? delete = null)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrWhiteSpace(path)) throw new ArgumentNullException(nameof(path));
@@ -550,13 +550,13 @@ namespace PSProxmoxVE.Core.Services
             var formData = new Dictionary<string, string>
             {
                 ["path"] = path,
-                ["roles"] = roles,
-                ["propagate"] = propagate ? "1" : "0",
-                ["delete"] = delete ? "1" : "0"
+                ["roles"] = roles
             };
             if (!string.IsNullOrEmpty(users)) formData["users"] = users!;
             if (!string.IsNullOrEmpty(groups)) formData["groups"] = groups!;
             if (!string.IsNullOrEmpty(tokens)) formData["tokens"] = tokens!;
+            if (propagate.HasValue) formData["propagate"] = propagate.Value ? "1" : "0";
+            if (delete.HasValue) formData["delete"] = delete.Value ? "1" : "0";
 
             Invoke(session, client =>
             {

@@ -358,6 +358,7 @@ namespace PSProxmoxVE.Core.Tests.Services
             Assert.Equal(1, result[0].Special);
             Assert.Equal("CustomOps", result[2].RoleId);
             Assert.Equal(0, result[2].Special);
+            Assert.Equal("VM.PowerMgmt,VM.Console", result[2].Privileges);
         }
 
         [Fact]
@@ -873,7 +874,10 @@ namespace PSProxmoxVE.Core.Tests.Services
                     d["roles"] == "PVEVMAdmin" &&
                     d["users"] == "deploy@pve" &&
                     d["propagate"] == "1" &&
-                    d["delete"] == "0")),
+                    !d.ContainsKey("delete") &&
+                    !d.ContainsKey("groups") &&
+                    !d.ContainsKey("tokens") &&
+                    d.Count == 4)),
                 Times.Once);
         }
 
@@ -894,7 +898,70 @@ namespace PSProxmoxVE.Core.Tests.Services
                     d["roles"] == "Administrator" &&
                     d["groups"] == "admins" &&
                     d["propagate"] == "0" &&
-                    d["delete"] == "1")),
+                    d["delete"] == "1" &&
+                    !d.ContainsKey("users") &&
+                    !d.ContainsKey("tokens") &&
+                    d.Count == 5)),
+                Times.Once);
+        }
+
+        [Fact]
+        public void SetPermission_WithToken_SendsTokensKey()
+        {
+            // Arrange
+            _mockClient.Setup(c => c.PutAsync("access/acl", It.IsAny<Dictionary<string, string>>()))
+                .ReturnsAsync(@"{""data"":null}");
+
+            // Act
+            _service.SetPermission(_session, "/vms/100", "PVEVMAdmin", tokens: "deploy@pve!ci");
+
+            // Assert
+            _mockClient.Verify(c => c.PutAsync("access/acl",
+                It.Is<Dictionary<string, string>>(d =>
+                    d["tokens"] == "deploy@pve!ci" &&
+                    !d.ContainsKey("users") &&
+                    !d.ContainsKey("groups") &&
+                    !d.ContainsKey("propagate") &&
+                    !d.ContainsKey("delete") &&
+                    d.Count == 3)),
+                Times.Once);
+        }
+
+        [Fact]
+        public void SetPermission_DeleteWithoutPropagate_SendsDeleteOmitsPropagate()
+        {
+            // Arrange
+            _mockClient.Setup(c => c.PutAsync("access/acl", It.IsAny<Dictionary<string, string>>()))
+                .ReturnsAsync(@"{""data"":null}");
+
+            // Act
+            _service.SetPermission(_session, "/vms/100", "PVEVMAdmin", users: "deploy@pve", delete: true);
+
+            // Assert
+            _mockClient.Verify(c => c.PutAsync("access/acl",
+                It.Is<Dictionary<string, string>>(d =>
+                    d["delete"] == "1" &&
+                    !d.ContainsKey("propagate") &&
+                    d.Count == 4)),
+                Times.Once);
+        }
+
+        [Fact]
+        public void SetPermission_NoPropagateOrDelete_OmitsBothFlags()
+        {
+            // Arrange
+            _mockClient.Setup(c => c.PutAsync("access/acl", It.IsAny<Dictionary<string, string>>()))
+                .ReturnsAsync(@"{""data"":null}");
+
+            // Act
+            _service.SetPermission(_session, "/vms/100", "PVEVMAdmin", users: "deploy@pve");
+
+            // Assert
+            _mockClient.Verify(c => c.PutAsync("access/acl",
+                It.Is<Dictionary<string, string>>(d =>
+                    !d.ContainsKey("propagate") &&
+                    !d.ContainsKey("delete") &&
+                    d.Count == 3)),
                 Times.Once);
         }
 
