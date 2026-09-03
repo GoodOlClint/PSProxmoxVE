@@ -4,6 +4,7 @@ using Newtonsoft.Json.Linq;
 using PSProxmoxVE.Core.Authentication;
 using PSProxmoxVE.Core.Client;
 using PSProxmoxVE.Core.Models.Vms;
+using PSProxmoxVE.Core.Utilities;
 
 namespace PSProxmoxVE.Core.Services
 {
@@ -78,7 +79,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/snapshot", formData)
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -103,7 +104,7 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.DeleteAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/snapshot/{Uri.EscapeDataString(snapname)}")
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
         }
 
@@ -128,23 +129,8 @@ namespace PSProxmoxVE.Core.Services
             {
                 var response = client.PostAsync($"nodes/{Uri.EscapeDataString(node)}/qemu/{vmid}/snapshot/{Uri.EscapeDataString(snapname)}/rollback")
                     .GetAwaiter().GetResult();
-                return ParseTask(response, node);
+                return PveTaskResponse.Parse(response, node);
             });
-        }
-
-        // -------------------------------------------------------------------------
-        // Private helpers
-        // -------------------------------------------------------------------------
-
-        private static PveTask ParseTask(string response, string node)
-        {
-            var data = JObject.Parse(response)["data"];
-            if (data?.Type == JTokenType.String)
-                return new PveTask { Upid = data.ToString(), Node = node, Status = "running" };
-
-            var task = data?.ToObject<PveTask>() ?? new PveTask();
-            task.Node = node;
-            return task;
         }
     }
 }
