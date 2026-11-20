@@ -7,6 +7,8 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-03
+
 ### Added
 
 - `Get-PveFirewallRule`, `New-PveFirewallRule`, `Set-PveFirewallRule` and `Remove-PveFirewallRule` accept `-Level Group -Group <name>` to manage the rules of a firewall security group; the `FirewallService` methods for group rules existed with no cmdlet surface, so a group created with `New-PveFirewallGroup` could not be given rules from PowerShell. (#126)

@@ -10,7 +10,7 @@
     RootModule        = 'PSProxmoxVE.dll'
 
     # Version number of this module.
-    ModuleVersion     = '0.2.0'
+    ModuleVersion     = '0.3.0'
 
     # Supported PSEditions
     CompatiblePSEditions = @('Desktop', 'Core')
@@ -372,20 +372,48 @@
 
             # Release notes for this version
             ReleaseNotes = @'
-## 0.2.0
+## 0.3.0
 
 Added:
-- New-PveVm disk controller / IO options: -DiskBus (virtio/scsi/sata/ide),
-  -ScsiHardware, -DiskIoThread, -DiskAio, -DiskSsd, -DiskDiscard, -DiskCache,
-  with up-front validation of invalid combinations (#65).
-- Get-PveVmConfig now surfaces scsihw/efidisk0/tpmstate0 plus an
-  AdditionalProperties dictionary for any other config key (#65).
+- Firewall security-group rules: Get/New/Set/Remove-PveFirewallRule -Level Group -Group <name> (#126).
+- New-PveNetwork / Set-PveNetwork -BridgeVlanAware (#92).
+- Connect-PveServer -ApiToken now takes a SecureString; a plain string still
+  binds this release with a deprecation warning and is removed in the next
+  major. The session object no longer exposes ApiToken, Ticket or CsrfToken (#147).
+
+Changed:
+- Every cmdlet reports PVE API failures as typed error records
+  (PermissionDenied, ObjectNotFound, InvalidArgument, OperationTimeout,
+  AuthenticationError, ConnectionError, OperationStopped) with an ErrorId
+  naming the resource and status, so -ErrorAction and typed catch work (#155).
+- Ticket sessions renew themselves at half their lifetime and retry once after
+  a 401; long -Wait operations no longer die at the two-hour mark (#143).
+- The session is stored per runspace, not in a process-wide static, so
+  ForEach-Object -Parallel and hosted runspaces no longer share it (#150).
+- One pooled transport per host; -Wait polling backs off from 1 s to 10 s over
+  one connection (#151). Get-PveVm without -Node is one cluster/resources call;
+  -Detailed streams (#152).
+- 31 cmdlets send their requests through their service, with the payloads
+  asserted offline; where service and cmdlet disagreed the shipped cmdlet
+  behaviour won (#126). Lifecycle waits run in GuestLifecycleService; OVA
+  parsing in OvfReader; Get-PveNodeConfig/NodeDns/ClusterConfig/BackupInfo
+  return typed objects (#157). Ten unused service methods removed (#220).
+- Restart-PveVm uses PVE's native reboot endpoint; guest operations retry past
+  the qemu-server config flock for up to 45 s; -Wait also waits for the config
+  lock to clear; New-PveCluster -Wait blocks until quorum (#113, D014-D016, D020).
+- Newtonsoft.Json 13.0.4, central package versions, SDK pinned (#156).
 
 Fixed:
-- Form values containing ';' were split into bogus fields, breaking a
-  multi-device boot order via Set-PveVmConfig; semicolons are now encoded (#64).
-- Invoke-PveVmGuestExec -Args reached the guest as JSON on STDIN instead of
-  argv; arguments are now sent as the PVE command array (#68).
+- Copy-PveVm/Copy-PveContainer allocate a valid ID and forward -Storage (#135);
+  Import-PveOva disk bus mapping, href validation, DTD rejection and upload
+  timeout (#138, #139, #148); Remove-* path traversal (#145); Remove-PveVm
+  -Force and Remove-PveContainer -Force honoured (#136); Get-PvePermission
+  returns Privileges (#137); Invoke-PveVmGuestExec boolean exited (#141);
+  Disconnect-PveServer no longer calls a non-existent endpoint and gained
+  -Session (#144); Wait-PveTask uses the shared poller (#140); Send-PveFile
+  -ContentType vztmpl/import (#126); Get-PveClusterConfig no longer always
+  empty (#157); Add-PveClusterMember -Wait keeps its re-auth fallback across
+  the join's key rotation (#143).
 
 Full changelog: https://github.com/goodolclint/PSProxmoxVE/blob/main/CHANGELOG.md
 '@
